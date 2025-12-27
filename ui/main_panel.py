@@ -162,11 +162,10 @@ class MHW_PT_MainPanel(bpy.types.Panel):
         row.operator("mhw.general_tools", text="镜像对齐 X").action = 'MIRROR_X'
         col.operator("mhw.general_tools", text="骨链简化 (隔1删1)").action = 'SIMPLIFY_CHAIN'
         
-        # 3. MHWI
+        # 3. 游戏专用栏
         if settings.show_mhwi:
             self.draw_mhwi_tools(layout)
             
-        # 4. MHWilds
         if settings.show_mhws:
             box = layout.box()
             box.label(text="MHWilds Tools", icon='WORLD')
@@ -174,20 +173,18 @@ class MHW_PT_MainPanel(bpy.types.Panel):
             box.operator("mhwilds.endfield_snap", text="Endfield -> MHWs 对齐", icon='SNAP_ON')
             box.label(text="选法: 参考骨架 -> Shift+目标骨架", icon='INFO')
              
-        # 5. RE4 (重点更新部分)
         if settings.show_re4:
             box = layout.box()
             box.label(text="RE4 Tools", icon='GHOST_ENABLED')
             
-            # --- 转换工具 ---
             col = box.column(align=True)
-            col.label(text="权重/命名转换:")
+            col.label(text="转换工具:", icon='MOD_VERTEX_WEIGHT')
             col.operator("re4.mhwi_rename", text="MHWI -> RE4 重命名", icon='FONT_DATA')
             col.operator("re4.endfield_convert", text="Endfield -> RE4 权重转换", icon='MOD_VERTEX_WEIGHT')
             
             layout.separator()
             
-            # --- 假骨与对齐 (紧凑布局) ---
+            # --- 假骨与对齐 (图标修正版) ---
             box_fake = layout.box()
             box_fake.label(text="假骨与对齐 (FakeBone)", icon='BONE_DATA')
             
@@ -196,8 +193,10 @@ class MHW_PT_MainPanel(bpy.types.Panel):
             # 步骤 1: 创建
             col_fake.label(text="1. 创建 End 骨骼:")
             row1 = col_fake.row(align=True)
-            row1.operator("re4.fake_body_process", text="身体", icon='BODY_DATA')
-            row1.operator("re4.fake_fingers_process", text="手指", icon='HAND')
+            # 修正图标：BODY_DATA -> ARMATURE_DATA
+            row1.operator("re4.fake_body_process", text="身体", icon='ARMATURE_DATA')
+            # 修正图标：HAND -> VIEW_PAN (手掌图标)
+            row1.operator("re4.fake_fingers_process", text="手指", icon='VIEW_PAN')
             
             # 步骤 2: 合并
             col_fake.label(text="2. 合并与绑定:")

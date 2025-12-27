@@ -1,26 +1,12 @@
 # MHWI (MhBone) -> RE4 (标准名)
 MHWI_TO_RE4_MAP = {
-    "MhBone_001": "Spine_0",
-    "MhBone_002": "Spine_2",
-    "MhBone_003": "Neck_1",
-    "MhBone_004": "Head",
-    "MhBone_005": "L_Shoulder",
-    "MhBone_006": "L_UpperArm_Twist_s1",
-    "MhBone_007": "L_Forearm",
-    "MhBone_008": "L_Hand",
-    "MhBone_009": "R_Shoulder",
-    "MhBone_010": "R_UpperArm_Twist_s1",
-    "MhBone_011": "R_Forearm",
-    "MhBone_012": "R_Hand",
-    "MhBone_013": "Hip",
-    "MhBone_014": "L_Thigh",
-    "MhBone_015": "L_Shin",
-    "MhBone_016": "L_Foot",
-    "MhBone_017": "L_Toe",
-    "MhBone_018": "R_Thigh",
-    "MhBone_019": "R_Shin",
-    "MhBone_020": "R_Foot",
-    "MhBone_021": "R_Toe",
+    "MhBone_001": "Spine_0", "MhBone_002": "Spine_2", "MhBone_003": "Neck_1",
+    "MhBone_004": "Head", "MhBone_005": "L_Shoulder", "MhBone_006": "L_UpperArm_Twist_s1",
+    "MhBone_007": "L_Forearm", "MhBone_008": "L_Hand", "MhBone_009": "R_Shoulder",
+    "MhBone_010": "R_UpperArm_Twist_s1", "MhBone_011": "R_Forearm", "MhBone_012": "R_Hand",
+    "MhBone_013": "Hip", "MhBone_014": "L_Thigh", "MhBone_015": "L_Shin",
+    "MhBone_016": "L_Foot", "MhBone_017": "L_Toe", "MhBone_018": "R_Thigh",
+    "MhBone_019": "R_Shin", "MhBone_020": "R_Foot", "MhBone_021": "R_Toe",
     "MhBone_031": "L_Thumb1", "MhBone_032": "L_Thumb2", "MhBone_033": "L_Thumb3",
     "MhBone_034": "L_IndexF1", "MhBone_035": "L_IndexF2", "MhBone_036": "L_IndexF3",
     "MhBone_037": "L_MiddleF1", "MhBone_038": "L_MiddleF2", "MhBone_039": "L_MiddleF3",
@@ -37,104 +23,74 @@ MHWI_TO_RE4_MAP = {
     "MhBone_076": "Butt_R", "MhBone_077": "RShinHelp",
     "MhBone_080": "L_UpperArm", "MhBone_081": "L_Forearm_Twist_s12",
     "MhBone_082": "R_UpperArm", "MhBone_083": "R_Forearm_Twist_s12",
-    # Head & Face
     "MhBone_308": "Brow1_L", "MhBone_307": "Brow2_L", "MhBone_306": "Brow3_L",
     "MhBone_310": "Brow1_R", "MhBone_311": "Brow2_R", "MhBone_312": "Brow3_R",
     "MhBone_315": "Eye_L", "MhBone_328": "Eye_R",
     "MhBone_320": "L_U_Eyelid02", "MhBone_321": "L_U_Eyelid03", "MhBone_322": "L_U_Eyelid04",
     "MhBone_333": "R_U_Eyelid02", "MhBone_334": "R_U_Eyelid03", "MhBone_335": "R_U_Eyelid04",
-    "MhBone_372": "Tongue02",
-    "MhBone_379": "R_UpperLip02", "MhBone_380": "R_UpperLip01",
-    "MhBone_382": "L_UpperLip01", "MhBone_383": "L_UpperLip02",
-    "MhBone_384": "L_MouthCorner", "MhBone_385": "R_MouthCorner",
-    "MhBone_386": "L_LowerLip02", "MhBone_387": "L_LowerLip01",
-    "MhBone_389": "R_LowerLip01", "MhBone_390": "R_LowerLip02",
-    "MhBone_404": "C_Chin",
+    "MhBone_372": "Tongue02", "MhBone_379": "R_UpperLip02", "MhBone_380": "R_UpperLip01",
+    "MhBone_382": "L_UpperLip01", "MhBone_383": "L_UpperLip02", "MhBone_384": "L_MouthCorner",
+    "MhBone_385": "R_MouthCorner", "MhBone_386": "L_LowerLip02", "MhBone_387": "L_LowerLip01",
+    "MhBone_389": "R_LowerLip01", "MhBone_390": "R_LowerLip02", "MhBone_404": "C_Chin",
 }
 
 # Endfield -> RE4
 ENDFIELD_TO_RE4_MAP = {
-    "Bip001_Head": "Head",
-    "Bip001_Neck": "Neck_0",
-    "TongueMd02Joint": "Tongue04", "TongueMd01Joint": "Tongue05",
-    "NoseMd01Joint": "Head.005",
+    "Bip001_Head": "Head", "Bip001_Neck": "Neck_0",
+    "TongueMd02Joint": "Tongue04", "TongueMd01Joint": "Tongue05", "NoseMd01Joint": "Head.005",
     "lipRup4Joint": "R_UpperLip01", "lipRup3Joint": "R_UpperLip02", "lipRup2Joint": "R_UpperLip03",
-    "lipRup1Joint": "R_MouthCorner",
-    "lipRdn4Joint": "R_LowerLip01", "lipRdn3Joint": "R_LowerLip02", "lipRdn2Joint": "R_LowerLip03",
-    "lipRdn1Joint": "R_MouthCorner.001",
-    "lipMupJoint": "C_UpperLip", "lipMdnJoint": "C_LowerLip",
-    "lipLup4Joint": "L_UpperLip01", "lipLup3Joint": "L_UpperLip02", "lipLup2Joint": "L_UpperLip03",
-    "lipLup1Joint": "L_MouthCorner",
-    "lipLdn4Joint": "L_LowerLip01", "lipLdn3Joint": "L_LowerLip02", "lipLdn2Joint": "L_LowerLip03",
-    "lipLdn1Joint": "L_MouthCorner.001",
-    "line_jnt": "Head.004", "jawJoint": "C_D_Jaw",
-    "head_up_jnt": "Head.001", "head_mid_jnt": "Head.002", "head_dn_jnt": "Head.003",
-    "faceRtCheekOtJoint": "R_Risorius", "faceRtCheekOtDnJoint": "R_DepressorAnguliOris",
-    "faceMdJawDnJoint": "C_Chin",
-    "faceLfCheekOtJoint": "L_Risorius", "faceLfCheekOtDnJoint": "L_DepressorAnguliOris",
+    "lipRup1Joint": "R_MouthCorner", "lipRdn4Joint": "R_LowerLip01", "lipRdn3Joint": "R_LowerLip02",
+    "lipRdn2Joint": "R_LowerLip03", "lipRdn1Joint": "R_MouthCorner.001", "lipMupJoint": "C_UpperLip",
+    "lipMdnJoint": "C_LowerLip", "lipLup4Joint": "L_UpperLip01", "lipLup3Joint": "L_UpperLip02",
+    "lipLup2Joint": "L_UpperLip03", "lipLup1Joint": "L_MouthCorner", "lipLdn4Joint": "L_LowerLip01",
+    "lipLdn3Joint": "L_LowerLip02", "lipLdn2Joint": "L_LowerLip03", "lipLdn1Joint": "L_MouthCorner.001",
+    "line_jnt": "Head.004", "jawJoint": "C_D_Jaw", "head_up_jnt": "Head.001", "head_mid_jnt": "Head.002",
+    "head_dn_jnt": "Head.003", "faceRtCheekOtJoint": "R_Risorius", "faceRtCheekOtDnJoint": "R_DepressorAnguliOris",
+    "faceMdJawDnJoint": "C_Chin", "faceLfCheekOtJoint": "L_Risorius", "faceLfCheekOtDnJoint": "L_DepressorAnguliOris",
     "eyeRt08Joint": "R_D_Eyelid01", "eyeRt07Joint": "R_D_Eyelid03", "eyeRt06Joint": "R_D_Eyelid04",
     "eyeRt05Joint": "R_O_EyeCorner", "eyeRt04Joint": "R_U_Eyelid04", "eyeRt03Joint": "R_U_Eyelid03",
-    "eyeRt02Joint": "R_U_Eyelid01", "eyeRt01Joint": "R_I_EyeCorner",
-    "eyeLf08Joint": "L_D_Eyelid01", "eyeLf07Joint": "L_D_Eyelid03", "eyeLf06Joint": "L_D_Eyelid04",
-    "eyeLf05Joint": "L_O_EyeCorner", "eyeLf04Joint": "L_U_Eyelid04", "eyeLf03Joint": "L_U_Eyelid03",
-    "eyeLf02Joint": "L_U_Eyelid01", "eyeLf01Joint": "L_I_EyeCorner",
-    "faceLfIrisJoint": "Head.006", "faceRtIrisJoint": "Head.007",
+    "eyeRt02Joint": "R_U_Eyelid01", "eyeRt01Joint": "R_I_EyeCorner", "eyeLf08Joint": "L_D_Eyelid01",
+    "eyeLf07Joint": "L_D_Eyelid03", "eyeLf06Joint": "L_D_Eyelid04", "eyeLf05Joint": "L_O_EyeCorner",
+    "eyeLf04Joint": "L_U_Eyelid04", "eyeLf03Joint": "L_U_Eyelid03", "eyeLf02Joint": "L_U_Eyelid01",
+    "eyeLf01Joint": "L_I_EyeCorner", "faceLfIrisJoint": "Head.006", "faceRtIrisJoint": "Head.007",
 }
 
 # ==========================================
 # 假骨工具 (FakeBone) 数据
 # ==========================================
-
-# 身体骨骼处理列表
 FAKEBONE_BODY_BONES = [
     "Spine_0", "Spine_1", "Spine_2", "L_Shoulder", "R_Shoulder", 
     "Neck_0", "Neck_1", "Head", "R_Thigh", "L_Thigh", "L_UpperArm", "R_UpperArm"
 ]
 
-# 身体伪骨骼名称 (用于创建 _end)
 FAKEBONE_BODY_FAKES = [
     "Hip", "Spine_0", "Spine_1", "Spine_2", "L_Shoulder", "R_Shoulder", "Neck_0", "Neck_1"
 ]
 
-# 身体骨骼父级关系 (用于判断创建逻辑)
 FAKEBONE_BODY_PARENTS = {
     "Hip": ["Spine_0", "R_Thigh", "L_Thigh"],
-    "Spine_0": ["Spine_1"], 
-    "Spine_1": ["Spine_2"], 
+    "Spine_0": ["Spine_1"], "Spine_1": ["Spine_2"], 
     "Spine_2": ["L_Shoulder", "R_Shoulder", "Neck_0"], 
-    "L_Shoulder": ["L_UpperArm"], 
-    "R_Shoulder": ["R_UpperArm"], 
-    "Neck_0": ["Neck_1"], 
-    "Neck_1": ["Head"]
+    "L_Shoulder": ["L_UpperArm"], "R_Shoulder": ["R_UpperArm"], 
+    "Neck_0": ["Neck_1"], "Neck_1": ["Head"]
 }
 
-# 手指骨骼列表
 FAKEBONE_FINGER_BONES = [
-    "R_Hand", "R_Thumb1", "R_Thumb2", "R_Thumb3", 
-    "R_IndexF1", "R_IndexF2", "R_IndexF3",
-    "R_MiddleF1", "R_MiddleF2", "R_MiddleF3",
-    "R_Palm", "R_RingF1", "R_RingF2", "R_RingF3",
-    "R_PinkyF1", "R_PinkyF2", "R_PinkyF3",
-    "L_Hand", "L_Thumb1", "L_Thumb2", "L_Thumb3", 
-    "L_IndexF1", "L_IndexF2", "L_IndexF3",
-    "L_MiddleF1", "L_MiddleF2", "L_MiddleF3",
-    "L_Palm", "L_RingF1", "L_RingF2", "L_RingF3",
-    "L_PinkyF1", "L_PinkyF2", "L_PinkyF3"
+    "R_Hand", "R_Thumb1", "R_Thumb2", "R_Thumb3", "R_IndexF1", "R_IndexF2", "R_IndexF3",
+    "R_MiddleF1", "R_MiddleF2", "R_MiddleF3", "R_Palm", "R_RingF1", "R_RingF2", "R_RingF3",
+    "R_PinkyF1", "R_PinkyF2", "R_PinkyF3", "L_Hand", "L_Thumb1", "L_Thumb2", "L_Thumb3", 
+    "L_IndexF1", "L_IndexF2", "L_IndexF3", "L_MiddleF1", "L_MiddleF2", "L_MiddleF3",
+    "L_Palm", "L_RingF1", "L_RingF2", "L_RingF3", "L_PinkyF1", "L_PinkyF2", "L_PinkyF3"
 ]
 
-# 手指合并时的父子映射
 FAKEBONE_FINGER_MERGE_MAP = {
-    "L_Wep": "L_Hand_end",
-    "L_IndexF1": "L_Hand_endI", "L_MiddleF1": "L_Hand_endM",
-    "L_Palm": "L_Hand_endP", "L_Thumb1": "L_Hand_endT",
-    "L_PinkyF1": "L_Palm_endP", "L_RingF1": "L_Palm_endR",
-    "R_Wep": "R_Hand_end",
-    "R_IndexF1": "R_Hand_endI", "R_MiddleF1": "R_Hand_endM",
-    "R_Palm": "R_Hand_endP", "R_Thumb1": "R_Hand_endT",
+    "L_Wep": "L_Hand_end", "L_IndexF1": "L_Hand_endI", "L_MiddleF1": "L_Hand_endM",
+    "L_Palm": "L_Hand_endP", "L_Thumb1": "L_Hand_endT", "L_PinkyF1": "L_Palm_endP",
+    "L_RingF1": "L_Palm_endR", "R_Wep": "R_Hand_end", "R_IndexF1": "R_Hand_endI",
+    "R_MiddleF1": "R_Hand_endM", "R_Palm": "R_Hand_endP", "R_Thumb1": "R_Hand_endT",
     "R_PinkyF1": "R_Palm_endP", "R_RingF1": "R_Palm_endR",
 }
 
-# 手指指节模式
 FAKEBONE_FINGER_PATTERNS = [
     ("L_IndexF", 3), ("L_MiddleF", 3), ("L_RingF", 3), ("L_PinkyF", 3), ("L_Thumb", 3),
     ("R_IndexF", 3), ("R_MiddleF", 3), ("R_RingF", 3), ("R_PinkyF", 3), ("R_Thumb", 3),
