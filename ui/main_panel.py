@@ -172,7 +172,19 @@ class MHW_PT_MainPanel(bpy.types.Panel):
         if settings.show_mhws:
             box = layout.box()
             box.label(text="MHWilds Tools", icon='WORLD')
-            box.operator("mhwilds.tpose_convert", icon='ARMATURE_DATA')
+            box.operator("mhwilds.tpose_convert", text="转为 MHWI T-Pose", icon='ARMATURE_DATA')
+            # 新增按钮
+            box.operator("mhwilds.endfield_snap", text="Endfield -> MHWs 对齐", icon='SNAP_ON')
+            box.label(text="选法: 参考骨架 -> Shift+目标骨架", icon='INFO')
+             
+        if settings.show_re4:
+            box = layout.box()
+            box.label(text="RE4 Tools", icon='GHOST_ENABLED') # 选个符合生化危机的图标
+            
+            col = box.column(align=True)
+            col.operator("re4.mhwi_rename", text="MHWI -> RE4 骨架重命名")
+            col.operator("re4.endfield_convert", text="Endfield -> RE4 权重转换")
+            col.label(text="* 权重转换需选中网格物体", icon='INFO')
             
     def draw_mhwi_tools(self, layout):
         # ... 绘制 MHWI 按钮 ...
