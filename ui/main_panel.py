@@ -193,9 +193,7 @@ class MHW_PT_MainPanel(bpy.types.Panel):
             # 步骤 1: 创建
             col_fake.label(text="1. 创建 End 骨骼:")
             row1 = col_fake.row(align=True)
-            # 修正图标：BODY_DATA -> ARMATURE_DATA
             row1.operator("re4.fake_body_process", text="身体", icon='ARMATURE_DATA')
-            # 修正图标：HAND -> VIEW_PAN (手掌图标)
             row1.operator("re4.fake_fingers_process", text="手指", icon='VIEW_PAN')
             
             # 步骤 2: 合并

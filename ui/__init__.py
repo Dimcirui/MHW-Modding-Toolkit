@@ -152,7 +152,7 @@ class MHW_PT_MainPanel(bpy.types.Panel):
             box_fake.label(text="假骨工具 (FakeBone)", icon='BONE_DATA')
             row = box_fake.row(align=True)
             row.label(text="1. 创建")
-            row.operator("re4.fake_body_process", text="身体 End", icon='BODY_DATA')
+            row.operator("re4.fake_body_process", text="身体 End", icon='ARMATURE_DATA')
             row.operator("re4.fake_fingers_process", text="手指 End", icon='HAND')
             row = box_fake.row(align=True)
             row.label(text="2. 合并")
