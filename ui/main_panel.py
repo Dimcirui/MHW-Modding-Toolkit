@@ -1,4 +1,5 @@
 import bpy
+from ..core import bone_utils, weight_utils
 
 class MHW_PT_SuiteSettings(bpy.types.PropertyGroup):
     show_mhwi: bpy.props.BoolProperty(name="MHWI", default=True)
@@ -174,6 +175,9 @@ class MHW_PT_MainPanel(bpy.types.Panel):
             box.label(text="选法: 参考骨架 -> Shift+目标骨架", icon='INFO')
              
         if settings.show_re4:
+            box = layout.box()
+            box.label(text="RE4 Tools", icon='GHOST_ENABLED') # 加上标题
+            
             col = box.column(align=True)
             col.label(text="VRC -> RE4:", icon='IMPORT')
             row = col.row(align=True)
@@ -182,7 +186,6 @@ class MHW_PT_MainPanel(bpy.types.Panel):
             
             col.separator()
             
-            # --- 其他转换 ---
             col.label(text="其他转换:", icon='MOD_VERTEX_WEIGHT')
             col.operator("re4.mhwi_rename", text="MHWI -> RE4 重命名", icon='FONT_DATA')
             col.operator("re4.endfield_convert", text="Endfield -> RE4 权重转换", icon='MOD_VERTEX_WEIGHT')
@@ -195,19 +198,16 @@ class MHW_PT_MainPanel(bpy.types.Panel):
             
             col_fake = box_fake.column(align=True)
             
-            # 步骤 1: 创建
             col_fake.label(text="1. 创建 End 骨骼:")
             row1 = col_fake.row(align=True)
             row1.operator("re4.fake_body_process", text="身体", icon='ARMATURE_DATA')
             row1.operator("re4.fake_fingers_process", text="手指", icon='VIEW_PAN')
             
-            # 步骤 2: 合并
             col_fake.label(text="2. 合并与绑定:")
             row2 = col_fake.row(align=True)
             row2.operator("re4.fake_body_merge", text="身体", icon='LINKED')
             row2.operator("re4.fake_fingers_merge", text="手指", icon='LINKED')
             
-            # 步骤 3: 对齐 (含子级)
             col_fake.label(text="3. 骨骼对齐 (含子级):")
             row3 = col_fake.row(align=True)
             row3.operator("re4.align_bones_full", text="完全对齐", icon='SNAP_ON')
