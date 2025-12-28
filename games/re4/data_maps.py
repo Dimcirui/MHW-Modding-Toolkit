@@ -55,6 +55,40 @@ ENDFIELD_TO_RE4_MAP = {
     "eyeLf01Joint": "L_I_EyeCorner", "faceLfIrisJoint": "Head.006", "faceRtIrisJoint": "Head.007",
 }
 
+VRC_TO_RE4_MAP = {
+    # 躯干
+    "Hips": "Hip", "Spine": "Spine_0", "Chest": "Spine_2", 
+    "Neck": "Neck_1", "Head": "Head",
+    
+    # 左臂
+    "Shoulder_L": "L_Shoulder", "UpperArm_L": "L_UpperArm", 
+    "LowerArm_L": "L_Forearm", "Hand_L": "L_Hand",
+    
+    # 右臂
+    "Shoulder_R": "R_Shoulder", "UpperArm_R": "R_UpperArm", 
+    "LowerArm_R": "R_Forearm", "Hand_R": "R_Hand",
+    
+    # 腿部
+    "UpperLeg_L": "L_Thigh", "LowerLeg_L": "L_Shin", 
+    "Foot_L": "L_Foot", "Toe_L": "L_Toe",
+    "UpperLeg_R": "R_Thigh", "LowerLeg_R": "R_Shin", 
+    "Foot_R": "R_Foot", "Toe_R": "R_Toe",
+    
+    # 手指 (左)
+    "ThumbProximal_L": "L_Thumb1", "ThumbIntermediate_L": "L_Thumb2", "ThumbDistal_L": "L_Thumb3",
+    "IndexProximal_L": "L_IndexF1", "IndexIntermediate_L": "L_IndexF2", "IndexDistal_L": "L_IndexF3",
+    "MiddleProximal_L": "L_MiddleF1", "MiddleIntermediate_L": "L_MiddleF2", "MiddleDistal_L": "L_MiddleF3",
+    "RingProximal_L": "L_RingF1", "RingIntermediate_L": "L_RingF2", "RingDistal_L": "L_RingF3",
+    "LittleProximal_L": "L_PinkyF1", "LittleIntermediate_L": "L_PinkyF2", "LittleDistal_L": "L_PinkyF3",
+    
+    # 手指 (右)
+    "ThumbProximal_R": "R_Thumb1", "ThumbIntermediate_R": "R_Thumb2", "ThumbDistal_R": "R_Thumb3",
+    "IndexProximal_R": "R_IndexF1", "IndexIntermediate_R": "R_IndexF2", "IndexDistal_R": "R_IndexF3",
+    "MiddleProximal_R": "R_MiddleF1", "MiddleIntermediate_R": "R_MiddleF2", "MiddleDistal_R": "R_MiddleF3",
+    "RingProximal_R": "R_RingF1", "RingIntermediate_R": "R_RingF2", "RingDistal_R": "R_RingF3",
+    "LittleProximal_R": "R_PinkyF1", "LittleIntermediate_R": "R_PinkyF2", "LittleDistal_R": "R_PinkyF3",
+}
+
 # ==========================================
 # 假骨工具 (FakeBone) 数据
 # ==========================================

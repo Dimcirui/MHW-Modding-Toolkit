@@ -179,12 +179,14 @@ class MHW_PT_MainPanel(bpy.types.Panel):
             
             col = box.column(align=True)
             col.label(text="转换工具:", icon='MOD_VERTEX_WEIGHT')
+            col.operator("re4.vrc_snap", text="RE4 吸附到 VRC", icon='SNAP_ON') 
+            col.separator()
             col.operator("re4.mhwi_rename", text="MHWI -> RE4 重命名", icon='FONT_DATA')
             col.operator("re4.endfield_convert", text="Endfield -> RE4 权重转换", icon='MOD_VERTEX_WEIGHT')
             
             layout.separator()
             
-            # --- 假骨与对齐 (图标修正版) ---
+            # --- 假骨与对齐 ---
             box_fake = layout.box()
             box_fake.label(text="假骨与对齐 (FakeBone)", icon='BONE_DATA')
             

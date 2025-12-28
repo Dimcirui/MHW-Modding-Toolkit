@@ -310,12 +310,100 @@ class RE4_OT_AlignBones_Pos(bpy.types.Operator):
         bpy.ops.object.mode_set(mode='OBJECT')
         self.report({'INFO'}, f"位置对齐了 {count} 根骨骼")
         return {'FINISHED'}
+    
+class RE4_OT_VRC_Snap(bpy.types.Operator):
+    """将 RE4 骨架吸附到 VRChat 骨架位置 (基于 VRC->MHW->RE4 映射链)"""
+    bl_idname = "re4.vrc_snap"
+    bl_label = "RE4 吸附到 VRC"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        active_obj = context.active_object
+        selected = [o for o in context.selected_objects if o.type == 'ARMATURE']
+        
+        # 基础检查
+        if not active_obj or len(selected) != 2:
+            self.report({'ERROR'}, "请选择: VRC骨架(源) -> Shift+RE4骨架(目标)")
+            return {'CANCELLED'}
+            
+        target_arm = active_obj # RE4 (Active)
+        source_arm = [o for o in selected if o != target_arm][0] # VRC (Source)
+        
+        # 1. 准备数据 (物体模式)
+        if context.mode != 'OBJECT': 
+            bpy.ops.object.mode_set(mode='OBJECT')
+        context.view_layer.update()
+        
+        # 获取源 (VRC) 的世界坐标数据
+        # 自动探测 VRC 骨骼前缀 (有些 VRC 模型骨骼叫 Mixamorig:Hips)
+        # 这里做一个简单的名字映射，去掉前缀
+        vrc_world_data = {}
+        s_mat = source_arm.matrix_world
+        
+        for b in source_arm.data.bones:
+            # 存两个版本：原名 和 去掉前缀的短名
+            vrc_world_data[b.name] = s_mat @ b.head_local.copy()
+            if ":" in b.name:
+                short_name = b.name.split(":")[-1]
+                vrc_world_data[short_name] = s_mat @ b.head_local.copy()
+            
+        # 2. 编辑模式操作 (RE4)
+        context.view_layer.objects.active = target_arm
+        bpy.ops.object.mode_set(mode='EDIT')
+        edit_bones = target_arm.data.edit_bones
+        t_mat_inv = target_arm.matrix_world.inverted()
+        
+        count = 0
+        
+        # 遍历映射表
+        for vrc_name, re4_name in data_maps.VRC_TO_RE4_MAP.items():
+            # 检查源是否存在
+            if vrc_name not in vrc_world_data:
+                continue
+                
+            # 检查目标是否存在
+            t_bone = edit_bones.get(re4_name)
+            if not t_bone:
+                continue
+                
+            try:
+                src_pos = vrc_world_data[vrc_name]
+                
+                # 计算新位置 (世界转本地)
+                new_head = t_mat_inv @ src_pos
+                old_head = t_bone.head.copy()
+                
+                # 移动骨骼 (断开连接以允许自由移动)
+                t_bone.use_connect = False
+                
+                # 保持原骨骼长度和方向，只移动头部位置
+                orig_vec = t_bone.tail - t_bone.head
+                t_bone.head = new_head
+                t_bone.tail = new_head + orig_vec
+                
+                # 子级跟随移动 (防止身体拉扯)
+                offset = new_head - old_head
+                bone_utils.propagate_movement(t_bone, offset)
+                
+                count += 1
+            except Exception as e:
+                print(f"Error aligning {re4_name}: {e}")
+        
+        bpy.ops.object.mode_set(mode='OBJECT')
+        
+        if count > 0:
+            self.report({'INFO'}, f"成功吸附 {count} 根骨骼到 VRC 位置")
+            return {'FINISHED'}
+        else:
+            self.report({'WARNING'}, "未找到匹配骨骼，请检查 VRC 骨架命名是否标准")
+            return {'CANCELLED'}
 
 classes = [
     RE4_OT_MHWI_Rename, RE4_OT_Endfield_Convert,
     RE4_OT_FakeBody_Process, RE4_OT_FakeFingers_Process,
     RE4_OT_FakeBody_Merge, RE4_OT_FakeFingers_Merge,
-    RE4_OT_AlignBones, RE4_OT_AlignBones_Pos
+    RE4_OT_AlignBones, RE4_OT_AlignBones_Pos,
+    RE4_OT_VRC_Snap
 ]
 
 def register():
