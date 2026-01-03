@@ -79,84 +79,8 @@ class MHWILDS_OT_TPoseConvert(bpy.types.Operator):
         
         self.report({'INFO'}, f"MHWilds -> MHWI T-Pose 转换成功 (处理了 {len(meshes)} 个网格)")
         return {'FINISHED'}
-    
-class MHWILDS_OT_Endfield_Snap(bpy.types.Operator):
-    """根据映射表将 Endfield 骨骼位置对齐到 MHWilds (位置只读，保留原方向)"""
-    bl_idname = "mhwilds.endfield_snap"
-    bl_label = "Endfield -> MHWs 骨骼对齐"
-    bl_options = {'REGISTER', 'UNDO'}
 
-    def execute(self, context):
-        active_obj = context.active_object
-        selected_objects = [obj for obj in context.selected_objects if obj.type == 'ARMATURE']
-        
-        if len(selected_objects) != 2 or not active_obj:
-            self.report({'ERROR'}, "请选择两个骨架 (先选参考源，后选目标/活动骨架)")
-            return {'CANCELLED'}
-
-        target_armature = active_obj # B (MHWs/Endfield)
-        source_armature = [obj for obj in selected_objects if obj != target_armature][0] # A (参考源)
-        
-        bpy.ops.object.mode_set(mode='EDIT')
-        
-        source_bones = source_armature.data.bones
-        target_edit_bones = target_armature.data.edit_bones
-        
-        # 构建 B -> A 的映射字典
-        # 列表格式是 [A, B]，我们要让 B 找 A，所以 key 是 B，value 是 A
-        bone_map = {}
-        for pair in data_maps.ENDFIELD_SNAP_MAP:
-            src_name = pair[0] # A
-            tgt_name = pair[1] # B
-            bone_map[tgt_name] = src_name
-            
-        aligned_count = 0
-        
-        try:
-            for t_bone in target_edit_bones:
-                b_name = t_bone.name
-                
-                if b_name in bone_map:
-                    a_name = bone_map[b_name]
-                    
-                    if a_name in source_bones:
-                        s_bone = source_bones[a_name]
-                        
-                        # 计算
-                        orig_vec = t_bone.tail - t_bone.head
-                        orig_len = orig_vec.length
-                        if orig_len == 0: continue
-                        
-                        orig_dir = orig_vec.normalized()
-                        
-                        # 坐标转换
-                        s_matrix = source_armature.matrix_world
-                        s_head_world = s_matrix @ s_bone.head_local
-                        
-                        t_matrix_inv = target_armature.matrix_world.inverted()
-                        new_head_local = t_matrix_inv @ s_head_world
-                        
-                        # 应用
-                        t_bone.head = new_head_local
-                        t_bone.tail = new_head_local + (orig_dir * orig_len)
-                        
-                        aligned_count += 1
-                        
-        except Exception as e:
-            self.report({'ERROR'}, f"执行出错: {e}")
-            bpy.ops.object.mode_set(mode='OBJECT')
-            return {'CANCELLED'}
-            
-        bpy.ops.object.mode_set(mode='OBJECT')
-        
-        if aligned_count > 0:
-            self.report({'INFO'}, f"成功对齐 {aligned_count} 根骨骼")
-        else:
-            self.report({'WARNING'}, "未找到任何匹配骨骼")
-            
-        return {'FINISHED'}
-
-classes = [MHWILDS_OT_TPoseConvert, MHWILDS_OT_Endfield_Snap]
+classes = [MHWILDS_OT_TPoseConvert,]
 
 def register():
     for cls in classes:

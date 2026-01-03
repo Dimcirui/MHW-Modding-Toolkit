@@ -269,42 +269,18 @@ class MHW_PT_MainPanel(bpy.types.Panel):
             box.label(text="MHWI Tools", icon='ARMATURE_DATA')
             col = box.column(align=True)
             col.operator("mhwi.align_non_physics", text="对齐非物理骨骼", icon='BONE_DATA')
-            
-            col.separator()
-            col.label(text="Legacy Tools:")
-            row = col.row(align=True)
-            row.operator("mhwi.vrc_rename", text="VRC重命名", icon='GROUP_VERTEX')
-            row.operator("mhwi.vrc_snap", text="VRC吸附", icon='SNAP_ON')
-            
-            col.separator()
-            col.operator("mhwi.endfield_merge", text="Endfield 一键转换", icon='MOD_VERTEX_WEIGHT')
-            col.operator("mhwi.mmd_snap", text="MMD 吸附", icon='IMPORT')
 
         # --- MHW Wilds ---
         if settings.show_mhws:
             box = layout.box()
             box.label(text="MHWilds Tools", icon='WORLD')
             box.operator("mhwilds.tpose_convert", text="转为 MHWI T-Pose", icon='ARMATURE_DATA')
-            box.operator("mhwilds.endfield_snap", text="Endfield -> MHWs 对齐", icon='SNAP_ON')
              
         # --- RE4 ---
         if settings.show_re4:
             box = layout.box()
             box.label(text="RE4 Tools", icon='GHOST_ENABLED')
-            
-            col = box.column(align=True)
-            col.label(text="VRC -> RE4:", icon='IMPORT')
-            row = col.row(align=True)
-            row.operator("re4.vrc_snap", text="1. 骨架吸附", icon='SNAP_ON') 
-            row.operator("re4.vrc_vg_convert", text="2. 权重重命名", icon='GROUP_VERTEX')
-            
-            col.separator()
-            col.label(text="其他转换:", icon='MOD_VERTEX_WEIGHT')
-            col.operator("re4.mhwi_rename", text="MHWI -> RE4 重命名", icon='FONT_DATA')
-            col.operator("re4.endfield_convert", text="Endfield -> RE4 权重转换", icon='MOD_VERTEX_WEIGHT')
-            
-            layout.separator()
-            
+
             box_fake = layout.box()
             box_fake.label(text="假骨与对齐 (FakeBone)", icon='BONE_DATA')
             col_fake = box_fake.column(align=True)
