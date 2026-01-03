@@ -48,4 +48,3 @@ Specialized tools for tasks that cannot be handled by simple mapping.
 1.  Download the **ZIP** file from the Releases page.
 2.  In Blender, go to `Edit > Preferences > Add-ons`.
 3.  Click **Install**, select the ZIP, and enable **Modding Toolkit**.
-4.  **Update Check**: You can check for new versions directly within the addon panel.
