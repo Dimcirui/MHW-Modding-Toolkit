@@ -13,13 +13,13 @@
     "head": { "main": ["Head", "頭"], "aux": [] },
 
     "clavicle_L": { "main": ["Left shoulder", "肩.L"], "aux": [] },
-    "upperarm_L": { "main": ["Left arm", "腕.L"], "aux": ["腕捩.R", "腕捩1.R", "腕捩2.R", "腕捩3.R"] },
-    "forearm_L": { "main": ["Left elbow", "ひじ.L"], "aux": ["zHandTwist_L", "手捩.L", "手捩1.R", "手捩2.R", "手捩3.R"] },
+    "upperarm_L": { "main": ["Left arm", "腕.L"], "aux": ["腕捩.L", "腕捩1.L", "腕捩2.L", "腕捩3.L"] },
+    "forearm_L": { "main": ["Left elbow", "ひじ.L"], "aux": ["zHandTwist_L", "手捩.L", "手捩1.L", "手捩2.L", "手捩3.L"] },
     "hand_L": { "main": ["Left wrist", "手首.L"], "aux": [] },
 
     "clavicle_R": { "main": ["Right shoulder", "肩.R"], "aux": [] },
-    "upperarm_R": { "main": ["Right arm", "腕.R"], "aux": ["腕捩.L", "腕捩1.L", "腕捩2.L", "腕捩3.L"] },
-    "forearm_R": { "main": ["Right elbow", "ひじ.R"], "aux": ["zHandTwist_R", "手捩.R", "手捩1.L", "手捩2.L", "手捩3.L"] },
+    "upperarm_R": { "main": ["Right arm", "腕.R"], "aux": ["腕捩.R", "腕捩1.R", "腕捩2.R", "腕捩3.R"] },
+    "forearm_R": { "main": ["Right elbow", "ひじ.R"], "aux": ["zHandTwist_R", "手捩.R", "手捩1.R", "手捩2.R", "手捩3.R"] },
     "hand_R": { "main": ["Right wrist", "手首.R"], "aux": [] },
 
     "thigh_L": { "main": ["Left leg", "足D.L"], "aux": [] },
