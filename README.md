@@ -43,7 +43,7 @@ Specialized tools for tasks that cannot be handled by simple mapping.
 
 ---
 
-## Installation & Update
+## Installation
 
 1.  Download the **ZIP** file from the Releases page.
 2.  In Blender, go to `Edit > Preferences > Add-ons`.
