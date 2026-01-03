@@ -1,6 +1,8 @@
 import bpy
 from ...core import bone_utils
 from . import data_maps
+from .core.bone_mapper import BoneMapManager, STANDARD_BONE_NAMES
+from .core import weight_utils
 
 # ==========================================
 # 1. 对齐 MHWI 非物理骨骼
@@ -304,6 +306,76 @@ class MHWI_OT_MMDSnap(bpy.types.Operator):
         bpy.ops.object.mode_set(mode='OBJECT')
         self.report({'INFO'}, "MMD 吸附完成")
         return {'FINISHED'}
+    
+class MHWI_OT_ApplyStandardX(bpy.types.Operator):
+    """执行标准化 X 流程：根据预设合并权重、删除辅助骨并重命名为主骨"""
+    bl_idname = "mhwi.apply_standard_x"
+    bl_label = "1. 标准化重命名 (X)"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        settings = context.scene.mhw_suite_settings # 使用你定义的 settings
+        arm_obj = context.active_object
+        
+        if not arm_obj or arm_obj.type != 'ARMATURE':
+            self.report({'ERROR'}, "请先选中一个骨架")
+            return {'CANCELLED'}
+
+        # 1. 实例化加载器并读取 X 预设
+        mapper = BoneMapManager()
+        if not mapper.load_preset(settings.import_preset_enum, is_import_x=True):
+            self.report({'ERROR'}, f"无法加载预设: {settings.import_preset_enum}")
+            return {'CANCELLED'}
+
+        # 2. 预分析 (锁定哪些骨头要变，哪些要并)
+        analysis = {} # { standard_key: (main_bone_name, [aux_bone_names]) }
+        for std_key in STANDARD_BONE_NAMES:
+            main, auxs = mapper.get_matches_for_standard(arm_obj, std_key)
+            if main:
+                analysis[std_key] = (main, auxs)
+
+        if not analysis:
+            self.report({'WARNING'}, "当前骨架与所选预设没有匹配项")
+            return {'CANCELLED'}
+
+        # 3. 权重合并阶段 (需要在 OBJECT 模式下对 Mesh 进行操作)
+        # 找到所有受此骨架影响的 Mesh
+        meshes = [o for o in bpy.data.objects if o.type == 'MESH' and o.find_armature() == arm_obj]
+        
+        original_mode = context.mode
+        bpy.ops.object.mode_set(mode='OBJECT')
+        
+        for mesh_obj in meshes:
+            for std_key, (main_name, aux_list) in analysis.items():
+                if aux_list:
+                    # 将辅助骨的权重合并给主骨
+                    weight_utils.merge_vgroups_for_mapping(mesh_obj, main_name, aux_list)
+
+        # 4. 骨骼重命名与清理阶段 (需要在 EDIT 模式下操作)
+        bpy.ops.object.mode_set(mode='EDIT')
+        edit_bones = arm_obj.data.edit_bones
+        
+        rename_count = 0
+        deleted_count = 0
+
+        # 为了防止改名冲突，我们先统一收集所有要操作的动作
+        for std_key, (main_name, aux_list) in analysis.items():
+            if main_name in edit_bones:
+                # 重命名主骨为标准名 (如 Bip001_L_Arm -> upperarm_L)
+                edit_bones[main_name].name = std_key
+                rename_count += 1
+            
+            # 删除辅助骨 (因为权重已经并入主骨，这些骨头现在是废骨)
+            for aux_name in aux_list:
+                if aux_name in edit_bones:
+                    edit_bones.remove(edit_bones[aux_name])
+                    deleted_count += 1
+
+        # 切回原始模式
+        bpy.ops.object.mode_set(mode=original_mode)
+        
+        self.report({'INFO'}, f"标准化完成：重命名 {rename_count} 根，清理 {deleted_count} 根辅助骨")
+        return {'FINISHED'}
 
 # 注册所有类
 classes = [
@@ -311,7 +383,8 @@ classes = [
     MHWI_OT_VRC_Rename, 
     MHWI_OT_VRC_Snap,
     MHWI_OT_EndfieldMerge,
-    MHWI_OT_MMDSnap
+    MHWI_OT_MMDSnap,
+    MHWI_OT_ApplyStandardX,
 ]
 
 def register():

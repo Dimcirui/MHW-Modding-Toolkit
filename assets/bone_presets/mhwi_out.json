@@ -1,0 +1,68 @@
+{
+  "preset_info": {
+    "name": "Monster Hunter World: Iceborne",
+    "game_code": "MHWI",
+    "type": "Y_PRESET",
+    "version": "1.1",
+    "description": "Unified mapping for MHWI. Supports primary bone renaming and auxiliary weight merging for original MH models."
+  },
+  "mappings": {
+    "pelvis": { "main": ["MhBone_013"], "aux": [] },
+    "spine_01": { "main": ["MhBone_001"], "aux": [] },
+    "spine_02": { "main": ["MhBone_002"], "aux": [] },
+    "neck": { "main": ["MhBone_003"], "aux": ["MhBone_254"] },
+    "head": { "main": ["MhBone_004"], "aux": [] },
+
+    "clavicle_L": { "main": ["MhBone_005"], "aux": [] },
+    "upperarm_L": { "main": ["MhBone_006"], "aux": ["MhBone_070", "MhBone_080"] },
+    "forearm_L": { "main": ["MhBone_007"], "aux": ["MhBone_071", "MhBone_081"] },
+    "hand_L": { "main": ["MhBone_008"], "aux": ["MhBone_030", "MhBone_040"] },
+
+    "clavicle_R": { "main": ["MhBone_009"], "aux": [] },
+    "upperarm_R": { "main": ["MhBone_010"], "aux": ["MhBone_072", "MhBone_082"] },
+    "forearm_R": { "main": ["MhBone_011"], "aux": ["MhBone_073", "MhBone_083"] },
+    "hand_R": { "main": ["MhBone_012"], "aux": ["MhBone_047", "MhBone_057"] },
+
+    "thigh_L": { "main": ["MhBone_014"], "aux": ["MhBone_074"] },
+    "shin_L": { "main": ["MhBone_015"], "aux": ["MhBone_075"] },
+    "foot_L": { "main": ["MhBone_016"], "aux": ["MhBone_084"] },
+    "toe_L": { "main": ["MhBone_017"], "aux": [] },
+
+    "thigh_R": { "main": ["MhBone_018"], "aux": ["MhBone_076"] },
+    "shin_R": { "main": ["MhBone_019"], "aux": ["MhBone_077"] },
+    "foot_R": { "main": ["MhBone_020"], "aux": ["MhBone_085"] },
+    "toe_R": { "main": ["MhBone_021"], "aux": [] },
+
+    "thumb_01_L": { "main": ["MhBone_031"], "aux": [] },
+    "thumb_02_L": { "main": ["MhBone_032"], "aux": [] },
+    "thumb_03_L": { "main": ["MhBone_033"], "aux": [] },
+    "index_01_L": { "main": ["MhBone_034"], "aux": [] },
+    "index_02_L": { "main": ["MhBone_035"], "aux": [] },
+    "index_03_L": { "main": ["MhBone_036"], "aux": [] },
+    "middle_01_L": { "main": ["MhBone_037"], "aux": [] },
+    "middle_02_L": { "main": ["MhBone_038"], "aux": [] },
+    "middle_03_L": { "main": ["MhBone_039"], "aux": [] },
+    "ring_01_L": { "main": ["MhBone_041"], "aux": [] },
+    "ring_02_L": { "main": ["MhBone_042"], "aux": [] },
+    "ring_03_L": { "main": ["MhBone_043"], "aux": [] },
+    "pinky_01_L": { "main": ["MhBone_044"], "aux": [] },
+    "pinky_02_L": { "main": ["MhBone_045"], "aux": [] },
+    "pinky_03_L": { "main": ["MhBone_046"], "aux": [] },
+
+    "thumb_01_R": { "main": ["MhBone_048"], "aux": [] },
+    "thumb_02_R": { "main": ["MhBone_049"], "aux": [] },
+    "thumb_03_R": { "main": ["MhBone_050"], "aux": [] },
+    "index_01_R": { "main": ["MhBone_051"], "aux": [] },
+    "index_02_R": { "main": ["MhBone_052"], "aux": [] },
+    "index_03_R": { "main": ["MhBone_053"], "aux": [] },
+    "middle_01_R": { "main": ["MhBone_054"], "aux": [] },
+    "middle_02_R": { "main": ["MhBone_055"], "aux": [] },
+    "middle_03_R": { "main": ["MhBone_056"], "aux": [] },
+    "ring_01_R": { "main": ["MhBone_058"], "aux": [] },
+    "ring_02_R": { "main": ["MhBone_059"], "aux": [] },
+    "ring_03_R": { "main": ["MhBone_060"], "aux": [] },
+    "pinky_01_R": { "main": ["MhBone_061"], "aux": [] },
+    "pinky_02_R": { "main": ["MhBone_062"], "aux": [] },
+    "pinky_03_R": { "main": ["MhBone_063"], "aux": [] }
+  }
+}

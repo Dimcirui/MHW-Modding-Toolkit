@@ -1,11 +1,27 @@
 import bpy
-from ..core import bone_utils, weight_utils
+from ..core import bone_utils, weight_utils, ui_config
+from ..core.bone_mapper import BoneMapManager
 
 class MHW_PT_SuiteSettings(bpy.types.PropertyGroup):
     show_mhwi: bpy.props.BoolProperty(name="MHWI", default=True)
-    show_mhws: bpy.props.BoolProperty(name="MHWs", default=False)
+    show_mhws: bpy.props.BoolProperty(name="Wilds", default=False)
     show_re4: bpy.props.BoolProperty(name="RE4", default=False)
     
+    # --- 预设选择 ---
+    import_preset_enum: bpy.props.EnumProperty(
+        name="来源预设 (X)",
+        description="从 assets/import_presets 动态加载",
+        items=get_import_presets_callback # 绑定回调
+    )
+    
+    target_preset_enum: bpy.props.EnumProperty(
+        name="目标游戏 (Y)",
+        description="从 assets/bone_presets 动态加载",
+        items=get_target_presets_callback # 绑定回调
+    )
+    
+    show_mapping_details: bpy.props.BoolProperty(name="显示映射细节", default=False)
+
 class MHW_OT_GeneralTools(bpy.types.Operator):
     """通用工具集合 Operator"""
     bl_idname = "mhw.general_tools"
@@ -136,6 +152,7 @@ class MHW_OT_GeneralTools(bpy.types.Operator):
 
         return {'FINISHED'}
 
+mapper = BoneMapManager()
 class MHW_PT_MainPanel(bpy.types.Panel):
     bl_label = "MOD Toolkit"
     bl_idname = "MHW_PT_main"
@@ -165,7 +182,7 @@ class MHW_PT_MainPanel(bpy.types.Panel):
         
         # 3. 游戏专用栏
         if settings.show_mhwi:
-            self.draw_mhwi_tools(layout)
+            self.draw_mhwi_standard_suite(layout, context, settings)
             
         if settings.show_mhws:
             box = layout.box()
@@ -213,22 +230,67 @@ class MHW_PT_MainPanel(bpy.types.Panel):
             row3.operator("re4.align_bones_full", text="完全对齐", icon='SNAP_ON')
             row3.operator("re4.align_bones_pos", text="仅对齐位置", icon='SNAP_VERTEX')
 
-    def draw_mhwi_tools(self, layout):
+    def draw_mhwi_standard_suite(self, layout, context, settings):
+        """MHWI 工具栏"""
+        arm_obj = context.active_object
+        
         box = layout.box()
-        box.label(text="MHWI Tools", icon='ARMATURE_DATA')
+        box.label(text="MHWI 标准转换套件", icon='ARMATURE_DATA')
+        
+        # --- 预设选择区 ---
         col = box.column(align=True)
-        col.operator("mhwi.align_non_physics", text="对齐非物理骨骼", icon='BONE_DATA')
-        col.separator()
-        col.label(text="VRChat 转换:")
+        col.prop(settings, "import_preset_enum", icon='IMPORT')
+        col.prop(settings, "target_preset_enum", icon='EXPORT')
+        
+        # --- 核心执行按钮 ---
         row = col.row(align=True)
-        row.operator("mhwi.vrc_rename", text="重命名", icon='GROUP_VERTEX')
-        row.operator("mhwi.vrc_snap", text="骨骼吸附", icon='SNAP_ON')
+        row.scale_y = 1.2
+        # 这两个 Operator 我们之后实现
+        row.operator("mhwi.apply_standard_x", text="1. 合并权重并标准化", icon='MOD_VERTEX_WEIGHT')
+        row.operator("mhwi.apply_standard_y", text="2. 转换为游戏骨名", icon='SORT_ALPHA')
+
+        # --- 三级映射预览列表 ---
         col.separator()
-        col.label(text="Endfield 转换:")
-        col.operator("mhwi.endfield_merge", text="一键转 MHWI", icon='MOD_VERTEX_WEIGHT')
-        col.separator()
-        col.label(text="MMD 转换:")
-        col.operator("mhwi.mmd_snap", text="MMD 吸附 (日/英)", icon='IMPORT')
+        row = col.row()
+        row.prop(settings, "show_mapping_details", 
+                 icon='TRIA_DOWN' if settings.show_mapping_details else 'TRIA_RIGHT', 
+                 emboss=False)
+        
+        if settings.show_mapping_details:
+            if not arm_obj or arm_obj.type != 'ARMATURE':
+                col.label(text="未选中骨架", icon='ERROR')
+                return
+
+            # 加载当前选中的 X 预设用于预览
+            mapper.load_preset(settings.import_preset_enum, is_import_x=True)
+            
+            # 开始渲染三级结构
+            main_box = col.box()
+            for group_name, group_data in UI_HIERARCHY.items():
+                # Level 1: 大组
+                g_box = main_box.box()
+                g_row = g_box.row()
+                g_row.label(text=group_name, icon=group_data['icon'])
+                
+                # Level 2: 子类
+                for sub_name, bones in group_data['subsections'].items():
+                    sub_col = g_box.column(align=True)
+                    sub_col.label(text=sub_name)
+                    
+                    # Level 3: 映射行 (Mapping Row)
+                    for std_key in bones:
+                        main_bone, aux_list = mapper.get_matches_for_standard(arm_obj, std_key)
+                        
+                        m_row = sub_col.row(align=True)
+                        m_row.label(text=f"  {std_key}") # 缩进显示
+                        
+                        if main_bone:
+                            status_text = f"{main_bone}"
+                            if aux_list:
+                                status_text += f" (+{len(aux_list)})"
+                            m_row.label(text=status_text, icon='CHECKMARK')
+                        else:
+                            m_row.label(text="缺失", icon='CANCEL')
 
 # ==========================================
 # 注册/注销

@@ -1,0 +1,173 @@
+{
+  "preset_info": {
+    "name": "Arknights: Endfield",
+    "type": "X_PRESET",
+    "version": "1.0",
+    "description": "Auto-converted from Endfield flat map. Merges twists and helpers."
+  },
+  "mappings": {
+    "_comment_body": "=== 躯干 ===",
+    "pelvis": {
+      "main": ["Pelvis"],
+      "aux": []
+    },
+    "spine_01": {
+      "main": ["Spine", "Spine1"],
+      "aux": []
+    },
+    "spine_02": {
+      "main": ["Spine2"],
+      "aux": []
+    },
+    "neck": {
+      "main": ["Neck"],
+      "aux": []
+    },
+    "head": {
+      "main": ["Head"],
+      "aux": [
+        "head_dn_jnt", "head_mid_jnt", "head_up_jnt", 
+        "linejoint", "lineJoint", "line_toothJoint", 
+        "NoseMd01Joint", "jawJoint", 
+        "faceLfCheekOtUpJoint", "faceLfCheekOtInJoint", 
+        "faceRtCheekOtInJoint", "faceRtCheekOtUpJoint"
+      ]
+    },
+
+    "_comment_arm_l": "=== 左臂 ===",
+    "clavicle_L": {
+      "main": ["L_Clavicle"],
+      "aux": []
+    },
+    "upperarm_L": {
+      "main": ["L_UpperArm"],
+      "aux": [
+        "LUpArmTwist", "LUpArmTwist1", 
+        "L_UpperArm_ty_minus", "L_UpperArm_ty_plus", 
+        "L_UpperArm_tz_minus", "L_UpperArm_tz_plus"
+      ]
+    },
+    "forearm_L": {
+      "main": ["L_Forearm"],
+      "aux": [
+        "L_ForeTwist", "L_ForeTwist1", 
+        "L_Forearm_ty_minus", "L_Forearm_ty_plus"
+      ]
+    },
+    "hand_L": {
+      "main": ["L_Hand"],
+      "aux": [
+        "L_Hand_ty_minus", "L_Hand_ty_plus", 
+        "L_FingerTop1", "L_FingerTop2", "L_FingerTop3", "L_FingerTop4"
+      ]
+    },
+
+    "_comment_arm_r": "=== 右臂 ===",
+    "clavicle_R": {
+      "main": ["R_Clavicle"],
+      "aux": []
+    },
+    "upperarm_R": {
+      "main": ["R_UpperArm"],
+      "aux": [
+        "RUpArmTwist", "RUpArmTwist1", 
+        "R_UpperArm_ty_minus", "R_UpperArm_ty_plus", 
+        "R_UpperArm_tz_minus", "R_UpperArm_tz_plus"
+      ]
+    },
+    "forearm_R": {
+      "main": ["R_Forearm"],
+      "aux": [
+        "R_ForeTwist", "R_ForeTwist1", 
+        "R_Forearm_ty_minus", "R_Forearm_ty_plus"
+      ]
+    },
+    "hand_R": {
+      "main": ["R_Hand"],
+      "aux": [
+        "R_Hand_ty_minus", "R_Hand_ty_plus", 
+        "R_FingerTop1", "R_FingerTop2", "R_FingerTop3", "R_FingerTop4"
+      ]
+    },
+
+    "_comment_leg_l": "=== 左腿 ===",
+    "thigh_L": {
+      "main": ["L_Thigh"],
+      "aux": [
+        "LThighTwist", "LThighTwist1", 
+        "L_Thigh_tz_minus", "L_Thigh_ty_plus", "L_Thigh_ty_minus", 
+        "L_Calf_ty_minus"
+      ]
+    },
+    "shin_L": {
+      "main": ["L_Calf"],
+      "aux": ["LCalfTwist", "LCalfTwist1",
+              "L_Calf_ty_plus"
+      ]
+    },
+    "foot_L": {
+      "main": ["L_Foot"],
+      "aux": ["L_Foot_ty_minus", "L_Foot_ty_plus"]
+    },
+    "toe_L": {
+      "main": ["L_Toe0"],
+      "aux": []
+    },
+
+    "_comment_leg_r": "=== 右腿 ===",
+    "thigh_R": {
+      "main": ["R_Thigh"],
+      "aux": [
+        "RThighTwist", "RThighTwist1", 
+        "R_Thigh_tz_minus", "R_Thigh_ty_plus", "R_Thigh_ty_minus", 
+        "R_Calf_ty_minus"
+      ]
+    },
+    "shin_R": {
+      "main": ["R_Calf"],
+      "aux": ["RCalfTwist", "RCalfTwist1",
+              "R_Calf_ty_plus"
+      ]
+    },
+    "foot_R": {
+      "main": ["R_Foot"],
+      "aux": ["R_Foot_ty_minus", "R_Foot_ty_plus"]
+    },
+    "toe_R": {
+      "main": ["R_Toe0"],
+      "aux": []
+    },
+
+    "_comment_fingers": "=== 手指 ===",
+    "thumb_01_L": { "main": ["L_Finger0"], "aux": [] },
+    "thumb_02_L": { "main": ["L_Finger01"], "aux": [] },
+    "thumb_03_L": { "main": ["L_Finger02"], "aux": [] },
+    "index_01_L": { "main": ["L_Finger1"], "aux": [] },
+    "index_02_L": { "main": ["L_Finger11"], "aux": [] },
+    "index_03_L": { "main": ["L_Finger12"], "aux": [] },
+    "middle_01_L": { "main": ["L_Finger2"], "aux": [] },
+    "middle_02_L": { "main": ["L_Finger21"], "aux": [] },
+    "middle_03_L": { "main": ["L_Finger22"], "aux": [] },
+    "ring_01_L": { "main": ["L_Finger3"], "aux": [] },
+    "ring_02_L": { "main": ["L_Finger31"], "aux": [] },
+    "ring_03_L": { "main": ["L_Finger32"], "aux": [] },
+    "pinky_01_L": { "main": ["L_Finger4"], "aux": [] },
+    "pinky_02_L": { "main": ["L_Finger41"], "aux": [] },
+    "pinky_03_L": { "main": ["L_Finger42"], "aux": [] },
+    "thumb_01_R": { "main": ["R_Finger0"], "aux": [] },
+    "thumb_02_R": { "main": ["R_Finger01"], "aux": [] },
+    "thumb_03_R": { "main": ["R_Finger02"], "aux": [] },
+    "index_01_R": { "main": ["R_Finger1"], "aux": [] },
+    "index_02_R": { "main": ["R_Finger11"], "aux": [] },
+    "index_03_R": { "main": ["R_Finger12"], "aux": [] },
+    "middle_01_R": { "main": ["R_Finger2"], "aux": [] },
+    "middle_02_R": { "main": ["R_Finger21"], "aux": [] },
+    "middle_03_R": { "main": ["R_Finger22"], "aux": [] },
+    "ring_01_R": { "main": ["R_Finger3"], "aux": [] },
+    "ring_02_R": { "main": ["R_Finger31"], "aux": [] },
+    "ring_03_R": { "main": ["R_Finger32"], "aux": [] },
+    "pinky_01_R": { "main": ["R_Finger4"], "aux": [] },
+    "pinky_02_R": { "main": ["R_Finger41"], "aux": [] },
+    "pinky_03_R": { "main": ["R_Finger42"], "aux": [] }
+  }
+}

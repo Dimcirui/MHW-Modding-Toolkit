@@ -1,0 +1,67 @@
+{
+  "preset_info": {
+    "name": "Mikumiku Dance",
+    "type": "X_PRESET",
+    "version": "1.0",
+    "description": "Combined English and Japanese MMD bone names mapping."
+  },
+  "mappings": {
+    "pelvis": { "main": ["Hips", "下半身"], "aux": [] },
+    "spine_01": { "main": ["Spine", "上半身"], "aux": [] },
+    "spine_02": { "main": ["Chest", "上半身2"], "aux": [] },
+    "neck": { "main": ["Neck", "首"], "aux": [] },
+    "head": { "main": ["Head", "頭"], "aux": [] },
+
+    "clavicle_L": { "main": ["Left shoulder", "肩.L"], "aux": [] },
+    "upperarm_L": { "main": ["Left arm", "腕.L"], "aux": [] },
+    "forearm_L": { "main": ["Left elbow", "ひじ.L"], "aux": ["zHandTwist_L", "手捩.L"] },
+    "hand_L": { "main": ["Left wrist", "手首.L"], "aux": [] },
+
+    "clavicle_R": { "main": ["Right shoulder", "肩.R"], "aux": [] },
+    "upperarm_R": { "main": ["Right arm", "腕.R"], "aux": [] },
+    "forearm_R": { "main": ["Right elbow", "ひじ.R"], "aux": ["zHandTwist_R", "手捩.R"] },
+    "hand_R": { "main": ["Right wrist", "手首.R"], "aux": [] },
+
+    "thigh_L": { "main": ["Left leg", "足D.L"], "aux": [] },
+    "shin_L": { "main": ["Left knee", "ひざD.L"], "aux": [] },
+    "foot_L": { "main": ["Left ankle", "足首D.L"], "aux": [] },
+    "toe_L": { "main": ["Left toe", "足先EX.L"], "aux": [] },
+
+    "thigh_R": { "main": ["Right leg", "足D.R"], "aux": [] },
+    "shin_R": { "main": ["Right knee", "ひざD.R"], "aux": [] },
+    "foot_R": { "main": ["Right ankle", "足首D.R"], "aux": [] },
+    "toe_R": { "main": ["Right toe", "足先EX.R"], "aux": [] },
+
+    "thumb_01_L": { "main": ["Thumb0_L", "親指０.L"], "aux": [] },
+    "thumb_02_L": { "main": ["Thumb1_L", "親指１.L"], "aux": [] },
+    "thumb_03_L": { "main": ["Thumb2_L", "親指２.L"], "aux": [] },
+    "index_01_L": { "main": ["IndexFinger1_L", "人指１.L"], "aux": [] },
+    "index_02_L": { "main": ["IndexFinger2_L", "人指２.L"], "aux": [] },
+    "index_03_L": { "main": ["IndexFinger3_L", "人指３.L"], "aux": [] },
+    "middle_01_L": { "main": ["MiddleFinger1_L", "中指１.L"], "aux": [] },
+    "middle_02_L": { "main": ["MiddleFinger2_L", "中指２.L"], "aux": [] },
+    "middle_03_L": { "main": ["MiddleFinger3_L", "中指３.L"], "aux": [] },
+    "ring_01_L": { "main": ["RingFinger1_L", "薬指１.L"], "aux": [] },
+    "ring_02_L": { "main": ["RingFinger2_L", "薬指２.L"], "aux": [] },
+    "ring_03_L": { "main": ["RingFinger3_L", "薬指３.L"], "aux": [] },
+    "pinky_01_L": { "main": ["LittleFinger1_L", "小指１.L"], "aux": [] },
+    "pinky_02_L": { "main": ["LittleFinger2_L", "小指２.L"], "aux": [] },
+    "pinky_03_L": { "main": ["LittleFinger3_L", "小指３.L"], "aux": [] },
+
+    "thumb_01_R": { "main": ["Thumb0_R", "親指０.R"], "aux": [] },
+    "thumb_02_R": { "main": ["Thumb1_R", "親指１.R"], "aux": [] },
+    "thumb_03_R": { "main": ["Thumb2_R", "親指２.R"], "aux": [] },
+    "index_01_R": { "main": ["IndexFinger1_R", "人指１.R"], "aux": [] },
+    "index_02_R": { "main": ["IndexFinger2_R", "人指２.R"], "aux": [] },
+    "index_03_R": { "main": ["IndexFinger3_R", "人指３.R"], "aux": [] },
+    "middle_01_R": { "main": ["MiddleFinger1_R", "中指１.R"], "aux": [] },
+    "middle_02_R": { "main": ["MiddleFinger2_R", "中指２.R"], "aux": [] },
+    "middle_03_R": { "main": ["MiddleFinger3_R", "中指３.R"], "aux": [] },
+    "ring_01_R": { "main": ["RingFinger1_R", "薬指１.R"], "aux": [] },
+    "ring_02_R": { "main": ["RingFinger2_R", "薬指２.R"], "aux": [] },
+    "ring_03_R": { "main": ["RingFinger3_R", "薬指３.R"], "aux": [] },
+    "pinky_01_R": { "main": ["LittleFinger1_R", "小指１.R"], "aux": [] },
+    "pinky_02_R": { "main": ["LittleFinger2_R", "小指２.R"], "aux": [] },
+    "pinky_03_R": { "main": ["LittleFinger3_R", "小指３.R"], "aux": [] }
+  }
+}

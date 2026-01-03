@@ -1,0 +1,67 @@
+{
+  "preset_info": {
+    "name": "VRChat / Unity Humanoid",
+    "type": "X_PRESET",
+    "version": "1.1",
+    "description": "Standard Unity Humanoid mapping with preemptive main bone selection and auxiliary weight merging."
+  },
+  "mappings": {
+    "pelvis": { "main": ["Hips"], "aux": [] },
+    "spine_01": { "main": ["Spine"], "aux": [] },
+    "spine_02": { "main": ["Chest", "UpperChest"], "aux": [] },
+    "neck": { "main": ["Neck"], "aux": [] },
+    "head": { "main": ["Head"], "aux": ["Head_Adj", "Jaw"] },
+
+    "clavicle_L": { "main": ["Shoulder_L", "Left shoulder", "Shoulder.L"], "aux": [] },
+    "upperarm_L": { "main": ["UpperArm_L", "Left arm", "LeftUpperArm", "UpperArm.L"], "aux": ["UpperArm_twist_L"] },
+    "forearm_L": { "main": ["LowerArm_L", "Left elbow", "LeftLowerArm", "LowerArm.L"], "aux": ["LowerArm_twist_L", "LowerArm_Twist_L"] },
+    "hand_L": { "main": ["Hand_L", "Left wrist", "Hand.L"], "aux": [] },
+
+    "clavicle_R": { "main": ["Shoulder_R", "Right shoulder", "Shoulder.R"], "aux": [] },
+    "upperarm_R": { "main": ["UpperArm_R", "Right arm", "RightUpperArm", "UpperArm.R"], "aux": ["UpperArm_twist_R"] },
+    "forearm_R": { "main": ["LowerArm_R", "Right elbow", "RightLowerArm", "LowerArm.R"], "aux": ["LowerArm_twist_R", "LowerArm_Twist_R"] },
+    "hand_R": { "main": ["Hand_R", "Right wrist", "Hand.R"], "aux": [] },
+
+    "thigh_L": { "main": ["UpperLeg_L", "Left leg", "UpperLeg.L"], "aux": ["Hips_L"] },
+    "shin_L": { "main": ["LowerLeg_L", "Left knee", "LowerLeg.L"], "aux": [] },
+    "foot_L": { "main": ["Foot_L", "Left ankle", "Foot.L"], "aux": [] },
+    "toe_L": { "main": ["Toe_L", "Left toe", "Toe.L"], "aux": [] },
+
+    "thigh_R": { "main": ["UpperLeg_R", "Right leg", "UpperLeg.R"], "aux": ["Hips_R"] },
+    "shin_R": { "main": ["LowerLeg_R", "Right knee", "LowerLeg.R"], "aux": [] },
+    "foot_R": { "main": ["Foot_R", "Right ankle", "Foot.R"], "aux": [] },
+    "toe_R": { "main": ["Toe_R", "Right toe", "Toe.R"], "aux": [] },
+
+    "thumb_01_L": { "main": ["ThumbProximal_L", "Thumb0_L"], "aux": [] },
+    "thumb_02_L": { "main": ["ThumbIntermediate_L", "Thumb1_L"], "aux": [] },
+    "thumb_03_L": { "main": ["ThumbDistal_L", "Thumb2_L"], "aux": [] },
+    "index_01_L": { "main": ["IndexProximal_L", "Index1_L"], "aux": [] },
+    "index_02_L": { "main": ["IndexIntermediate_L", "Index2_L"], "aux": [] },
+    "index_03_L": { "main": ["IndexDistal_L", "Index3_L"], "aux": [] },
+    "middle_01_L": { "main": ["MiddleProximal_L", "Middle1_L"], "aux": [] },
+    "middle_02_L": { "main": ["MiddleIntermediate_L", "Middle2_L"], "aux": [] },
+    "middle_03_L": { "main": ["MiddleDistal_L", "Middle3_L"], "aux": [] },
+    "ring_01_L": { "main": ["RingProximal_L", "Ring1_L"], "aux": [] },
+    "ring_02_L": { "main": ["RingIntermediate_L", "Ring2_L"], "aux": [] },
+    "ring_03_L": { "main": ["RingDistal_L", "Ring3_L"], "aux": [] },
+    "pinky_01_L": { "main": ["LittleProximal_L", "Little1_L"], "aux": [] },
+    "pinky_02_L": { "main": ["LittleIntermediate_L", "Little2_L"], "aux": [] },
+    "pinky_03_L": { "main": ["LittleDistal_L", "Little3_L"], "aux": [] },
+
+    "thumb_01_R": { "main": ["ThumbProximal_R", "Thumb0_R"], "aux": [] },
+    "thumb_02_R": { "main": ["ThumbIntermediate_R", "Thumb1_R"], "aux": [] },
+    "thumb_03_R": { "main": ["ThumbDistal_R", "Thumb2_R"], "aux": [] },
+    "index_01_R": { "main": ["IndexProximal_R", "Index1_R"], "aux": [] },
+    "index_02_R": { "main": ["IndexIntermediate_R", "Index2_R"], "aux": [] },
+    "index_03_R": { "main": ["IndexDistal_R", "Index3_R"], "aux": [] },
+    "middle_01_R": { "main": ["MiddleProximal_R", "Middle1_R"], "aux": [] },
+    "middle_02_R": { "main": ["MiddleIntermediate_R", "Middle2_R"], "aux": [] },
+    "middle_03_R": { "main": ["MiddleDistal_R", "Middle3_R"], "aux": [] },
+    "ring_01_R": { "main": ["RingProximal_R", "Ring1_R"], "aux": [] },
+    "ring_02_R": { "main": ["RingIntermediate_R", "Ring2_R"], "aux": [] },
+    "ring_03_R": { "main": ["RingDistal_R", "Ring3_R"], "aux": [] },
+    "pinky_01_R": { "main": ["LittleProximal_R", "Little1_R"], "aux": [] },
+    "pinky_02_R": { "main": ["LittleIntermediate_R", "Little2_R"], "aux": [] },
+    "pinky_03_R": { "main": ["LittleDistal_R", "Little3_R"], "aux": [] }
+  }
+}

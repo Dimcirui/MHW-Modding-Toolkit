@@ -114,3 +114,40 @@ def find_bone_smart(bones, name):
             return b
             
     return None
+
+def get_preset_items(subdir):
+    """
+    通用函数：扫描指定子目录下的所有 .json 文件
+    subdir: "import_presets" 或 "bone_presets"
+    """
+    # 获取插件根目录
+    # 假设当前脚本位于 core/ 或 ui/ 目录下
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    root_dir = os.path.dirname(current_dir)
+    preset_dir = os.path.join(root_dir, "assets", subdir)
+    
+    items = []
+    
+    if not os.path.exists(preset_dir):
+        return [('NONE', "未找到文件夹", "请检查 assets 目录")]
+
+    files = [f for f in os.listdir(preset_dir) if f.endswith('.json')]
+    
+    for i, f in enumerate(files):
+        # identifier, name, description
+        # identifier 用文件名，name 去掉后缀
+        display_name = f.replace("_preset.json", "").replace(".json", "").upper()
+        items.append((f, display_name, f"加载 {f} 预设"))
+        
+    if not items:
+        return [('NONE', "无预设文件", "")]
+        
+    return items
+
+# --- 回调函数接口 ---
+
+def get_import_presets_callback(self, context):
+    return get_preset_items("import_presets")
+
+def get_target_presets_callback(self, context):
+    return get_preset_items("bone_presets")
