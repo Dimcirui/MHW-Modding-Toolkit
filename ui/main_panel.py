@@ -215,6 +215,8 @@ class MHW_PT_MainPanel(bpy.types.Panel):
             row = col.row(align=True)
             row.operator("modder.universal_snap", text="对齐骨骼", icon='SNAP_ON')
             
+            col.operator("modder.smart_graft", text="吸附物理骨骼", icon='BONE_DATA')
+            
             row = col.row(align=True)
             row.scale_y = 1.2
             row.operator("modder.direct_convert", text="重命名顶点组", icon='MOD_VERTEX_WEIGHT')
