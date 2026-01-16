@@ -1,0 +1,68 @@
+{
+  "preset_info": {
+    "name": "Monster Hunter World: Iceborne",
+    "game_code": "MHWI",
+    "type": "Y_PRESET",
+    "version": "1.1",
+    "description": "Unified mapping for MHWI. Supports primary bone renaming and auxiliary weight merging for original MH models."
+  },
+  "mappings": {
+    "pelvis": { "main": ["bonefunction_013"], "aux": [] },
+    "spine_01": { "main": ["bonefunction_001"], "aux": [] },
+    "spine_02": { "main": ["bonefunction_002"], "aux": [] },
+    "neck": { "main": ["bonefunction_003"], "aux": ["bonefunction_254"] },
+    "head": { "main": ["bonefunction_004"], "aux": [] },
+
+    "clavicle_L": { "main": ["bonefunction_005"], "aux": [] },
+    "upperarm_L": { "main": ["bonefunction_006"], "aux": ["bonefunction_070", "bonefunction_080"] },
+    "forearm_L": { "main": ["bonefunction_007"], "aux": ["bonefunction_071", "bonefunction_081"] },
+    "hand_L": { "main": ["bonefunction_008"], "aux": ["bonefunction_030", "bonefunction_040"] },
+
+    "clavicle_R": { "main": ["bonefunction_009"], "aux": [] },
+    "upperarm_R": { "main": ["bonefunction_010"], "aux": ["bonefunction_072", "bonefunction_082"] },
+    "forearm_R": { "main": ["bonefunction_011"], "aux": ["bonefunction_073", "bonefunction_083"] },
+    "hand_R": { "main": ["bonefunction_012"], "aux": ["bonefunction_047", "bonefunction_057"] },
+
+    "thigh_L": { "main": ["bonefunction_014"], "aux": ["bonefunction_074"] },
+    "shin_L": { "main": ["bonefunction_015"], "aux": ["bonefunction_075"] },
+    "foot_L": { "main": ["bonefunction_016"], "aux": ["bonefunction_084"] },
+    "toe_L": { "main": ["bonefunction_017"], "aux": [] },
+
+    "thigh_R": { "main": ["bonefunction_018"], "aux": ["bonefunction_076"] },
+    "shin_R": { "main": ["bonefunction_019"], "aux": ["bonefunction_077"] },
+    "foot_R": { "main": ["bonefunction_020"], "aux": ["bonefunction_085"] },
+    "toe_R": { "main": ["bonefunction_021"], "aux": [] },
+
+    "thumb_01_L": { "main": ["bonefunction_031"], "aux": [] },
+    "thumb_02_L": { "main": ["bonefunction_032"], "aux": [] },
+    "thumb_03_L": { "main": ["bonefunction_033"], "aux": [] },
+    "index_01_L": { "main": ["bonefunction_034"], "aux": [] },
+    "index_02_L": { "main": ["bonefunction_035"], "aux": [] },
+    "index_03_L": { "main": ["bonefunction_036"], "aux": [] },
+    "middle_01_L": { "main": ["bonefunction_037"], "aux": [] },
+    "middle_02_L": { "main": ["bonefunction_038"], "aux": [] },
+    "middle_03_L": { "main": ["bonefunction_039"], "aux": [] },
+    "ring_01_L": { "main": ["bonefunction_041"], "aux": [] },
+    "ring_02_L": { "main": ["bonefunction_042"], "aux": [] },
+    "ring_03_L": { "main": ["bonefunction_043"], "aux": [] },
+    "pinky_01_L": { "main": ["bonefunction_044"], "aux": [] },
+    "pinky_02_L": { "main": ["bonefunction_045"], "aux": [] },
+    "pinky_03_L": { "main": ["bonefunction_046"], "aux": [] },
+
+    "thumb_01_R": { "main": ["bonefunction_048"], "aux": [] },
+    "thumb_02_R": { "main": ["bonefunction_049"], "aux": [] },
+    "thumb_03_R": { "main": ["bonefunction_050"], "aux": [] },
+    "index_01_R": { "main": ["bonefunction_051"], "aux": [] },
+    "index_02_R": { "main": ["bonefunction_052"], "aux": [] },
+    "index_03_R": { "main": ["bonefunction_053"], "aux": [] },
+    "middle_01_R": { "main": ["bonefunction_054"], "aux": [] },
+    "middle_02_R": { "main": ["bonefunction_055"], "aux": [] },
+    "middle_03_R": { "main": ["bonefunction_056"], "aux": [] },
+    "ring_01_R": { "main": ["bonefunction_058"], "aux": [] },
+    "ring_02_R": { "main": ["bonefunction_059"], "aux": [] },
+    "ring_03_R": { "main": ["bonefunction_060"], "aux": [] },
+    "pinky_01_R": { "main": ["bonefunction_061"], "aux": [] },
+    "pinky_02_R": { "main": ["bonefunction_062"], "aux": [] },
+    "pinky_03_R": { "main": ["bonefunction_063"], "aux": [] }
+  }
+}

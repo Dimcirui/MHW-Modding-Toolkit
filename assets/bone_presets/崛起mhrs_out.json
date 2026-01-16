@@ -1,0 +1,68 @@
+{
+  "preset_info": {
+    "name": "Monster Hunter Rise",
+    "game_code": "MHR",
+    "type": "Y_PRESET",
+    "version": "1.0",
+    "description": "Target preset for MHRise (RE Engine)."
+  },
+  "mappings": {
+    "pelvis": { "main": ["Waist_00"], "aux": [] },
+    "spine_01": { "main": ["Spine_00"], "aux": [] },
+    "spine_02": { "main": ["Spine_01"], "aux": [] },
+    "neck": { "main": ["Neck_00"], "aux": [] },
+    "head": { "main": ["Head_00"], "aux": [] },
+
+    "clavicle_L": { "main": ["L_Arm_00"], "aux": [] },
+    "upperarm_L": { "main": ["L_Arm_01"], "aux": [] },
+    "forearm_L": { "main": ["L_Arm_02"], "aux": [] },
+    "hand_L": { "main": ["L_Arm_03"], "aux": [] },
+
+    "clavicle_R": { "main": ["R_Arm_00"], "aux": [] },
+    "upperarm_R": { "main": ["R_Arm_01"], "aux": [] },
+    "forearm_R": { "main": ["R_Arm_02"], "aux": [] },
+    "hand_R": { "main": ["R_Arm_03"], "aux": [] },
+
+    "thigh_L": { "main": ["L_Leg_00"], "aux": [] },
+    "shin_L": { "main": ["L_Leg_01"], "aux": [] },
+    "foot_L": { "main": ["L_Leg_02"], "aux": [] },
+    "toe_L": { "main": ["L_Leg_03"], "aux": [] },
+
+    "thigh_R": { "main": ["R_Leg_00"], "aux": [] },
+    "shin_R": { "main": ["R_Leg_01"], "aux": [] },
+    "foot_R": { "main": ["R_Leg_02"], "aux": [] },
+    "toe_R": { "main": ["R_Leg_03"], "aux": [] },
+
+    "thumb_01_L": { "main": ["L_Finger_00"], "aux": [] },
+    "thumb_02_L": { "main": ["L_Finger_01"], "aux": [] },
+    "thumb_03_L": { "main": ["L_Finger_02"], "aux": [] },
+    "index_01_L": { "main": ["L_Finger_03"], "aux": [] },
+    "index_02_L": { "main": ["L_Finger_04"], "aux": [] },
+    "index_03_L": { "main": ["L_Finger_05"], "aux": [] },
+    "middle_01_L": { "main": ["L_Finger_06"], "aux": [] },
+    "middle_02_L": { "main": ["L_Finger_07"], "aux": [] },
+    "middle_03_L": { "main": ["L_Finger_08"], "aux": [] },
+    "ring_01_L": { "main": ["L_Finger_10"], "aux": [] },
+    "ring_02_L": { "main": ["L_Finger_11"], "aux": [] },
+    "ring_03_L": { "main": ["L_Finger_12"], "aux": [] },
+    "pinky_01_L": { "main": ["L_Finger_13"], "aux": [] },
+    "pinky_02_L": { "main": ["L_Finger_14"], "aux": [] },
+    "pinky_03_L": { "main": ["L_Finger_15"], "aux": [] },
+
+    "thumb_01_R": { "main": ["R_Finger_00"], "aux": [] },
+    "thumb_02_R": { "main": ["R_Finger_01"], "aux": [] },
+    "thumb_03_R": { "main": ["R_Finger_02"], "aux": [] },
+    "index_01_R": { "main": ["R_Finger_03"], "aux": [] },
+    "index_02_R": { "main": ["R_Finger_04"], "aux": [] },
+    "index_03_R": { "main": ["R_Finger_05"], "aux": [] },
+    "middle_01_R": { "main": ["R_Finger_06"], "aux": [] },
+    "middle_02_R": { "main": ["R_Finger_07"], "aux": [] },
+    "middle_03_R": { "main": ["R_Finger_08"], "aux": [] },
+    "ring_01_R": { "main": ["R_Finger_10"], "aux": [] },
+    "ring_02_R": { "main": ["R_Finger_11"], "aux": [] },
+    "ring_03_R": { "main": ["R_Finger_12"], "aux": [] },
+    "pinky_01_R": { "main": ["R_Finger_13"], "aux": [] },
+    "pinky_02_R": { "main": ["R_Finger_14"], "aux": [] },
+    "pinky_03_R": { "main": ["R_Finger_15"], "aux": [] }
+  }
+}

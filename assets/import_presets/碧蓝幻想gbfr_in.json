@@ -1,0 +1,67 @@
+{
+  "preset_info": {
+    "name": "Granblue Fantasy: Relink",
+    "type": "X_PRESET",
+    "version": "1.0",
+    "description": "Source preset for GBFR models."
+  },
+  "mappings": {
+    "pelvis": { "main": ["_000"], "aux": [] },
+    "spine_01": { "main": ["_001"], "aux": [] },
+    "spine_02": { "main": ["_002"], "aux": [] },
+    "neck": { "main": ["_004"], "aux": [] },
+    "head": { "main": ["_005"], "aux": [] },
+
+    "clavicle_L": { "main": ["_a0a"], "aux": [] },
+    "upperarm_L": { "main": ["_a0b"], "aux": ["_00b"] },
+    "forearm_L": { "main": ["_00c"], "aux": ["_a21", "_a38"] },
+    "hand_L": { "main": ["_00d"], "aux": [] },
+
+    "clavicle_R": { "main": ["_a06"], "aux": [] },
+    "upperarm_R": { "main": ["_a07"], "aux": ["_007"] },
+    "forearm_R": { "main": ["_008"], "aux": ["_a31", "_a28"] },
+    "hand_R": { "main": ["_009"], "aux": [] },
+
+    "thigh_L": { "main": ["_a12"], "aux": ["_a36"] },
+    "shin_L": { "main": ["_013"], "aux": ["_a39"] },
+    "foot_L": { "main": ["_014"], "aux": ["_a14"] },
+    "toe_L": { "main": ["_015"], "aux": [] },
+
+    "thigh_R": { "main": ["_a0e"], "aux": ["_a26"] },
+    "shin_R": { "main": ["_00f"], "aux": ["_a29"] },
+    "foot_R": { "main": ["_010"], "aux": ["_a10"] },
+    "toe_R": { "main": ["_011"], "aux": [] },
+
+    "thumb_01_L": { "main": ["_200"], "aux": [] },
+    "thumb_02_L": { "main": ["_201"], "aux": [] },
+    "thumb_03_L": { "main": ["_202"], "aux": [] },
+    "index_01_L": { "main": ["_211"], "aux": [] },
+    "index_02_L": { "main": ["_212"], "aux": [] },
+    "index_03_L": { "main": ["_213"], "aux": [] },
+    "middle_01_L": { "main": ["_221"], "aux": [] },
+    "middle_02_L": { "main": ["_222"], "aux": [] },
+    "middle_03_L": { "main": ["_223"], "aux": [] },
+    "ring_01_L": { "main": ["_231"], "aux": ["_230"] },
+    "ring_02_L": { "main": ["_232"], "aux": [] },
+    "ring_03_L": { "main": ["_233"], "aux": [] },
+    "pinky_01_L": { "main": ["_241"], "aux": ["_240"] },
+    "pinky_02_L": { "main": ["_242"], "aux": [] },
+    "pinky_03_L": { "main": ["_243"], "aux": [] },
+
+    "thumb_01_R": { "main": ["_100"], "aux": [] },
+    "thumb_02_R": { "main": ["_101"], "aux": [] },
+    "thumb_03_R": { "main": ["_102"], "aux": [] },
+    "index_01_R": { "main": ["_111"], "aux": [] },
+    "index_02_R": { "main": ["_112"], "aux": [] },
+    "index_03_R": { "main": ["_113"], "aux": [] },
+    "middle_01_R": { "main": ["_121"], "aux": [] },
+    "middle_02_R": { "main": ["_122"], "aux": [] },
+    "middle_03_R": { "main": ["_123"], "aux": [] },
+    "ring_01_R": { "main": ["_131"], "aux": ["_130"] },
+    "ring_02_R": { "main": ["_132"], "aux": [] },
+    "ring_03_R": { "main": ["_133"], "aux": [] },
+    "pinky_01_R": { "main": ["_141"], "aux": ["_140"] },
+    "pinky_02_R": { "main": ["_142"], "aux": [] },
+    "pinky_03_R": { "main": ["_143"], "aux": [] }
+  }
+}
