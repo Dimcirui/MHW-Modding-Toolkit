@@ -275,12 +275,11 @@ class MODDER_OT_UniversalSnap(bpy.types.Operator):
     
 class MODDER_OT_SmartGraftBones(bpy.types.Operator):
     """
-    智能物理骨移植 (竖直重置 + 强制断连版):
+    物理骨移植 (仅支持_graft结尾的来源预设):
     1. 不修改任何骨架姿态 (默认用户已对齐)。
     2. 识别并复制物理骨。
-    3. 核心修复: 强制取消 Connected 状态，防止位置吸附。
-    4. 核心功能: 强制将骨骼重置为竖直向上 (Z+)，Roll 归零。
-    5. 智能父级重定向。
+    3. 自动处理骨骼朝向和扭转、重定向父级。
+    可能会同时移植辅助骨，请注意检查并删除。
     """
     bl_idname = "modder.smart_graft"
     bl_label = "3. 物理骨移植 (Fix Connected)"

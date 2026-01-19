@@ -7,15 +7,15 @@
     "description": "Source preset for MHWI. Identifies MhBones and automatically merges twist/muscle bones (e.g. 070, 080) into standard limbs."
   },
   "mappings": {
-    "pelvis": { "main": ["MhBone_013"], "aux": [] },
+    "pelvis": { "main": ["MhBone_013"], "aux": ["MhBone_069", "MhBone_067", "MhBone_064", "MhBone_066", "MhBone_000", "MhBone_249", "MhBone_250", "MhBone_251", "MhBone_252", "MhBone_253"] },
     "spine_01": { "main": ["MhBone_001"], "aux": [] },
-    "spine_02": { "main": ["MhBone_002"], "aux": [] },
+    "spine_02": { "main": ["MhBone_002"], "aux": ["MhBone_248", "MhBone_247"] },
     "neck": { "main": ["MhBone_003"], "aux": ["MhBone_254"] },
     "head": { "main": ["MhBone_004"], "aux": [] },
 
     "clavicle_L": { "main": ["MhBone_005"], "aux": [] },
     "upperarm_L": { "main": ["MhBone_006"], "aux": ["MhBone_070", "MhBone_080"] },
-    "forearm_L": { "main": ["MhBone_007"], "aux": ["MhBone_071", "MhBone_081"] },
+    "forearm_L": { "main": ["MhBone_007"], "aux": ["MhBone_071", "MhBone_081", "MhBone_101", "MhBone_102", "MhBone_104", "MhBone_103"] },
     "hand_L": { "main": ["MhBone_008"], "aux": ["MhBone_030", "MhBone_040"] },
 
     "clavicle_R": { "main": ["MhBone_009"], "aux": [] },
