@@ -12,17 +12,13 @@ import bpy
 from .core import standard_ops 
 from .core import editor_props
 from .core import editor_ops
-from .core import updater      # 逻辑和Operator
-from .core import preferences  # 偏好设置UI界面
-
+from .core import addon_updater_ops 
 from . import ui, games
 
 modules = [
     editor_props,
     editor_ops,
     standard_ops, 
-    updater,
-    preferences,
     games,
     ui,
 ]
@@ -30,8 +26,12 @@ modules = [
 def register():
     for mod in modules:
         mod.register()
+    
+    addon_updater_ops.register(bl_info)
 
 def unregister():
+    addon_updater_ops.unregister()
+    
     for mod in reversed(modules):
         mod.unregister()
 
