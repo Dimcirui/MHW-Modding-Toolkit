@@ -6,11 +6,11 @@
     "description": "Combined English and Japanese MMD bone names mapping."
   },
   "mappings": {
-    "pelvis": { "main": ["Hips", "下半身"], "aux": ["下半身先", "スカート元", "センター", "グルーブ", "全ての親", "操作中心", "センター先", "足IK親.L", "足ＩＫ.L", "つま先ＩＫ先.L", "つま先ＩＫ.L", "足IK親.R", "足ＩＫ.R", "つま先ＩＫ先.R", "つま先ＩＫ.R"] },
-    "spine_01": { "main": ["Spine", "上半身"], "aux": ["腰"] },
-    "spine_02": { "main": ["Chest", "上半身2"], "aux": [] },
+    "pelvis": { "main": ["Hips", "下半身"], "aux": ["下半身先", "スカート元", "センター", "センター2", "グルーブ", "グルーブ2", "全ての親", "操作中心", "センター先", "足IK親.L", "足ＩＫ.L", "つま先ＩＫ先.L", "つま先ＩＫ.L", "足IK親.R", "足ＩＫ.R", "つま先ＩＫ先.R", "つま先ＩＫ.R"] },
+    "spine_01": { "main": ["Spine", "上半身"], "aux": ["腰", "上半身1"] },
+    "spine_02": { "main": ["Chest", "上半身2"], "aux": ["おっぱい調整", "胸上.L", "胸下.L", "胸下先.L", "胸上.R", "胸下.R", "胸下先.R"] },
     "neck": { "main": ["Neck", "首"], "aux": [] },
-    "head": { "main": ["Head", "頭"], "aux": ["頭先", "目.L", "目先.L", "目.R", "目先.R", "両目", "両目先"] },
+    "head": { "main": ["Head", "頭"], "aux": ["頭先", "目.L", "_dummy_目.L", "_shadow_目.L",  "目先.L", "目.R", "_dummy_目.R", "_shadow_目.R",  "目先.R", "両目", "両目先", "齿上", "齿下"] },
 
     "clavicle_L": { "main": ["Left shoulder", "肩.L"], "aux": ["肩P.L", "_dummy_肩C.L", "_shadow_肩C.L", "肩C.L"] },
     "upperarm_L": { "main": ["Left arm", "腕.L"], "aux": ["腕捩.L", "腕捩1.L", "腕捩2.L", "腕捩3.L", "_dummy_腕捩1.L", "_dummy_腕捩2.L", "_dummy_腕捩3.L", "_shadow_腕捩1.L", "_shadow_腕捩2.L", "_shadow_腕捩3.L"] },
@@ -22,12 +22,12 @@
     "forearm_R": { "main": ["Right elbow", "ひじ.R"], "aux": ["zHandTwist_R", "手捩.R", "手捩1.R", "手捩2.R", "手捩3.R", "_dummy_手捩1.R", "_dummy_手捩2.R", "_dummy_手捩3.R", "_shadow_手捩1.R", "_shadow_手捩2.R", "_shadow_手捩3.R"] },
     "hand_R": { "main": ["Right wrist", "手首.R"], "aux": ["手先.R", "ダミー.R"] },
 
-    "thigh_L": { "main": ["Left leg", "足D.L"], "aux": ["足.L", "腰キャンセル.L", "_shadow_腰キャンセル.L", "_dummy_腰キャンセル.L", "_dummy_足D.L", "_shadow_足D.L"] },
+    "thigh_L": { "main": ["Left leg", "足D.L"], "aux": ["足.L", "腰キャンセル.L", "_shadow_腰キャンセル.L", "_dummy_腰キャンセル.L", "腰キャンセル.001.L", "_dummy_腰キャンセル.001.L", "_shadow_腰キャンセル.001.L", "_dummy_足D.L", "_shadow_足D.L"] },
     "shin_L": { "main": ["Left knee", "ひざD.L"], "aux": ["_dummy_ひざD.L", "_shadow_ひざD.L", "ひざ.L"] },
     "foot_L": { "main": ["Left ankle", "足首D.L"], "aux": ["_dummy_足首D.L", "_shadow_足首D.L", "足首.L"] },
     "toe_L": { "main": ["Left toe", "足先EX.L"], "aux": ["つま先.L"] },
 
-    "thigh_R": { "main": ["Right leg", "足D.R"], "aux": ["足.R", "腰キャンセル.R", "_shadow_腰キャンセル.R", "_dummy_腰キャンセル.R", "_dummy_足D.R", "_shadow_足D.R"] },
+    "thigh_R": { "main": ["Right leg", "足D.R"], "aux": ["足.R", "腰キャンセル.R", "_shadow_腰キャンセル.R", "_dummy_腰キャンセル.R", "腰キャンセル.001.R", "_dummy_腰キャンセル.001.R", "_shadow_腰キャンセル.001.R", "_dummy_足D.R", "_shadow_足D.R"] },
     "shin_R": { "main": ["Right knee", "ひざD.R"], "aux": ["_dummy_ひざD.R", "_shadow_ひざD.R", "ひざ.R"] },
     "foot_R": { "main": ["Right ankle", "足首D.R"], "aux": ["_dummy_足首D.R", "_shadow_足首D.R", "足首.R"] },
     "toe_R": { "main": ["Right toe", "足先EX.R"], "aux": ["つま先.R"] },
