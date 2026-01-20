@@ -1,10 +1,10 @@
 bl_info = {
     "name": "Modding Toolkit",
     "author": "Dimcirui",
-    "version": (2, 1),
+    "version": (2, 1, 2),
     "blender": (3, 0, 0),
     "location": "View3D > Sidebar > MOD Toolkit",
-    "description": "Modular Toolkit for MHWI, MHWs, and RE4...",
+    "description": "Modular Toolkit for MHWI, MHRS, MHWs, and RE4...",
     "category": "Object",
 }
 
@@ -12,12 +12,17 @@ import bpy
 from .core import standard_ops 
 from .core import editor_props
 from .core import editor_ops
+from .core import updater      # 逻辑和Operator
+from .core import preferences  # 偏好设置UI界面
+
 from . import ui, games
 
 modules = [
     editor_props,
     editor_ops,
     standard_ops, 
+    updater,
+    preferences,
     games,
     ui,
 ]
