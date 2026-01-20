@@ -6,7 +6,7 @@ import webbrowser
 from datetime import datetime
 
 # 你的 version.json 地址
-REPO_URL = "https://raw.githubusercontent.com/Dimcirui/YourRepoName/main/version.json"
+REPO_URL = "https://raw.githubusercontent.com/Dimcirui/Modding-Toolkit/refs/heads/feat/func_simplify/version.json"
 
 # 运行时状态（不需要保存）
 update_state = {
