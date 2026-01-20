@@ -72,7 +72,7 @@ class MT_Preferences(bpy.types.AddonPreferences):
         row_bottom = box.row()
         row_bottom.alignment = 'LEFT'
         # 稍微变灰一点的文字感觉
-        row_bottom.label(text=f"Last update check: {self.last_check_time}", icon='time')
+        row_bottom.label(text=f"Last update check: {self.last_check_time}", icon='TIME')
 
 # 注册逻辑
 def register():
