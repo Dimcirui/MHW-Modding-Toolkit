@@ -58,11 +58,11 @@
     "middle_01_R": { "main": ["R_Finger_06"], "aux": [] },
     "middle_02_R": { "main": ["R_Finger_07"], "aux": [] },
     "middle_03_R": { "main": ["R_Finger_08"], "aux": [] },
-    "ring_01_R": { "main": ["R_Finger_10"], "aux": [] },
-    "ring_02_R": { "main": ["R_Finger_11"], "aux": [] },
-    "ring_03_R": { "main": ["R_Finger_12"], "aux": [] },
-    "pinky_01_R": { "main": ["R_Finger_13"], "aux": [] },
-    "pinky_02_R": { "main": ["R_Finger_14"], "aux": [] },
-    "pinky_03_R": { "main": ["R_Finger_15"], "aux": [] }
+    "ring_01_R": { "main": ["R_Finger_09"], "aux": [] },
+    "ring_02_R": { "main": ["R_Finger_10"], "aux": [] },
+    "ring_03_R": { "main": ["R_Finger_11"], "aux": [] },
+    "pinky_01_R": { "main": ["R_Finger_12"], "aux": [] },
+    "pinky_02_R": { "main": ["R_Finger_13"], "aux": [] },
+    "pinky_03_R": { "main": ["R_Finger_14"], "aux": [] }
   }
 }

@@ -275,14 +275,14 @@ class MODDER_OT_UniversalSnap(bpy.types.Operator):
     
 class MODDER_OT_SmartGraftBones(bpy.types.Operator):
     """
-    物理骨移植 (仅支持_graft结尾的来源预设):
-    1. 不修改任何骨架姿态 (默认用户已对齐)。
-    2. 移植非身体基础骨。
-    3. 自动处理骨骼朝向和扭转、重定向父级，使其满足物理骨要求。
-    实验性功能：很可能会同时移植大量辅助骨，请自行检查、删除。
+    智能物理骨移植 (末端延伸版):
+    1. 复制物理骨骼 (直接世界坐标对齐)。
+    2. 【新功能】自动为物理链末端添加 _End 骨骼 (在竖直重置前生成)。
+    3. 强制断开连接，防止位置吸附。
+    4. 统一将所有移植骨骼重置为竖直向上 (Z+)。
     """
     bl_idname = "modder.smart_graft"
-    bl_label = "3. 物理骨移植 (Fix Connected)"
+    bl_label = "3. 物理骨移植 (+End Bone)"
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
@@ -304,26 +304,22 @@ class MODDER_OT_SmartGraftBones(bpy.types.Operator):
             self.report({'ERROR'}, "操作失败：未找到来源(In)骨架")
             return {'CANCELLED'}
 
-        # --- 2. 加载预设 (只为识别谁是"非物理骨") ---
+        # --- 2. 加载预设 (仅用于排除非物理骨) ---
         from .bone_mapper import BoneMapManager
         mapper = BoneMapManager()
         settings = context.scene.mhw_suite_settings
         
-        # 加载 In 预设
         if not mapper.load_preset(settings.import_preset_enum, is_import_x=True):
             self.report({'ERROR'}, "无法加载源预设 (In)")
             return {'CANCELLED'}
         src_data = mapper.mapping_data 
 
-        # 加载 Out 预设
         if not mapper.load_preset(settings.target_preset_enum, is_import_x=False):
             self.report({'ERROR'}, "无法加载目标预设 (Out)")
             return {'CANCELLED'}
         tgt_data = mapper.mapping_data
 
         # --- 3. 构建查找表 ---
-        # src_to_std: In骨骼名 -> 标准名 (包含 Main 和 Aux)
-        # all_preset_bones_src: 用于排除法识别物理骨
         src_to_std = {}
         all_preset_bones_src = set()
         
@@ -335,7 +331,6 @@ class MODDER_OT_SmartGraftBones(bpy.types.Operator):
                 src_to_std[a] = std_key 
                 all_preset_bones_src.add(a)
 
-        # std_to_tgt_bone: 标准名 -> Out骨骼名
         std_to_tgt_bone = {}
         for std_key, entry in tgt_data.items():
             mains = entry.get('main', [])
@@ -343,83 +338,129 @@ class MODDER_OT_SmartGraftBones(bpy.types.Operator):
                 std_to_tgt_bone[std_key] = mains[0]
 
         # --- 4. 筛选物理骨 ---
-        physics_bones = [b.name for b in source_arm.data.bones if b.name not in all_preset_bones_src]
+        # 只要不在预设里的，都算物理骨
+        physics_bones_names = [b.name for b in source_arm.data.bones if b.name not in all_preset_bones_src]
+        physics_bones_set = set(physics_bones_names) # 用于快速查找
         
-        if not physics_bones:
-            self.report({'WARNING'}, "未检测到物理骨骼 (可能是所有骨骼都在预设里？)")
+        if not physics_bones_names:
+            self.report({'WARNING'}, "未检测到物理骨骼")
             return {'FINISHED'}
 
         # --- 5. 核心移植逻辑 ---
         bpy.context.view_layer.objects.active = target_arm
         bpy.ops.object.mode_set(mode='EDIT')
         edit_bones = target_arm.data.edit_bones
+        
+        tgt_mat_inv = target_arm.matrix_world.inverted()
+        import mathutils
 
         created_count = 0
         new_bones_map = {} # {src_name: new_bone_name}
+        
+        # 临时列表：存储所有新生成的骨骼对象（包括标准物理骨和End骨）以便稍后统一竖直化
+        # 格式: (edit_bone, length_to_use)
+        bones_to_verticalize = []
 
-        # 计算 Out 的逆矩阵，用于将世界坐标转为 Out 的本地编辑坐标
-        tgt_mat_inv = target_arm.matrix_world.inverted()
-
-        for p_name in physics_bones:
+        # 5.1 第一轮：创建所有基础物理骨
+        for p_name in physics_bones_names:
             src_bone = source_arm.data.bones.get(p_name)
             src_pb = source_arm.pose.bones.get(p_name)
-            
             if not src_bone or not src_pb: continue
             
-            # 5.1 创建/获取骨骼
             if p_name in edit_bones:
                 eb = edit_bones[p_name]
             else:
                 eb = edit_bones.new(p_name)
             new_bones_map[p_name] = eb.name
-
-            # 5.2 核心修复: 必须先断开连接，否则无法修改 Head 位置！
-            eb.use_connect = False 
-
-            # 5.3 计算位置 (世界空间 -> Target本地空间)
-            src_world_head = source_arm.matrix_world @ src_pb.head
-            target_local_head = tgt_mat_inv @ src_world_head
             
-            # 5.4 强制重置 (竖直朝上 & Roll归零)
-            eb.head = target_local_head
-            # 长度沿用原骨骼长度
-            length = src_bone.length if src_bone.length > 0.001 else 0.1
-            eb.tail = target_local_head + mathutils.Vector((0, 0, length))
-            eb.roll = 0
+            # 基础定位 (Head)
+            src_world_head = source_arm.matrix_world @ src_pb.head
+            eb.head = tgt_mat_inv @ src_world_head
+            # 暂时随便给个 Tail，稍后会被竖直化覆盖
+            eb.tail = eb.head + mathutils.Vector((0, 0, 0.1))
+            
+            # 加入待处理列表
+            bones_to_verticalize.append((eb, src_bone.length))
 
+        # 5.2 第二轮：检测末端并创建 _End 骨骼
+        # (此时所有基础物理骨已创建，位置对应 Source Head)
+        
+        for p_name in physics_bones_names:
+            src_bone = source_arm.data.bones.get(p_name)
+            
+            # 判断是否是"叶子节点" (在物理骨集合中没有子级)
+            # 注意：只检查物理骨集合内的子级。如果它下面连着非物理骨(极少见)，这里也会视为断开。
+            is_leaf = True
+            for child in src_bone.children:
+                if child.name in physics_bones_set:
+                    is_leaf = False
+                    break
+            
+            if is_leaf:
+                # 这是一个末端骨骼，需要生成 _End
+                end_bone_name = f"{p_name}_End"
+                if end_bone_name in edit_bones:
+                    end_eb = edit_bones[end_bone_name]
+                else:
+                    end_eb = edit_bones.new(end_bone_name)
+                
+                # 【关键逻辑】：End 骨骼的头部 = 原 Source 骨骼的尾部
+                src_pb = source_arm.pose.bones.get(p_name)
+                src_world_tail = source_arm.matrix_world @ src_pb.tail
+                
+                end_eb.head = tgt_mat_inv @ src_world_tail
+                # 暂时给个 Tail
+                end_eb.tail = end_eb.head + mathutils.Vector((0, 0, 0.05))
+                
+                # 建立与父级的连接 (逻辑连接)
+                if p_name in new_bones_map:
+                    end_eb.parent = edit_bones[new_bones_map[p_name]]
+                
+                # 加入待处理列表 (End 骨骼长度固定为 0.05 或其他小数值)
+                bones_to_verticalize.append((end_eb, 0.05))
+
+        # 5.3 第三轮：统一竖直化 (Vertical Reset)
+        # 这一步会覆盖刚才的 Tail 位置
+        for eb, length in bones_to_verticalize:
+            # 强制断连
+            eb.use_connect = False
+            
+            # 竖直化 (保持 Head 不动)
+            # 防止长度为 0
+            safe_length = length if length > 0.001 else 0.05
+            
+            # 简单粗暴：Tail = Head + (0, 0, Length)
+            # 由于断开了连接，这不会影响父子关系中的位置
+            eb.tail = eb.head + mathutils.Vector((0, 0, safe_length))
+            eb.roll = 0
+            
             created_count += 1
 
-        # --- 6. 智能重建父级 ---
+        # --- 6. 智能重建父级 (仅针对基础物理骨，End骨刚才已处理) ---
         for src_name, tgt_name in new_bones_map.items():
             eb = edit_bones.get(tgt_name)
             src_bone = source_arm.data.bones.get(src_name)
             
-            if not src_bone or not src_bone.parent:
-                continue
+            if not src_bone or not src_bone.parent: continue
             
             src_p_name = src_bone.parent.name
             target_parent_name = None
 
-            # 情况 A: 父级也是物理骨
+            # A. 父级是物理骨
             if src_p_name in new_bones_map:
                 target_parent_name = new_bones_map[src_p_name]
-            
-            # 情况 B: 父级是映射骨 (Main或Aux)
+            # B. 父级是映射骨 (Main/Aux)
             elif src_p_name in src_to_std:
                 std_key = src_to_std[src_p_name]
                 if std_key in std_to_tgt_bone:
                     target_parent_name = std_to_tgt_bone[std_key]
 
-            # 应用父级连接
             if target_parent_name and target_parent_name in edit_bones:
-                parent_bone = edit_bones[target_parent_name]
-                eb.parent = parent_bone
-                
-                # 再次强调: 物理骨绝不使用 Connected，否则刚才的竖直重置会失效
+                eb.parent = edit_bones[target_parent_name]
                 eb.use_connect = False 
 
         bpy.ops.object.mode_set(mode='OBJECT')
-        self.report({'INFO'}, f"移植完成: {created_count} 根物理骨骼 (已断开连接并重置竖直)")
+        self.report({'INFO'}, f"移植完成: 处理 {created_count} 根骨骼 (含自动生成的末端骨)")
         return {'FINISHED'}
 
 classes = [
