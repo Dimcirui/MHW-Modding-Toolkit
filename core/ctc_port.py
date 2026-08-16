@@ -618,6 +618,25 @@ def cluster_settings(per_chain_fields):
 CLSP_SHAPE_SPHERE = "1"
 CLSP_SHAPE_CAPSULE = "2"
 
+#: What a ported collider starts as.  The counterpart of ``GROUP_DEFAULTS``'
+#: ``clspFlags0 = -1``, and needed for the same reason: that one says the group
+#: collides with every clsp tag group, while this one says which groups the
+#: collider *belongs to*.  RE Chain Editor defaults it to 0 -- no bits, so no tag
+#: group -- and the two together mean "collide with everything" meeting "I am in
+#: nothing", which collides with nothing at all.  -1 is all-bits-on, the same safe
+#: default, and needs no translation from MHWI, which has no equivalent concept.
+#:
+#: B stays 0 (user, 2026-08-16).
+#:
+#: Only ``.clsp`` reads these, so they are inert on the MHRS route, whose v1
+#: ``.chain`` carries its collisions inline -- written anyway rather than switched
+#: on the target game, because a field the format ignores costs nothing and a
+#: per-game branch here would be a second thing to keep true.
+COLLIDER_DEFAULTS = {
+    "clspBitFlag0": -1,
+    "clspBitFlag1": 0,
+}
+
 
 def sphere_as_capsule(bone, offset, radius):
     """A ccl sphere expressed as clsp's degenerate, same-bone capsule.

@@ -493,6 +493,7 @@ def _build_collider(context, arm_obj, col, shape, report):
         "endRadius": shape["end_radius"],
         "collisionOffset": shape["begin_offset"],
         "endCollisionOffset": shape["end_offset"],
+        **ctc_port.COLLIDER_DEFAULTS,
     })
     report["unwritable_collider_fields"].update(missed)
 
