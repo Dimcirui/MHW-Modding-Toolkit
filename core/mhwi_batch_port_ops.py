@@ -291,17 +291,25 @@ class MHWI_OT_BatchPortMHRS(bpy.types.Operator):
             self.report({'ERROR'}, T("core.mhwi_batch_port_ops.no_portable_part"))
             return {'CANCELLED'}
 
-        group_col = batch.import_group(context, entry)
+        group_col, created = batch.import_group(context, entry)
         if group_col is None:
             self.report({'ERROR'}, T("core.mhwi_batch_port_ops.import_failed"))
             return {'CANCELLED'}
 
-        parts = batch.discover(group_col)
+        parts = batch.discover(group_col, created)
         results = batch.run(
             context, parts, target_game="MHRS",
             dest_base_path=self.dest_base_path.strip() or default_base_path(entry),
             src_root=context.scene.get("mhwi_natives_root", ""),
             dst_root=dst_root)
+
+        # Before the export, not after: the export needs only the ported
+        # collections, and clearing first means a failed export still leaves a clean
+        # scene rather than a set the next run has to disambiguate against.
+        for r in results:
+            for key in batch.FILE_TYPES:
+                r[key] = None
+        batch.discard_source(group_col)
 
         exported = batch.export(context, results, armor_id=armor_id,
                                 gender=settings.mhrs_gender, natives_root=dst_root)

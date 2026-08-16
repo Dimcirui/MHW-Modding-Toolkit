@@ -137,8 +137,17 @@ def parse_part_name(name):
     return m.group('gender'), m.group('part'), m.group('id')
 
 
-def discover(group_col):
+def discover(group_col, created=None):
     """The parts under a MHWI group collection, in ``PART_ORDER``.
+
+    *created* is the set of collection names this run's import just made.  Given it,
+    a fresh collection displaces a stale one for the same slot; without it, first
+    found wins.  It matters because the importer **reuses** a group collection of the
+    same name rather than making a second one (``games/mhwi/batch_import.
+    _get_or_create_collection``), and a group name is a vanilla armour slot code like
+    ``pl119_0000`` -- so two different mods replacing the same slot land in one
+    collection, the second one's parts named ``.001``.  First-found would then be the
+    *previous* port's model, ported again under the new armour id, silently.
 
     Each entry is ``{'part', 'gender', 'mod3', 'mrl3', 'ctc', 'skip'}``, with the
     three collections or ``None`` and *skip* set to a ``SKIP_*`` code when the part
@@ -166,9 +175,13 @@ def discover(group_col):
         if slot is not None:
             entry = found.setdefault(part, {"part": part, "gender": gender,
                                             "mod3": None, "mrl3": None, "ctc": None})
-            # First one wins.  A duplicate is Blender's ``.001`` copy of something
-            # already taken, and taking the copy instead would port the stale one.
-            if entry[slot] is None:
+            # First one wins, *except* that something this import created displaces
+            # something it did not -- see the docstring.  Within a single import the
+            # two rules agree: everything is new, so first still wins.
+            fresh = created is not None and col.name in created
+            stale = (entry[slot] is not None and created is not None
+                     and entry[slot].name not in created)
+            if entry[slot] is None or (fresh and stale):
                 entry[slot] = col
         for child in col.children:
             walk(child)
@@ -198,6 +211,10 @@ def import_group(context, entry):
     It reads its file list off the scene, so the list is written first.  That does
     replace whatever the MHWI import panel was showing, which is a visible side
     effect and an intended one: what it shows afterwards is what this just imported.
+
+    Returns ``(group collection or None, set of collection names created)``.  The
+    second half is what tells ``discover`` which parts are this run's -- the group
+    collection alone cannot, because the importer reuses one of the same name.
     """
     scene = context.scene
     items, groups = scene.mhwi_import_items, scene.mhwi_import_groups
@@ -218,9 +235,11 @@ def import_group(context, entry):
             item.enabled = True
             item.kind = "armor"
 
+    before = set(bpy.data.collections.keys())
     if bpy.ops.mhwi.batch_import('EXEC_DEFAULT') != {'FINISHED'}:
-        return None
-    return bpy.data.collections.get(entry["group"])
+        return None, set()
+    created = set(bpy.data.collections.keys()) - before
+    return bpy.data.collections.get(entry["group"]), created
 
 
 def is_ctc_collection(col):
@@ -299,7 +318,8 @@ def export(context, results, *, armor_id, gender, natives_root):
     ``parts_mask``, the blank-file fallback, the shadow mesh -- and a second
     implementation would have to be kept in step with all of it.
 
-    Returns ``{'error': <T key>}`` or ``{'error': None, 'bound': n, 'copied': [...]}``.
+    Returns ``{'error': <T key>}`` or
+    ``{'error': None, 'bound': n, 'copied': [...], 'extra': [...]}``.
     """
     from ..games.mhrs import batch_export as mhrs_export
 
@@ -352,7 +372,61 @@ def export(context, results, *, armor_id, gender, natives_root):
             setattr(settings, k, v)
 
     copied = _copy_inherited_chains(natives_root, gender, armor_id, inherited)
-    return {"error": None, "bound": bound, "copied": copied}
+    extra = _copy_extra_files(natives_root, gender, armor_id)
+    return {"error": None, "bound": bound, "copied": copied, "extra": extra}
+
+
+#: Files a particular armour slot needs that the port cannot produce, keyed on
+#: ``(gender, armour id)`` and written verbatim at the end of the export.
+#:
+#: A ``.pfb`` is a prefab: it is what names the mesh, mdf2, chain and sound bank
+#: that make up one equipment part, and nothing in this addon builds one -- the
+#: port writes the four files a prefab points *at*, not the prefab.  For most slots
+#: that is fine, because the vanilla prefab already points at the right names and a
+#: replacement mod keeps those names.  Where it is not fine, the working prefab has
+#: to be shipped and dropped in, which is what this table is for.
+#:
+#: 279 (公会十字 / Guild Cross) female legs is the one such slot so far.  The file
+#: shipped here names ``f_leg279``'s mesh, mdf2, **chain** and ``.wcc``; it is a
+#: known-good prefab supplied by the user (2026-08-16), not something derived.
+#:
+#: Female only, and not because the male set was overlooked: the prefab's contents
+#: name ``f_leg279`` throughout, so it is the female part's prefab and copying it
+#: under ``m/`` would point the male legs at the female files.
+#:
+#: Paths are relative to ``assets/`` and to the mod root respectively.
+EXTRA_FILES = {
+    ("f", "279"): (
+        ("mhrs/prefab/f_leg279.pfb.17",
+         "natives/STM/player/prefab/mod/f/pl279/f_leg279.pfb.17"),
+    ),
+}
+
+
+def _copy_extra_files(natives_root, gender, armor_id):
+    """Drop in whatever ``EXTRA_FILES`` lists for this slot.  Returns the paths written.
+
+    Silent by design (user, 2026-08-16): from the user's side this is part of what
+    "port the set" means, not a step they chose, so a report line would be noise
+    about something they cannot act on.  A missing shipped asset is skipped rather
+    than raised, for the same reason the blank-file copy is: the armour itself
+    exported fine, and failing the whole run over an extra file would be worse than
+    the file's absence.
+    """
+    import os
+
+    addon_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    written = []
+    for asset_rel, dest_rel in EXTRA_FILES.get((gender, armor_id), ()):
+        src = os.path.join(addon_dir, "assets", *asset_rel.split("/"))
+        if not os.path.isfile(src):
+            print(f"[MHWI->MHRS] extra file missing from the addon: {asset_rel}")
+            continue
+        dst = os.path.join(natives_root, *dest_rel.split("/"))
+        os.makedirs(os.path.dirname(dst), exist_ok=True)
+        shutil.copy2(src, dst)
+        written.append(dst)
+    return written
 
 
 def _copy_inherited_chains(natives_root, gender, armor_id, inherited):
@@ -425,6 +499,142 @@ def run(context, parts, *, target_game="MHRS", dest_base_path="",
         _discard_armature(reference)
         shutil.rmtree(temp_dir, ignore_errors=True)
     return results
+
+
+def discard_source(group_col):
+    """Delete the imported MHWI side outright, data-blocks and all.
+
+    **Not the whole group collection.**  The ports nest their results *inside* the
+    part they came from, so a real ported set looks like
+
+        pl082_0000 / f_body082_0000 / f_body082_0000.mod3        <- source
+                                      f_body082_0000.mrl3        <- source
+                                      f_body082_0000.ctc         <- source
+                                      f_body082_0000_MHRS.mesh   <- the result
+                                      f_body082_0000_MHRS.mdf2   <- the result
+
+    and deleting the tree would take the deliverable with it.  So this deletes the
+    three MHWI collection kinds and whatever hangs off them, then drops the wrappers
+    that end up holding nothing -- leaving the results where they were.
+
+    Safe to delete those because the ports never work in place:
+    ``mhwi_port_ops.run_port`` duplicates the rig and its meshes before touching
+    anything, and the material and physics ports build fresh collections from a
+    prefab.
+
+    Worth doing rather than leaving to the user, for three reasons, in order of how
+    much they cost:
+
+    * The importer reuses a group collection of the same name, and a group name is a
+      vanilla armour slot code, so a leftover set is what makes a later port of a
+      *different* mod for the same slot ambiguous.  ``discover``'s *created* set
+      already resolves that ambiguity; clearing the scene means it does not arise.
+    * A MHWI set is heavy, and it has served its purpose the moment the port is done.
+    * Unlinking alone would not do it: an object dropped from every collection still
+      sits in ``bpy.data`` at zero users until the file is saved and reloaded, as does
+      its mesh.  So the data-blocks go too.
+
+    Only data-blocks left with **no users** are removed, which is what keeps this from
+    reaching into the port's output: anything the new materials genuinely share -- an
+    image, say -- still has a user and stays.
+
+    Returns ``{'objects': n, 'collections': n, 'data': n}``.
+    """
+    if group_col is None or group_col.name not in bpy.data.collections:
+        return {"objects": 0, "collections": 0, "data": 0}
+
+    # Find the MHWI collections, and stop there: a .ctc owns its "Chain Entries" and
+    # "Collision Entries" children, which go with it, and nothing below a MHWI
+    # collection is ever a result.
+    roots = []
+
+    def find(col):
+        if is_mhwi_collection(col):
+            roots.append(col)
+            return
+        for child in list(col.children):
+            find(child)
+
+    find(group_col)
+
+    cols, objs = [], []
+
+    def walk(col):
+        for child in col.children:
+            walk(child)
+        cols.append(col)
+        objs.extend(col.objects)
+
+    for root in roots:
+        walk(root)
+
+    # Names, not references.  Removing the objects can free the data-block outright,
+    # and a Python reference to a freed one raises ReferenceError on *any* attribute
+    # -- including the ``users`` this needs to read to decide.  A name survives.
+    orphans = [(_DATA_COLLECTIONS.get(type(o.data).__name__), o.data.name)
+               for o in objs if o.data is not None]
+
+    n_obj = 0
+    for obj in {o.name: o for o in objs}.values():
+        if obj.name in bpy.data.objects:
+            bpy.data.objects.remove(obj, do_unlink=True)
+            n_obj += 1
+
+    n_col = 0
+    for col in cols:
+        if col.name in bpy.data.collections:
+            bpy.data.collections.remove(col)
+            n_col += 1
+
+    n_data = 0
+    for coll_name, data_name in orphans:
+        coll = getattr(bpy.data, coll_name, None) if coll_name else None
+        data = coll.get(data_name) if coll is not None else None
+        if data is not None and data.users == 0:
+            coll.remove(data)
+            n_data += 1
+
+    n_col += _prune_empty(group_col)
+    return {"objects": n_obj, "collections": n_col, "data": n_data}
+
+
+def is_mhwi_collection(col):
+    """One of the three collection kinds a MHWI import produces."""
+    return (mhwi_port_ops.is_mod3_collection(col)
+            or mrl3_port_ops.is_mrl3_collection(col)
+            or is_ctc_collection(col))
+
+
+def _prune_empty(col):
+    """Drop wrappers under *col* -- and *col* -- once they hold nothing.
+
+    The per-part wrapper of a part that was skipped, or that produced no result, has
+    nothing left in it after the source goes; the group wrapper likewise when every
+    part was skipped.  Depth-first, so a wrapper is judged after its children are.
+
+    A ``~TYPE`` is what makes something *not* a wrapper.  The batch importer's
+    per-part and per-group collections are plain; everything meaningful -- MHWI's
+    three kinds and the ports' ``RE_*`` results -- is tagged.  Judging on emptiness
+    alone would take a result with it: an ``RE_MDF_COLLECTION`` whose materials have
+    not been built yet holds no objects and no children, and looks exactly like a
+    spent wrapper.
+    """
+    removed = 0
+    for child in list(col.children):
+        removed += _prune_empty(child)
+    if (col.name in bpy.data.collections and not col.get("~TYPE")
+            and not col.children and not col.objects):
+        bpy.data.collections.remove(col)
+        removed += 1
+    return removed
+
+
+#: ``obj.data``'s type name -> the ``bpy.data`` collection it lives in.  Only the
+#: kinds a MHWI import can produce; anything else is left alone rather than guessed.
+_DATA_COLLECTIONS = {
+    "Mesh": "meshes",
+    "Armature": "armatures",
+}
 
 
 def _discard_armature(obj):
