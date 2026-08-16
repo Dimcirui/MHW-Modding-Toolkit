@@ -343,7 +343,7 @@ def _physics_order(arm_obj):
     return out
 
 
-def _graft_parent(eb, parents, name, name_map):
+def _graft_parent(eb, parents, name, name_map, overrides):
     """``(edit bone to hang *name* from, the MHWI bone it came from)``, or ``(None, None)``.
 
     Walks up rather than looking only at the direct parent.  A physics bone whose
@@ -355,9 +355,10 @@ def _graft_parent(eb, parents, name, name_map):
     Three ways an ancestor can be usable, in the order they are tried per ancestor:
 
     * an **override** -- a base bone with no counterpart whose right destination is
-      known anyway (``mhwi_port.PHYSICS_PARENT_OVERRIDES``).  First, because it beats
-      what the walk would otherwise find: 064's own ancestry leads to the hip, which
-      follows none of the leg's motion, where the override says thigh.
+      known anyway (``mhwi_port.physics_parent_overrides``, already resolved for the
+      target game by the caller).  First, because it beats what the walk would
+      otherwise find: 064's own ancestry leads to the hip, which follows none of the
+      leg's motion, where the override says thigh.
     * a **physics bone already grafted** -- it keeps its MHWI name, so it is looked up
       as-is.  Checked against *eb* rather than assumed, because an ancestor that was
       itself orphaned is not there and the walk has to carry on past it.
@@ -367,7 +368,7 @@ def _graft_parent(eb, parents, name, name_map):
     for a bone MHWilds does not have is no better than no name.
     """
     for ancestor, is_physics in mhwi_port.physics_parent_chain(parents, name):
-        override = mhwi_port.PHYSICS_PARENT_OVERRIDES.get(ancestor)
+        override = overrides.get(ancestor)
         if override and override in eb:
             return eb[override], ancestor
         if is_physics:
@@ -380,7 +381,7 @@ def _graft_parent(eb, parents, name, name_map):
     return None, None
 
 
-def transplant_physics(model_arm, ref_arm, name_map):
+def transplant_physics(model_arm, ref_arm, name_map, target_game="MHWS"):
     """Copy the model's own cloth and hair bones onto the new rig.
 
     Safe to take world coordinates verbatim: step 4 has already moved the reference's
@@ -413,12 +414,13 @@ def transplant_physics(model_arm, ref_arm, name_map):
     bpy.ops.object.mode_set(mode='EDIT')
     eb = ref_arm.data.edit_bones
     made, orphans, rehomed = 0, [], []
+    overrides = mhwi_port.physics_parent_overrides(target_game)
     try:
         for name in names:
             if name in eb:
                 continue
             src = src_bones[name]
-            parent, via = _graft_parent(eb, parents, name, name_map)
+            parent, via = _graft_parent(eb, parents, name, name_map, overrides)
             if parent is None:
                 orphans.append(name)
                 continue
@@ -519,7 +521,7 @@ def run_port(context, src_col, target_game, *, reference=None):
     out_col = assemble_collection(src_col, ref_arm, work_meshes, target_game)
     rename_vertex_groups(context, work_meshes, cfg["preset"])
     grafted, orphans, rehomed = transplant_physics(
-        work_arm, ref_arm, dict(cross.mapping))
+        work_arm, ref_arm, dict(cross.mapping), target_game)
 
     bpy.data.objects.remove(work_arm, do_unlink=True)
     optimize(context, ref_arm, work_meshes, cfg["optimize_ops"])

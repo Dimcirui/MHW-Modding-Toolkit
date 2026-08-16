@@ -134,26 +134,43 @@ BASE_ID_RANGES = ((0, 21), (30, 63), (64, 69), (70, 77), (80, 85), (100, 104),
 PHYSICS_ID_RANGES = ((150, 246), (256, 511))
 
 
-#: Where a physics chain hanging off a *base* bone with no MHWilds counterpart goes
-#: instead.  MHWI bone name -> MHWilds bone name (user's decision, 2026-08-16).
+#: Where a physics chain hanging off a *base* bone with no counterpart goes instead.
+#: target game -> {MHWI bone name: target bone name} (user's decision, 2026-08-16).
 #:
 #: 064 and 067 are the left and right leg's skirt attach bones.  They are genuinely
 #: half-followers: they rise when the leg lifts and ignore everything else it does, and
-#: MHWilds has no bone that behaves that way, so the bone presets map neither -- which
-#: left every skirt chain hanging off them orphaned and dropped.
+#: neither target has a bone that behaves that way, so the bone presets map neither --
+#: which left every skirt chain hanging off them orphaned and dropped.
 #:
 #: The thigh is the deliberate approximation.  A chain moved there follows *all* of the
 #: leg's motion rather than only the lift, which is wrong in the same direction the
-#: source is right; the alternative the generic walk below would have reached is the
-#: hip, which follows none of it.  Overshooting beats not moving at all for a skirt.
+#: source is right; the alternative the generic walk reaches is the hip, which follows
+#: none of it.  Overshooting beats not moving at all for a skirt.
 #:
-#: Only these two are listed because only these two have a known answer.  The rest of
-#: the 064-069 skirt block falls through to ``physics_parent_chain``, which finds the
-#: nearest ancestor that does map rather than guessing at a slot.
+#: Keyed per game because the destination is a *bone name*, and the two targets do not
+#: share one: MHWilds' thigh is ``L_Thigh``, MHRS' is ``L_Leg_00`` (``mhwr.json``'s
+#: ``thigh_L``).  A single MHWilds-named table silently did nothing under MHRS -- the
+#: lookup in ``mhwi_port_ops._graft_parent`` requires the name to exist on the target
+#: rig, so a wrong name is indistinguishable from no override.
+#:
+#: Only these two bones are listed because only these two have a known answer.  The
+#: rest of the 064-069 skirt block falls through to ``physics_parent_chain``, which
+#: finds the nearest ancestor that does map rather than guessing at a slot.
 PHYSICS_PARENT_OVERRIDES = {
-    "MhBone_064": "L_Thigh",
-    "MhBone_067": "R_Thigh",
+    "MHWS": {
+        "MhBone_064": "L_Thigh",
+        "MhBone_067": "R_Thigh",
+    },
+    "MHRS": {
+        "MhBone_064": "L_Leg_00",
+        "MhBone_067": "R_Leg_00",
+    },
 }
+
+
+def physics_parent_overrides(game_code):
+    """The per-game override table, or MHWilds' as the default."""
+    return PHYSICS_PARENT_OVERRIDES.get(game_code) or PHYSICS_PARENT_OVERRIDES["MHWS"]
 
 
 def physics_parent_chain(parent_names, start):
