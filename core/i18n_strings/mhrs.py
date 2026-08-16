@@ -112,11 +112,9 @@ STRINGS = {
         "EN": "Writes reframework/data/LUABoneSystem/custom/ next to natives. Players need the LuaBoneSystem script",
         "ZH": "写入与 natives 并列的 reframework/data/LUABoneSystem/custom/，玩家需安装 LuaBoneSystem 脚本"},
     "mhrs.batch_export_ui.align_armature_label":   {"EN": "Source Armature", "ZH": "来源骨架"},
-    "mhrs.batch_export_ui.shadow_auto_use_hint":   {
-        "EN": "Will auto-use when unselected: {name}", "ZH": "未选择时将自动使用: {name}"},
-    "mhrs.batch_export_ui.shadow_no_align_arm_error": {
-        "EN": "No align armature selected, and it cannot be auto-determined (requires exactly 1 bound Mesh collection)",
-        "ZH": "未选择对齐骨架，且无法自动判定（需恰好绑定 1 个 Mesh 集合）"},
+    "mhrs.batch_export_ui.no_armature_means_skip": {
+        "EN": "Leave empty to export without any skeleton scheme",
+        "ZH": "留空则本次导出不套用任何骨骼方案"},
 
     # ══════════════════════════════════════════════════════════════════════
     # games/mhrs/mdf_generator.py

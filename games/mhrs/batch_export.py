@@ -209,24 +209,6 @@ def _get_armature_from_collection(col_name):
     return arms[0] if len(arms) == 1 else None
 
 
-def _find_auto_align_armature(scene, armor_id, gender, parts_mask):
-    """
-    未手动指定对齐骨架时的保险：若本次勾选的部位中，绑定的 mesh 集合
-    实际只涉及同一个集合（不管绑定了几个部位），就自动取该集合中的
-    唯一骨架作为对齐骨架；有 0 个或 >1 个不同集合时返回 None。
-    """
-    mesh_cols = set()
-    for idx, (part_id, _name) in enumerate(MHRS_PARTS):
-        if not (parts_mask & (1 << idx)):
-            continue
-        col_name = get_binding(scene, armor_id, gender, part_id, "mesh")
-        if col_name:
-            mesh_cols.add(col_name)
-    if len(mesh_cols) != 1:
-        return None
-    return _get_armature_from_collection(next(iter(mesh_cols)))
-
-
 @contextlib.contextmanager
 def _imported_shadow(context, gender):
     """临时导入内置的 {gender}_shadow 参考模型，产出 (集合名, 骨架)，退出时清理。
@@ -507,11 +489,11 @@ class MHRS_OT_BatchExport(bpy.types.Operator):
         # ── 体型方案：全局骨架 / LuaBoneSystem，二选一 ──
         # 互斥不是取舍而是事实：两者都在改同一批关节，同时启用会让全局骨架先把
         # 体型烘进 shadow.mesh，脚本再在它之上叠一份同样的偏移，结果是加倍。
+        # 来源骨架为空 = 不跑任何骨骼方案，不报错。这既是“没东西可读就别写”，
+        # 也是点错方案时的退路：清空骨架就等于取消，不必记得再点一次按钮。
         mode = settings.mhrs_skeleton_mode      # ENUM_FLAG -> a set, possibly empty
-        if mode:
-            align_arm = settings.mhrs_shadow_armature
-            if align_arm is None:
-                align_arm = _find_auto_align_armature(scene, armor_id, gender, parts_mask)
+        align_arm = settings.mhrs_shadow_armature
+        if mode and align_arm is not None:
             if 'SHADOW' in mode:
                 ok, msg = _do_shadow_export(context, natives_root, gender, align_arm)
             else:

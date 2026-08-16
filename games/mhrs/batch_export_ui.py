@@ -7,7 +7,6 @@ from .batch_export import (
     _load_scheme, _resolve_part_file_types, _canonical_order_file_types,
     get_binding, set_binding,
     get_mhrs_armor_callback,
-    _find_auto_align_armature,
 )
 
 EXPORTER_WINDOW_WIDTH = 580
@@ -283,12 +282,9 @@ class MHRS_OT_BatchExportDialog(bpy.types.Operator):
         if 'LUA' in mode:
             box.label(text=T("mhrs.batch_export_ui.lua_bone_hint"), icon='INFO')
         box.prop(settings, "mhrs_shadow_armature", text=T("mhrs.batch_export_ui.align_armature_label"))
-        if not settings.mhrs_shadow_armature and scene is not None and armor_id and armor_id != 'NONE' and parts_mask is not None:
-            auto_arm = _find_auto_align_armature(scene, armor_id, gender, parts_mask)
-            if auto_arm:
-                box.label(text=T("mhrs.batch_export_ui.shadow_auto_use_hint").format(name=auto_arm.name), icon='INFO')
-            else:
-                box.label(text=T("mhrs.batch_export_ui.shadow_no_align_arm_error"), icon='ERROR')
+        # 空骨架不是错误，是“这次不跑骨骼方案”。说明白，免得用户以为漏填了。
+        if not settings.mhrs_shadow_armature:
+            box.label(text=T("mhrs.batch_export_ui.no_armature_means_skip"), icon='INFO')
 
     def execute(self, context):
         bpy.ops.mhrs.batch_export()
