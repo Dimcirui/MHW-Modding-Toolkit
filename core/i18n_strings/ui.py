@@ -27,6 +27,20 @@ STRINGS = {
                                                 "ZH": "头部、尾部、扭转全部对齐到来源骨骼 (骨骼长度和方向都会跟随来源)"},
 
     # ── mhwi_export_mode / mhwi_rank_tab / mhwi_gender EnumProperty items ──────
+    "ui.main_panel.mhrs_skel_shadow":      {"EN": "Use Global Skeleton (Legacy)", "ZH": "使用全局骨架（古法）"},
+    "ui.main_panel.mhrs_skel_shadow_desc": {
+        "EN": "Align the built-in Shadow reference model to the source armature and export it over "
+              "mod/{gender}/bone/. Needs no extra plugin, but there is only one such file per gender, "
+              "so these proportions apply to every outfit",
+        "ZH": "把内置 Shadow 参考模型对齐到体型骨架后覆盖 mod/{gender}/bone/。无需额外插件，"
+              "但每个性别只有这一份文件，体型会套用到所有装备"},
+    "ui.main_panel.mhrs_skel_lua":         {"EN": "Use Lua Bone (Per-Set Skeleton)", "ZH": "使用Lua bone（独立骨骼）"},
+    "ui.main_panel.mhrs_skel_lua_desc": {
+        "EN": "Write this set's joint offsets as five json files under reframework/data/LUABoneSystem/custom/. "
+              "Proportions apply to this armor set alone, at the cost of players needing the LuaBoneSystem script",
+        "ZH": "把本套装备的关节偏移写成五份 json，放在 reframework/data/LUABoneSystem/custom/ 下。"
+              "体型只作用于这一套装备，代价是玩家需要安装 LuaBoneSystem 脚本"},
+
     "ui.main_panel.mhwi_mode_armor":       {"EN": "Armor",  "ZH": "装备"},
     "ui.main_panel.mhwi_mode_armor_desc":  {"EN": "Export character armor (equipment/transmog)", "ZH": "导出人物装备（护甲/幻化）"},
     "ui.main_panel.mhwi_mode_weapon":      {"EN": "Weapon", "ZH": "武器"},
@@ -175,6 +189,10 @@ STRINGS = {
         "EN": "Port Material (mrl3)", "ZH": "移植材质 (mrl3)"},
     "ui.main_panel.btn_port_ctc_to_chain2": {
         "EN": "Port Physics (ctc)", "ZH": "移植物理 (ctc)"},
+    # Named after what it does to a whole set, not after the three buttons above:
+    # it is not "run those three in a loop", it also imports and exports.
+    "ui.main_panel.btn_batch_port_mhrs": {
+        "EN": "Batch Port Set → MHRS", "ZH": "批量移植整套 → 崛起"},
     "ui.main_panel.btn_record_transform":         {"EN": "Record Transform (select two armatures)", "ZH": "录制变换 (选两个骨架)"},
     "ui.main_panel.btn_apply_forward":            {"EN": "▶ Forward (A→B)", "ZH": "▶ 正向 (A→B)"},
     "ui.main_panel.btn_apply_inverse":            {"EN": "◀ Inverse (B→A)", "ZH": "◀ 逆向 (B→A)"},

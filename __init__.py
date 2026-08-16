@@ -31,6 +31,7 @@ from .core import mhwi_port_ops
 from .core import mdf_port_ops
 from .core import mrl3_port_ops
 from .core import ctc_port_ops
+from .core import mhwi_batch_port_ops
 from .core import pre_export_check_ops
 from .core import ref_model_ops
 from .core import stale_cleanup_ops
@@ -111,6 +112,9 @@ modules = [
     # it shares no state with them, and drives RE Chain Editor through
     # core/re_chain_utils.py rather than reimplementing the builders.
     ctc_port_ops,
+    # Last of the MHWI ports: it drives all three above plus the MHWI importer
+    # and the MHRS exporter, so it registers after every operator it calls.
+    mhwi_batch_port_ops,
     # After mdf_port_ops: it imports that module's collection picker and shared
     # "Mod Root" row rather than restating either.
     pre_export_check_ops,

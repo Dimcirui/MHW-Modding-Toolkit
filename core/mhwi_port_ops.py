@@ -197,6 +197,23 @@ def import_reference_rig(context, game=DST_GAME):
     return arm
 
 
+def duplicate_reference(master):
+    """A working copy of an already-imported reference rig.
+
+    Exists for the batch path, where the import above is the single most expensive
+    step and every part of an armour set wants the same rig.  It cannot be shared:
+    ``snap_reference_to_model`` and ``optimize`` both rewrite the rest pose in place,
+    so the master has to stay untouched and each part gets its own copy.
+
+    The data-block is copied too -- a plain ``obj.copy()`` would leave both objects
+    pointing at one armature, and the first snap would move the master with it.
+    """
+    arm = master.copy()
+    arm.data = master.data.copy()
+    bpy.context.scene.collection.objects.link(arm)
+    return arm
+
+
 # ── 4. snap the reference onto the model ────────────────────────────────────────
 
 def snap_reference_to_model(context, model_arm, ref_arm, dst_preset=DST_PRESET):
@@ -433,6 +450,93 @@ def optimize(context, arm_obj, meshes, ops=()):
         getattr(getattr(bpy.ops, category), name)()
 
 
+# ── the port itself ─────────────────────────────────────────────────────────────
+
+def run_port(context, src_col, target_game, *, reference=None):
+    """Rebuild one MHWI collection as *target_game*.  The whole port, minus the UI.
+
+    Split out of the operator so the batch path can drive it directly: an operator's
+    ``execute`` can only be re-entered through ``bpy.ops``, which re-runs the poll,
+    re-reads the enum properties, and gives nothing back but a status set.
+
+    *reference* is an already-imported reference rig to copy instead of importing a
+    fresh one -- see ``duplicate_reference``.  It must be for *target_game*; nothing
+    here can tell, and a MHWilds master handed to an MHRS port would produce a rig
+    with the wrong bone set and no error anywhere.
+
+    Returns a dict.  ``{"error": <T key>}`` when the inputs are not a portable model;
+    otherwise the collection, the rig, and the four things worth saying out loud.
+    """
+    arms = [o for o in src_col.objects if o.type == 'ARMATURE'] if src_col else []
+    if len(arms) != 1:
+        return {"error": "core.mhwi_port_ops.pick_collection"}
+    if not looks_like_mhwi(arms[0]):
+        return {"error": "core.mhwi_port_ops.not_mhwi"}
+
+    cfg = mhwi_port.port_target(target_game)
+    cross = build_cross_game_map(SRC_PRESET, cfg["preset"])
+    if cross is None:
+        return {"error": "core.mhwi_port_ops.preset_load_failed"}
+
+    if context.mode != 'OBJECT':
+        bpy.ops.object.mode_set(mode='OBJECT')
+
+    # Work on a copy: steps 1 and 2 rewrite mesh data, and the source model must
+    # survive them intact.
+    work_arm = bone_utils.duplicate_armature_with_meshes(
+        arms[0], arms[0].name + "_port_tmp")
+    work_meshes = bound_meshes(work_arm)
+
+    # Bind the copies *before* anything moves, not at assembly time.  A mesh that
+    # arrived with an empty modifier target is deformed by nothing, so the thumb
+    # bake in step 2 would skip it -- and it would then be bound, at the end, to a
+    # rig whose rest pose already carries the rotated thumb, leaving its own thumb
+    # geometry where MHWI had it.  Binding here puts every mesh through every step.
+    #
+    # Only the copy is touched; the user's own model keeps whatever binding state
+    # it had.  Harmless for the meshes that were already bound -- rebind retargets
+    # in place rather than stacking a second modifier.
+    for mesh in work_meshes:
+        pose_bake.rebind(mesh, work_arm)
+
+    if cfg["sole_offset"]:
+        translate_rig(work_arm, cfg["sole_offset"])
+    thumbs = rotate_thumbs(work_arm, context) if cfg["rotate_thumbs"] else 0
+
+    ref_arm = (duplicate_reference(reference) if reference is not None
+               else import_reference_rig(context, target_game))
+    if ref_arm is None:
+        # The mesh copies have to go too.  ``duplicate_armature_with_meshes``
+        # links them into the *source's* collections, so leaving them behind
+        # puts a second, unbound body in the user's own .mod3 collection --
+        # which then reads as a two-mesh model on the next run.
+        for obj in work_meshes:
+            bpy.data.objects.remove(obj, do_unlink=True)
+        bpy.data.objects.remove(work_arm, do_unlink=True)
+        return {"error": "core.mhwi_port_ops.need_reference"}
+
+    snap_reference_to_model(context, work_arm, ref_arm, cfg["preset"])
+    out_col = assemble_collection(src_col, ref_arm, work_meshes, target_game)
+    rename_vertex_groups(context, work_meshes, cfg["preset"])
+    grafted, orphans, rehomed = transplant_physics(
+        work_arm, ref_arm, dict(cross.mapping))
+
+    bpy.data.objects.remove(work_arm, do_unlink=True)
+    optimize(context, ref_arm, work_meshes, cfg["optimize_ops"])
+
+    return {
+        "error": None,
+        "collection": out_col,
+        "armature": ref_arm,
+        "meshes": work_meshes,
+        "thumbs": thumbs,
+        "grafted": grafted,
+        "orphans": orphans,
+        "rehomed": rehomed,
+        "unknown": mhwi_port.partition([b.name for b in arms[0].data.bones])["unknown"],
+    }
+
+
 # ── operator ────────────────────────────────────────────────────────────────────
 
 #: Same persistent-list rule as _collection_items below: Blender's C side keeps the
@@ -496,71 +600,18 @@ class MHWI_OT_PortToMHWS(bpy.types.Operator):
         box.label(text=T("core.mhwi_port_ops.rebuild_note"), icon='INFO')
 
     def execute(self, context):
-        col = bpy.data.collections.get(self.source_collection)
-        arms = [o for o in col.objects if o.type == 'ARMATURE'] if col else []
-        if len(arms) != 1:
-            self.report({'ERROR'}, T("core.mhwi_port_ops.pick_collection"))
-            return {'CANCELLED'}
-        if not looks_like_mhwi(arms[0]):
-            self.report({'ERROR'}, T("core.mhwi_port_ops.not_mhwi"))
+        result = run_port(context, bpy.data.collections.get(self.source_collection),
+                          self.target_game)
+        if result["error"]:
+            self.report({'ERROR'}, T(result["error"]))
             return {'CANCELLED'}
 
-        cross = build_cross_game_map(
-            SRC_PRESET, mhwi_port.port_target(self.target_game)["preset"])
-        if cross is None:
-            self.report({'ERROR'}, T("core.mhwi_port_ops.preset_load_failed"))
-            return {'CANCELLED'}
-
-        if context.mode != 'OBJECT':
-            bpy.ops.object.mode_set(mode='OBJECT')
-
-        # Work on a copy: steps 1 and 2 rewrite mesh data, and the source model must
-        # survive them intact.
-        work_arm = bone_utils.duplicate_armature_with_meshes(
-            arms[0], arms[0].name + "_port_tmp")
-        work_meshes = bound_meshes(work_arm)
-
-        # Bind the copies *before* anything moves, not at assembly time.  A mesh that
-        # arrived with an empty modifier target is deformed by nothing, so the thumb
-        # bake in step 2 would skip it -- and it would then be bound, at the end, to a
-        # rig whose rest pose already carries the rotated thumb, leaving its own thumb
-        # geometry where MHWI had it.  Binding here puts every mesh through every step.
-        #
-        # Only the copy is touched; the user's own model keeps whatever binding state
-        # it had.  Harmless for the meshes that were already bound -- rebind retargets
-        # in place rather than stacking a second modifier.
-        for mesh in work_meshes:
-            pose_bake.rebind(mesh, work_arm)
-
-        cfg = mhwi_port.port_target(self.target_game)
-        if cfg["sole_offset"]:
-            translate_rig(work_arm, cfg["sole_offset"])
-        thumbs = rotate_thumbs(work_arm, context) if cfg["rotate_thumbs"] else 0
-
-        ref_arm = import_reference_rig(context, self.target_game)
-        if ref_arm is None:
-            # The mesh copies have to go too.  ``duplicate_armature_with_meshes``
-            # links them into the *source's* collections, so leaving them behind
-            # puts a second, unbound body in the user's own .mod3 collection --
-            # which then reads as a two-mesh model on the next run.
-            for obj in work_meshes:
-                bpy.data.objects.remove(obj, do_unlink=True)
-            bpy.data.objects.remove(work_arm, do_unlink=True)
-            self.report({'ERROR'}, T("core.mhwi_port_ops.need_reference"))
-            return {'CANCELLED'}
-
-        snap_reference_to_model(context, work_arm, ref_arm, cfg["preset"])
-        out_col = assemble_collection(col, ref_arm, work_meshes, self.target_game)
-        rename_vertex_groups(context, work_meshes, cfg["preset"])
-        grafted, orphans, rehomed = transplant_physics(
-            work_arm, ref_arm, dict(cross.mapping))
-
-        bpy.data.objects.remove(work_arm, do_unlink=True)
-        optimize(context, ref_arm, work_meshes, cfg["optimize_ops"])
-
+        out_col, orphans = result["collection"], result["orphans"]
+        rehomed, unknown = result["rehomed"], result["unknown"]
         parts = [T("core.mhwi_port_ops.stat").format(
-            name=out_col.name, thumbs=thumbs, bones=len(ref_arm.data.bones),
-            grafted=grafted, meshes=len(work_meshes))]
+            name=out_col.name, thumbs=result["thumbs"],
+            bones=len(result["armature"].data.bones),
+            grafted=result["grafted"], meshes=len(result["meshes"]))]
         if orphans:
             parts.append(T("core.mhwi_port_ops.physics_orphans").format(
                 n=len(orphans), names=", ".join(orphans[:8])))
@@ -571,8 +622,6 @@ class MHWI_OT_PortToMHWS(bpy.types.Operator):
             pairs = sorted({f"{src}->{dst}" for _b, src, dst in rehomed})
             parts.append(T("core.mhwi_port_ops.physics_rehomed").format(
                 n=len(rehomed), pairs=", ".join(pairs[:4])))
-        unknown = mhwi_port.partition(
-            [b.name for b in arms[0].data.bones])["unknown"]
         if unknown:
             parts.append(T("core.mhwi_port_ops.unknown_ids").format(
                 n=len(unknown), names=", ".join(unknown[:8])))

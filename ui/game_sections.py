@@ -209,6 +209,13 @@ SECTIONS = {
             # without it there is no ``scene.re_chain_toolpanel`` to build into.
             op("mhwi.port_physics_to_mhws", "ui.main_panel.btn_port_ctc_to_chain2",
                'PHYSICS', needs='mhw_ctc'),
+            # Below the three, because it is the same job done to a whole set --
+            # someone who wants one part reaches for the buttons above, someone
+            # who wants a set reaches past them.  Guarded on MHW Model Editor for
+            # the importer it drives; RE Mesh and RE Chain are caught at run time
+            # by the operators it hands off to, each with its own message.
+            op("mhwi.batch_port_mhrs", "ui.main_panel.btn_batch_port_mhrs",
+               'EXPORT', needs='mhw_model'),
         ],
     },
     'mhws': {
@@ -283,7 +290,10 @@ SECTIONS = {
     },
     'mhrs': {
         'label': "MHRS Tools", 'icon': 'GHOST_ENABLED',
-        'io': [_ref_model('MHRS'), _pre_export_check('MHRS'),
+        'io': [_ref_model('MHRS'),
+               op("mhrs.batch_import_dialog", "ui.main_panel.btn_batch_import",
+                  'IMPORT', needs='re_mesh_import'),
+               _pre_export_check('MHRS'),
                _batch_export('mhrs', "ui.game_sections.btn_batch_export_mhrs")],
         'rig': [],
         'material': [

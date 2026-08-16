@@ -1340,6 +1340,54 @@ STRINGS = {
         "ZH": "导出目录"},
     "core.mrl3_port_ops.migrate_params": {
         "EN": "Migrate Params", "ZH": "迁移参数"},
+    # ── MHWI -> MHRS batch port ────────────────────────────────────────────────
+    # Part names, gender labels and the texture-path pair are deliberately absent:
+    # this dialog reuses mhrs.batch_export.part_* / gender_* and
+    # core.mrl3_port_ops.dest_base_path, because they are the same words about the
+    # same things and a second copy would be a second thing to keep in step.
+    "core.mhwi_batch_port_ops.desc": {
+        "EN": "Port a whole MHWI armor set to MH Rise in one pass: model, materials "
+              "and physics for every part, then export",
+        "ZH": "一次性将整套 MHWI 装备移植到怪猎崛起：逐部位的模型、材质、物理，并导出"},
+    "core.mhwi_batch_port_ops.scan": {"EN": "Scan", "ZH": "解析"},
+    "core.mhwi_batch_port_ops.source_root_missing": {
+        "EN": "Set the MHWI mod root first", "ZH": "请先设置 MHWI Mod 根目录"},
+    "core.mhwi_batch_port_ops.not_scanned": {
+        "EN": "Not scanned yet", "ZH": "尚未解析"},
+    "core.mhwi_batch_port_ops.nothing_found": {
+        "EN": "No armor found under nativePC/pl/{f,m}_equip",
+        "ZH": "在 nativePC/pl/{f,m}_equip 下没有找到装备"},
+    "core.mhwi_batch_port_ops.source_group": {
+        "EN": "Source Set", "ZH": "来源装备"},
+    "core.mhwi_batch_port_ops.skip_no_mod3": {
+        "EN": "no .mod3 - skipped", "ZH": "缺 mod3，跳过"},
+    "core.mhwi_batch_port_ops.skip_no_mrl3": {
+        "EN": "no .mrl3 - skipped", "ZH": "缺 mrl3，跳过"},
+    "core.mhwi_batch_port_ops.no_physics": {
+        "EN": "no physics - inherits the body's",
+        "ZH": "无物理，继承躯干"},
+    "core.mhwi_batch_port_ops.no_physics_alone": {
+        "EN": "no physics", "ZH": "无物理"},
+    "core.mhwi_batch_port_ops.full": {
+        "EN": "model + materials + physics", "ZH": "模型 + 材质 + 物理"},
+    "core.mhwi_batch_port_ops.target_hint": {
+        "EN": "Which vanilla armor slot the ported set replaces",
+        "ZH": "移植后的装备覆盖哪一套原版装备"},
+    "core.mhwi_batch_port_ops.target_armor": {
+        "EN": "Target Armor", "ZH": "目标装备"},
+    "core.mhwi_batch_port_ops.import_failed": {
+        "EN": "Import failed - is MHW Model Editor enabled?",
+        "ZH": "导入失败 —— 是否已启用 MHW Model Editor？"},
+    "core.mhwi_batch_port_ops.no_portable_part": {
+        "EN": "No part has both a .mod3 and a .mrl3",
+        "ZH": "没有任何部位同时具备 mod3 和 mrl3"},
+    # No file count.  The obvious one to reach for is the number of bindings, and
+    # it is wrong by a wide margin: the blank files, the ``user.2``, the shadow mesh
+    # and every ``.tex`` are all written without one.  Naming the destination is
+    # both true and the thing the user actually needs next.
+    "core.mhwi_batch_port_ops.stat": {
+        "EN": "Batch port done: {ported} part(s) ported, {skipped} skipped -> {armor}",
+        "ZH": "批量移植完成：移植 {ported} 个部位，跳过 {skipped} 个 → {armor}"},
     "core.ctc_port_ops.target_label": {"EN": "Target Game", "ZH": "目标游戏"},
     "core.ctc_port_ops.target_mhws": {"EN": "MHWS", "ZH": "怪猎荒野"},
     "core.ctc_port_ops.target_mhws_desc": {

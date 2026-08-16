@@ -87,6 +87,11 @@ STRINGS = {
         "EN": "No unique armature found in the reference model collection", "ZH": "参考模型集合中未找到唯一骨架"},
     "mhrs.batch_export.shadow_export_done": {"EN": "Shadow export complete: {name}", "ZH": "Shadow 导出完成: {name}"},
     "mhrs.batch_export.shadow_export_failed": {"EN": "Shadow export failed: {err}", "ZH": "Shadow 导出失败: {err}"},
+    "mhrs.batch_export.lua_bone_export_done": {
+        "EN": "LuaBoneSystem: wrote {count} json to {dir}/ ({missing} joint(s) not on this rig, written as 0)",
+        "ZH": "LuaBoneSystem: 已写入 {count} 份 json 到 {dir}/（{missing} 根骨骼不在该骨架上，按 0 写出）"},
+    "mhrs.batch_export.lua_bone_export_failed": {
+        "EN": "LuaBoneSystem export failed: {err}", "ZH": "LuaBoneSystem 导出失败: {err}"},
 
     # ══════════════════════════════════════════════════════════════════════
     # games/mhrs/batch_export_ui.py
@@ -102,8 +107,11 @@ STRINGS = {
     "mhrs.batch_export_ui.select_armor_to_configure": {
         "EN": "Select an armor set to configure bindings", "ZH": "请选择装备以配置绑定"},
 
-    "mhrs.batch_export_ui.use_shadow_mesh_label":  {"EN": "Use Shadow Mesh", "ZH": "使用 Shadow Mesh"},
-    "mhrs.batch_export_ui.align_armature_label":   {"EN": "Align Armature", "ZH": "对齐骨架"},
+    "mhrs.batch_export_ui.skeleton_mode_label":    {"EN": "Skeleton Scheme", "ZH": "骨骼方案"},
+    "mhrs.batch_export_ui.lua_bone_hint": {
+        "EN": "Writes reframework/data/LUABoneSystem/custom/ next to natives. Players need the LuaBoneSystem script",
+        "ZH": "写入与 natives 并列的 reframework/data/LUABoneSystem/custom/，玩家需安装 LuaBoneSystem 脚本"},
+    "mhrs.batch_export_ui.align_armature_label":   {"EN": "Source Armature", "ZH": "来源骨架"},
     "mhrs.batch_export_ui.shadow_auto_use_hint":   {
         "EN": "Will auto-use when unselected: {name}", "ZH": "未选择时将自动使用: {name}"},
     "mhrs.batch_export_ui.shadow_no_align_arm_error": {
@@ -222,4 +230,45 @@ STRINGS = {
         "EN": "FxMap — secondary effect mask; carried for export, not used by "
               "the preview",
         "ZH": "FxMap — 附加特效遮罩；仅为导出保留，预览不使用"},
+
+    # ══════════════════════════════════════════════════════════════════════
+    # games/mhrs/batch_import.py
+    # ══════════════════════════════════════════════════════════════════════
+
+    "mhrs.batch_import.scan_desc": {
+        "EN": "Scan the armor pack against the Mod Root and list files found on disk",
+        "ZH": "按装备包在 Mod Root 中扫描，列出磁盘上实际存在的文件"},
+    "mhrs.batch_import.no_files_found": {"EN": "No files found", "ZH": "未找到任何文件"},
+    "mhrs.batch_import.scan_done": {"EN": "Found {n} file(s)", "ZH": "已找到 {n} 个文件"},
+    "mhrs.batch_import.toggle_group_desc": {
+        "EN": "Expand/collapse this armor set", "ZH": "展开/折叠该装备"},
+    "mhrs.batch_import.select_group_desc": {
+        "EN": "Select/deselect all files in this armor set", "ZH": "选中/取消选中该装备的所有文件"},
+    "mhrs.batch_import.select_all_desc": {
+        "EN": "Select/deselect all files", "ZH": "选中/取消选中全部文件"},
+    "mhrs.batch_import.mesh_editor_missing": {
+        "EN": "RE Mesh Editor not installed, cannot import", "ZH": "未安装 RE Mesh Editor，无法导入"},
+    "mhrs.batch_import.no_items_selected": {"EN": "No files selected", "ZH": "未选中任何文件"},
+    "mhrs.batch_import.batch_import_desc": {
+        "EN": "MHRS armor batch import", "ZH": "MHRS 装备批量导入"},
+    "mhrs.batch_import.done": {
+        "EN": "Done: imported {ok}, skipped {skip}", "ZH": "完成: 导入 {ok}, 跳过 {skip}"},
+    "mhrs.batch_import.done_with_fail": {
+        "EN": "Done: imported {ok}, failed {fail}, skipped {skip}",
+        "ZH": "完成: 导入 {ok}, 失败 {fail}, 跳过 {skip}"},
+
+    # ══════════════════════════════════════════════════════════════════════
+    # games/mhrs/batch_import_ui.py
+    # ══════════════════════════════════════════════════════════════════════
+
+    "mhrs.batch_import_ui.dialog_desc": {
+        "EN": "MHRS armor batch import dialog", "ZH": "MHRS 装备批量导入对话框"},
+    "mhrs.batch_import_ui.scan_btn": {"EN": "Scan", "ZH": "扫描"},
+    "mhrs.batch_import_ui.click_scan_hint": {
+        "EN": "Click Scan to look for importable files", "ZH": "点击扫描以查找可导入的文件"},
+    "mhrs.batch_import_ui.set_mod_root_hint": {
+        "EN": "Please set Mod Root first, then click Scan", "ZH": "请先设置 Mod Root，再点击扫描"},
+    "mhrs.batch_import_ui.deselect_all": {"EN": "Deselect All", "ZH": "取消全选"},
+    "mhrs.batch_import_ui.selected_count": {
+        "EN": "{enabled}/{total} selected", "ZH": "已选 {enabled}/{total}"},
 }

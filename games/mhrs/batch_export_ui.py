@@ -269,10 +269,19 @@ class MHRS_OT_BatchExportDialog(bpy.types.Operator):
     def _draw_shadow(self, layout, settings, scene=None, armor_id=None, gender=None, parts_mask=None):
         layout.separator()
         box = layout.box()
-        row = box.row(align=True)
-        row.prop(settings, "mhrs_use_shadow_export", text=T("mhrs.batch_export_ui.use_shadow_mesh_label"), icon='ARMATURE_DATA')
-        if not settings.mhrs_use_shadow_export:
+        box.label(text=T("mhrs.batch_export_ui.skeleton_mode_label"), icon='ARMATURE_DATA')
+        # text=" ", one space, and it has to be exactly that.  On an expanded enum
+        # text="" blanks the *item* labels as well -- every button comes out empty,
+        # which is what this box did at first -- while omitting text= entirely would
+        # fall back to the property's static English name=.  A single space is the
+        # only value that suppresses the property label and keeps the item labels.
+        # (Measured on 5.1 against a known-good enum, which blanks the same way.)
+        box.row(align=True).prop(settings, "mhrs_skeleton_mode", text=" ", expand=True)
+        mode = settings.mhrs_skeleton_mode      # ENUM_FLAG -> a set, possibly empty
+        if not mode:
             return
+        if 'LUA' in mode:
+            box.label(text=T("mhrs.batch_export_ui.lua_bone_hint"), icon='INFO')
         box.prop(settings, "mhrs_shadow_armature", text=T("mhrs.batch_export_ui.align_armature_label"))
         if not settings.mhrs_shadow_armature and scene is not None and armor_id and armor_id != 'NONE' and parts_mask is not None:
             auto_arm = _find_auto_align_armature(scene, armor_id, gender, parts_mask)

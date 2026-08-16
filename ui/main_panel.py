@@ -32,6 +32,47 @@ def _align_mode_items(self, context):
     ]
 
 
+#: Persistent backing for the enum below -- the trap every dynamic enum in this
+#: addon documents: Blender's C side keeps the pointers, so a list built fresh
+#: inside the callback is freed the moment Python drops it.
+_skeleton_mode_item_cache = []
+
+
+def _mhrs_skeleton_mode_items(self, context):
+    # Four-tuples: an ENUM_FLAG enum needs an explicit power-of-two value per item.
+    _skeleton_mode_item_cache.clear()
+    _skeleton_mode_item_cache.extend([
+        ('SHADOW', T("ui.main_panel.mhrs_skel_shadow"), T("ui.main_panel.mhrs_skel_shadow_desc"), 1),
+        ('LUA',    T("ui.main_panel.mhrs_skel_lua"),    T("ui.main_panel.mhrs_skel_lua_desc"),    2),
+    ])
+    return _skeleton_mode_item_cache
+
+
+#: Where the previous selection is remembered, so the update below can tell which
+#: of two lit buttons was the one just clicked.
+_SKEL_PREV_KEY = "_mhrs_skeleton_mode_prev"
+
+
+def _mhrs_skeleton_mode_exclusive(self, context):
+    """Keep at most one scheme lit.
+
+    A plain EnumProperty cannot express "neither" -- it always holds a value --
+    so this is an ENUM_FLAG (a set, which may be empty) narrowed back down to a
+    radio button by hand.  That buys the two things a plain enum could not have
+    together: nothing selected by default, and clicking the lit button again to
+    turn it back off.
+
+    Re-assigning inside an update callback re-enters this function once; the
+    second pass sees a single item and only records it, so it terminates.
+    """
+    current = set(self.mhrs_skeleton_mode)
+    if len(current) > 1:
+        just_clicked = current - set(self.get(_SKEL_PREV_KEY, []))
+        self.mhrs_skeleton_mode = just_clicked or {next(iter(current))}
+        return
+    self[_SKEL_PREV_KEY] = list(current)
+
+
 def _mhwi_export_mode_items(self, context):
     return [
         ('ARMOR',  T("ui.main_panel.mhwi_mode_armor"),  T("ui.main_panel.mhwi_mode_armor_desc")),
@@ -324,17 +365,26 @@ class MHW_PT_SuiteSettings(bpy.types.PropertyGroup):
                      "clear zero-weight vertex groups, limit and normalize weights (requires RE Mesh Editor)",
         default=True,
     )
-    mhrs_use_shadow_export: bpy.props.BoolProperty(
-        name="Use Shadow Mesh",
-        description="On export, align the built-in Shadow reference model's skeleton to the selected armature and "
-                     "export it to the fixed mod/{gender}/bone/ path",
-        default=False,
+    #: How the armour's proportions reach the game.  One enum rather than two
+    #: checkboxes because the two are mutually exclusive in the game, not merely
+    #: by convention: both move the same joints, so enabling both applies the
+    #: same offset twice.
+    mhrs_skeleton_mode: bpy.props.EnumProperty(
+        name="Skeleton Scheme",
+        description="How this armor set's skeleton reaches the game",
+        items=_mhrs_skeleton_mode_items,
+        options={'ENUM_FLAG'},
+        # No default=.  Blender rejects a set default when items is a callback
+        # ("'default' can only be an integer when 'items' is a function"), and an
+        # ENUM_FLAG with no default already starts as the empty set, which is
+        # exactly "neither scheme chosen".
+        update=_mhrs_skeleton_mode_exclusive,
     )
     mhrs_shadow_armature: bpy.props.PointerProperty(
         type=bpy.types.Object,
         poll=lambda self, obj: obj.type == 'ARMATURE',
-        name="Align Armature",
-        description="Target armature to align the Shadow reference model's skeleton to; if left empty and only "
+        name="Source Armature",
+        description="Armature this set's skeleton is read from; if left empty and only "
                      "one Mesh collection is bound this run, that collection's armature is used automatically",
     )
 

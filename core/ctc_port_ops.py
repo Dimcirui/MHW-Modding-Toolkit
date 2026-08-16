@@ -729,6 +729,45 @@ def detect_armature_game(arm_obj):
     return game
 
 
+def run_port(context, col, arm, target_game, migrate_flags='BASIC'):
+    """Rebuild one MHWI ``.ctc`` collection against *arm*.  The port, minus the UI.
+
+    Split out of the operator for the batch path, which needs to hand in the rig the
+    model port just built rather than pick one from an enum.  Returns a dict;
+    ``{"error": <T key>}`` when the inputs cannot be ported.
+    """
+    if col is None or arm is None or arm.type != 'ARMATURE':
+        return {"error": "core.ctc_port_ops.pick_inputs"}
+    if getattr(context.scene, "re_chain_toolpanel", None) is None:
+        return {"error": "core.ctc_port_ops.need_chain_editor"}
+
+    cross = build_cross_game_map(
+        SRC_PRESET, mhwi_port.port_target(target_game)["preset"])
+    if cross is None:
+        return {"error": "core.ctc_port_ops.preset_load_failed"}
+
+    if context.mode != 'OBJECT':
+        bpy.ops.object.mode_set(mode='OBJECT')
+
+    chains = read_chains(context, col)
+    colliders = read_colliders(col)
+    if not chains and not colliders:
+        return {"error": "core.ctc_port_ops.nothing_to_port"}
+
+    target_bones = set(arm.data.bones.keys())
+    bad = (resolve_chains(chains, cross, target_bones)
+           + resolve_colliders(colliders, cross, target_bones))
+
+    stem = chain_convert.chain_stem(col.name)
+    if stem.endswith(".ctc"):
+        stem = stem[:-4]
+    out, report = build(context, arm, chains, colliders,
+                        f"{stem}_{target_game}", migrate_flags, target_game)
+    if out is None:
+        return {"error": "core.ctc_port_ops.build_failed"}
+    return {"error": None, "collection": out, "report": report, "bad": bad}
+
+
 class MHWI_OT_PortPhysicsToMHWS(bpy.types.Operator):
     bl_idname = "mhwi.port_physics_to_mhws"
     bl_label = "MHWI Physics Port"
@@ -788,45 +827,13 @@ class MHWI_OT_PortPhysicsToMHWS(bpy.types.Operator):
                 icon='ERROR')
 
     def execute(self, context):
-        col = bpy.data.collections.get(self.source_collection)
-        arm = bpy.data.objects.get(self.target_armature)
-        if col is None or arm is None or arm.type != 'ARMATURE':
-            self.report({'ERROR'}, T("core.ctc_port_ops.pick_inputs"))
+        result = run_port(context, bpy.data.collections.get(self.source_collection),
+                          bpy.data.objects.get(self.target_armature),
+                          self.target_game, self.migrate_flags)
+        if result["error"]:
+            self.report({'ERROR'}, T(result["error"]))
             return {'CANCELLED'}
-        if getattr(context.scene, "re_chain_toolpanel", None) is None:
-            self.report({'ERROR'}, T("core.ctc_port_ops.need_chain_editor"))
-            return {'CANCELLED'}
-
-        cross = build_cross_game_map(
-            SRC_PRESET, mhwi_port.port_target(self.target_game)["preset"])
-        if cross is None:
-            self.report({'ERROR'}, T("core.ctc_port_ops.preset_load_failed"))
-            return {'CANCELLED'}
-
-        if context.mode != 'OBJECT':
-            bpy.ops.object.mode_set(mode='OBJECT')
-
-        chains = read_chains(context, col)
-        colliders = read_colliders(col)
-        if not chains and not colliders:
-            self.report({'ERROR'}, T("core.ctc_port_ops.nothing_to_port"))
-            return {'CANCELLED'}
-
-        target_bones = set(arm.data.bones.keys())
-        bad = (resolve_chains(chains, cross, target_bones)
-               + resolve_colliders(colliders, cross, target_bones))
-
-        stem = chain_convert.chain_stem(col.name)
-        if stem.endswith(".ctc"):
-            stem = stem[:-4]
-        out, report = build(context, arm, chains, colliders,
-                            f"{stem}_{self.target_game}", self.migrate_flags,
-                            self.target_game)
-        if out is None:
-            self.report({'ERROR'}, T("core.ctc_port_ops.build_failed"))
-            return {'CANCELLED'}
-
-        return self._report(out, report, bad)
+        return self._report(result["collection"], result["report"], result["bad"])
 
     def _report(self, out, report, bad):
         parts = [T("core.ctc_port_ops.stat").format(

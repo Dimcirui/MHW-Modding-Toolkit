@@ -186,14 +186,29 @@ def _png_to_array(png_path):
         bpy.data.images.remove(img)
 
 
-def load_source_slots(mat_data, natives_root, temp_dir):
-    """``({slot: array}, {slot: png path}, [missing])`` for one mrl3 material.
+def new_tex_cache():
+    """Backing store for the decode/compose caching below.
+
+    Keyed on the source ``.tex`` **path**, not on the material -- which is the whole
+    point.  One armour set's parts routinely bind the same texture from several
+    materials, and decoding is three hops (MT tex -> DDS -> PNG -> array) of the most
+    expensive work this port does.  A per-run dict rather than a module global, so a
+    cache never outlives the temp directory the PNGs it names live in.
+    """
+    return {"png": {}, "arr": {}, "composed": {}}
+
+
+def load_source_slots(mat_data, natives_root, temp_dir, cache=None):
+    """``({slot: array}, {slot: png path}, [missing], {slot: source path})``.
 
     The PNGs are kept alongside the arrays because the two slots that cross over
     unchanged -- masks, which have no PBR reading -- are written from the file rather
     than rebuilt from planes.
+
+    The source paths come back too so the caller can tell whether two materials were
+    built from the same pixels; nothing here uses them.
     """
-    arrays, pngs, missing = {}, {}, []
+    arrays, pngs, missing, sources = {}, {}, [], {}
     for item in mat_data.mapList_items:
         slot = item.name
         if not item.value or _is_null_tex(item.value):
@@ -205,13 +220,26 @@ def load_source_slots(mat_data, natives_root, temp_dir):
             missing.append(f"{slot}: {item.value}")
             continue
         try:
-            png = decode_mhwi_tex(path, temp_dir)
+            png_cache = cache["png"] if cache is not None else None
+            if png_cache is not None and path in png_cache:
+                png = png_cache[path]
+            else:
+                png = decode_mhwi_tex(path, temp_dir)
+                if png_cache is not None:
+                    png_cache[path] = png
             pngs[slot] = png
+            sources[slot] = path
             if slot in mrl3_port_tex.DECODE_MAP:
-                arrays[slot] = _png_to_array(png)
+                arr_cache = cache["arr"] if cache is not None else None
+                if arr_cache is not None and path in arr_cache:
+                    arrays[slot] = arr_cache[path]
+                else:
+                    arrays[slot] = _png_to_array(png)
+                    if arr_cache is not None:
+                        arr_cache[path] = arrays[slot]
         except Exception as err:
             missing.append(f"{slot}: {err}")
-    return arrays, pngs, missing
+    return arrays, pngs, missing, sources
 
 
 # ── material rebuild ────────────────────────────────────────────────────────────
@@ -298,12 +326,25 @@ def migrate_params(src_data, dst_data, mode):
 # ── texture rebuild ─────────────────────────────────────────────────────────────
 
 def port_textures(mat_data, dst_data, tex_name, arrays, pngs, dst_cfg,
-                  dst_root, dst_base, temp_dir):
-    """Fill the new material's bindings, writing each texture out.  ``(written, notes)``."""
+                  dst_root, dst_base, temp_dir, cache=None, sources=None):
+    """Fill the new material's bindings, writing each texture out.  ``(written, notes)``.
+
+    With a *cache*, the composed PNG for a destination slot is reused whenever a
+    later material decomposes from **the same set of source files**, which is the
+    signature *sources* carries.  Deliberately the whole material's source set
+    rather than just the planes one slot reads: it costs a few missed hits and buys
+    the guarantee that a hit means identical pixels, which a per-plane key would
+    have to prove separately for every slot in ``BASE_SLOT_CHANNEL_MAPS``.
+
+    Only the compose is shared.  The write is not: the file name is built from
+    *tex_name*, so each material still gets its own ``.tex`` on disk.
+    """
     from .mdf_tex_processor_base import BASE_SLOT_CHANNEL_MAPS, _compose_channels
 
     planes, notes = mrl3_port_tex.decompose(arrays)
     written = 0
+    signature = (tuple(sorted((sources or {}).values()))
+                 if cache is not None and sources else None)
 
     for binding in dst_data.textureBindingList_items:
         slot = binding.textureType
@@ -322,10 +363,16 @@ def port_textures(mat_data, dst_data, tex_name, arrays, pngs, dst_cfg,
             # textures in twenty neutral ones.
             if not (needed & set(planes)):
                 continue
-            composed = _compose_channels(
-                slot, {}, {}, temp_dir, tex_name,
-                channel_maps=BASE_SLOT_CHANNEL_MAPS, pbr_arrays=planes,
-                octahedral=True)
+            key = (slot, signature) if signature is not None else None
+            if key is not None and key in cache["composed"]:
+                composed = cache["composed"][key]
+            else:
+                composed = _compose_channels(
+                    slot, {}, {}, temp_dir, tex_name,
+                    channel_maps=BASE_SLOT_CHANNEL_MAPS, pbr_arrays=planes,
+                    octahedral=True)
+                if key is not None and composed is not None:
+                    cache["composed"][key] = composed
             if composed is None:
                 continue
             source = ("png", composed)
@@ -410,6 +457,186 @@ def used_material_names(mod3_col):
     return names
 
 
+def run_port(context, src_col, target_game, *, dest_base_path="",
+             params_mode='BASIC', convert_textures=True, cull_unused=True,
+             mod3_col=None, src_root=None, dst_root=None, temp_dir=None,
+             tex_cache=None):
+    """Port one MHWI ``.mrl3`` collection to *target_game*.  The port, minus the UI.
+
+    Split out of the operator for the batch path.  Two of the parameters exist only
+    for it:
+
+    * *src_root* / *dst_root* default to the scene's own natives roots when left
+      ``None``, which is what the operator wants -- but the batch writes into a
+      folder the user picked for that run, which is not a scene setting at all.
+    * *temp_dir*, when given, is neither created nor removed here.  Decoding is the
+      expensive half of this port and an armour set's parts share source textures,
+      so the batch keeps one directory across every part and cleans it up itself.
+
+    Returns a dict; ``{"error": <T key>}`` when the port cannot start.
+    """
+    materials = mrl3_materials(src_col) if src_col else []
+    if not materials:
+        return {"error": "core.mrl3_port_ops.no_targets"}
+
+    # Culled before anything is built, not after: a material that will not
+    # survive should not cost a texture decode, and the count in the report is
+    # then "what was ported", not "what was ported minus what was thrown away".
+    culled = []
+    if cull_unused:
+        if mod3_col is None:
+            return {"error": "core.mrl3_port_ops.pick_mod3"}
+        used = used_material_names(mod3_col)
+        keep = []
+        for obj in materials:
+            name = obj.mhw_mrl3_material.materialName or obj.name
+            (keep if name in used else culled).append(obj if name in used else name)
+        materials = keep
+        if not materials:
+            return {"error": "core.mrl3_port_ops.all_culled"}
+
+    # Textures go straight to the *final* target, even when the material is
+    # built against MHWilds' prefab on the way to MHRS.  Writing them as
+    # MHWilds and fixing them up afterwards would mean either a second
+    # decode/encode or a pile of orphaned .tex in the wrong container; writing
+    # them once here costs nothing extra, because the two games' channel_maps
+    # and abbrev_map are identical and only tex_version (241106027 vs 28),
+    # use_art_prefix and the natives root differ.
+    dst_cfg = mdf_port_tex.get_game_tex_config(target_game)
+    if dst_cfg is None:
+        return {"error": "core.mdf_port_ops.missing_tex_config"}
+
+    read_preset = import_read_preset_json()
+    if read_preset is None:
+        return {"error": "core.mdf_port_ops.cannot_load_preset_tool"}
+
+    prefab = mrl3_port.prefab_path()
+    if prefab is None:
+        return {"error": "core.mrl3_port_ops.no_prefab"}
+
+    if src_root is None:
+        src_root = context.scene.get(SRC_NATIVES_KEY, "")
+    if dst_root is None:
+        dst_root = context.scene.get(dst_cfg["natives_root_key"], "")
+    dst_base = mdf_port_tex.full_base_path(dst_cfg, (dest_base_path or "").strip())
+    convert = convert_textures and bool(src_root)
+
+    owns_temp = temp_dir is None
+    if owns_temp:
+        temp_dir = tempfile.mkdtemp(prefix="mrl3_port_")
+    new_col = _new_mdf_collection(src_col)
+    built = failed = tex_written = 0
+    params_ok = params_skip = 0
+    missing, notes, unportable = [], [], set()
+
+    try:
+        for obj in materials:
+            src_data = obj.mhw_mrl3_material
+            name = src_data.materialName or obj.name
+            new_obj = read_preset(prefab, new_col)
+            if not new_obj:
+                failed += 1
+                continue
+            dst_data = new_obj.re_mdf_material
+            dst_data.materialName = name
+            apply_flags(src_data, dst_data)
+            ok, skip = migrate_params(src_data, dst_data, params_mode)
+            params_ok += ok
+            params_skip += skip
+
+            if convert:
+                arrays, pngs, gone, sources = load_source_slots(
+                    src_data, src_root, temp_dir, tex_cache)
+                missing.extend(f"{name}/{m}" for m in gone)
+                unportable.update(mrl3_port_tex.unportable(arrays))
+                written, size_notes = port_textures(
+                    src_data, dst_data, name.removesuffix('_UseSC'),
+                    arrays, pngs, dst_cfg, dst_root, dst_base, temp_dir,
+                    tex_cache, sources)
+                tex_written += written
+                notes.extend(f"{name}/{n}" for n in size_notes)
+            built += 1
+    finally:
+        if owns_temp:
+            import shutil
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
+    result = {
+        "error": None, "collection": new_col, "built": built, "failed": failed,
+        "textures": tex_written, "params_ok": params_ok, "params_skip": params_skip,
+        "culled": culled, "missing": missing, "notes": notes,
+        "unportable": unportable,
+        "source_root_missing": convert_textures and not src_root,
+        "relay": None,
+    }
+    if target_game == _RELAY_TARGET and built:
+        result["relay"] = relay(context, new_col, dest_base_path=dest_base_path,
+                                params_mode=params_mode)
+        if result["relay"][0]:
+            result["collection"] = bpy.data.collections.get(result["relay"][2])
+    return result
+
+
+def relay(context, mhws_col, *, dest_base_path="", params_mode='BASIC'):
+    """Hand the MHWilds result to the ordinary MHWS -> MHRS material port.
+
+    The intermediate is removed on success, so the user is left with the one
+    collection they asked for rather than two -- but only on success: if the
+    second hop fails, the MHWilds materials are a real result and throwing
+    them away would turn a partial port into no port at all.
+
+    Textures are not converted again -- ``run_port`` has already written them in
+    MHRS's own container and path convention, so there is nothing left to
+    convert.  But the material port skips its whole binding loop when
+    ``convert_textures`` is off, which would leave the new materials on
+    PL_Default's stock paths, so the bindings are carried over here by slot
+    type.  A plain name-keyed copy is enough: MHWilds and MHRS name all 15 slot
+    types identically and pack them identically, which is the same measurement
+    that makes the relay free in the first place.
+
+    Returns ``(ok, note, result collection name or None)``.
+    """
+    stem = mhws_col.name
+    for suffix in (f"_{DST_GAME}.mdf2", ".mdf2"):
+        if stem.endswith(suffix):
+            stem = stem[:-len(suffix)]
+            break
+    try:
+        r = bpy.ops.modder.port_mdf_material_cross_game(
+            'EXEC_DEFAULT', source_game=DST_GAME, target_game=_RELAY_TARGET,
+            source_collection=mhws_col.name, convert_textures=False,
+            dest_base_path=(dest_base_path or "").strip(),
+            migrate_params=params_mode)
+    except (RuntimeError, TypeError) as e:
+        return False, T("core.mrl3_port_ops.relay_failed").format(err=e), None
+    if 'FINISHED' not in r:
+        return False, T("core.mrl3_port_ops.relay_failed").format(
+            err=", ".join(r)), None
+
+    made = next((c for c in bpy.data.collections
+                 if c.get("~TYPE") == "RE_MDF_COLLECTION"
+                 and c.name.startswith(mhws_col.name.removesuffix(".mdf2"))
+                 and c is not mhws_col), None)
+    if made is None:
+        return False, T("core.mrl3_port_ops.relay_no_result"), None
+    made.name = f"{stem}_{_RELAY_TARGET}.mdf2"
+    # Only the author's own textures move. The stock paths differ per game and
+    # the destination prefab already carries the right ones -- see
+    # carry_texture_bindings' docstring for what carrying them costs.
+    from .mdf_material_convert_base import (_load_vanilla_art_paths,
+                                            is_custom_tex_path)
+    src_cfg = mdf_port_tex.get_game_tex_config(DST_GAME) or {}
+    vanilla = _load_vanilla_art_paths(src_cfg.get("vanilla_asset_rel", ""))
+    carried = mrl3_port.carry_texture_bindings(
+        mhws_col, made, lambda p: is_custom_tex_path(p, vanilla))
+    n = len([o for o in made.objects if o.get("~TYPE") == "RE_MDF_MATERIAL"])
+    for obj in list(mhws_col.objects):
+        bpy.data.objects.remove(obj, do_unlink=True)
+    bpy.data.collections.remove(mhws_col)
+    return True, T("core.mrl3_port_ops.relayed").format(
+        name=made.name, n=n, tex=carried), made.name
+
+
 class MHWI_OT_PortMrl3ToMdf2(bpy.types.Operator):
     bl_idname = "mhwi.port_mrl3_to_mdf2"
     bl_label = "MHWI Material Port"
@@ -489,175 +716,46 @@ class MHWI_OT_PortMrl3ToMdf2(bpy.types.Operator):
                 _draw_mod_root_row(box, context, self.target_game, dst_cfg)
 
     def execute(self, context):
-        src_col = bpy.data.collections.get(self.source_collection)
-        materials = mrl3_materials(src_col) if src_col else []
-        if not materials:
-            self.report({'ERROR'}, T("core.mrl3_port_ops.no_targets"))
+        result = run_port(
+            context, bpy.data.collections.get(self.source_collection),
+            self.target_game,
+            dest_base_path=self.dest_base_path,
+            params_mode=self.migrate_params,
+            convert_textures=self.convert_textures,
+            cull_unused=self.cull_unused,
+            mod3_col=bpy.data.collections.get(self.mod3_collection))
+        if result["error"]:
+            self.report({'ERROR'}, T(result["error"]))
             return {'CANCELLED'}
-
-        # Culled before anything is built, not after: a material that will not
-        # survive should not cost a texture decode, and the count in the report is
-        # then "what was ported", not "what was ported minus what was thrown away".
-        culled = []
-        if self.cull_unused:
-            mod3_col = bpy.data.collections.get(self.mod3_collection)
-            if mod3_col is None:
-                self.report({'ERROR'}, T("core.mrl3_port_ops.pick_mod3"))
-                return {'CANCELLED'}
-            used = used_material_names(mod3_col)
-            keep = []
-            for obj in materials:
-                name = obj.mhw_mrl3_material.materialName or obj.name
-                (keep if name in used else culled).append(obj if name in used else name)
-            materials = keep
-            if not materials:
-                self.report({'ERROR'}, T("core.mrl3_port_ops.all_culled"))
-                return {'CANCELLED'}
-
-        # Textures go straight to the *final* target, even when the material is
-        # built against MHWilds' prefab on the way to MHRS.  Writing them as
-        # MHWilds and fixing them up afterwards would mean either a second
-        # decode/encode or a pile of orphaned .tex in the wrong container; writing
-        # them once here costs nothing extra, because the two games' channel_maps
-        # and abbrev_map are identical and only tex_version (241106027 vs 28),
-        # use_art_prefix and the natives root differ.
-        dst_cfg = mdf_port_tex.get_game_tex_config(self.target_game)
-        if dst_cfg is None:
-            self.report({'ERROR'}, T("core.mdf_port_ops.missing_tex_config"))
-            return {'CANCELLED'}
-
-        read_preset = import_read_preset_json()
-        if read_preset is None:
-            self.report({'ERROR'}, T("core.mdf_port_ops.cannot_load_preset_tool"))
-            return {'CANCELLED'}
-
-        prefab = mrl3_port.prefab_path()
-        if prefab is None:
-            self.report({'ERROR'}, T("core.mrl3_port_ops.no_prefab"))
-            return {'CANCELLED'}
-
-        src_root = context.scene.get(SRC_NATIVES_KEY, "")
-        dst_root = context.scene.get(dst_cfg["natives_root_key"], "")
-        dst_base = mdf_port_tex.full_base_path(dst_cfg, self.dest_base_path.strip())
-        convert = self.convert_textures and bool(src_root)
-        if self.convert_textures and not src_root:
+        if result["source_root_missing"]:
             self.report({'WARNING'}, T("core.mrl3_port_ops.source_root_missing"))
 
-        temp_dir = tempfile.mkdtemp(prefix="mrl3_port_")
-        new_col = _new_mdf_collection(src_col)
-        built = failed = tex_written = 0
-        params_ok = params_skip = 0
-        missing, notes, unportable = [], [], set()
-
-        try:
-            for obj in materials:
-                src_data = obj.mhw_mrl3_material
-                name = src_data.materialName or obj.name
-                new_obj = read_preset(prefab, new_col)
-                if not new_obj:
-                    failed += 1
-                    continue
-                dst_data = new_obj.re_mdf_material
-                dst_data.materialName = name
-                apply_flags(src_data, dst_data)
-                ok, skip = migrate_params(src_data, dst_data, self.migrate_params)
-                params_ok += ok
-                params_skip += skip
-
-                if convert:
-                    arrays, pngs, gone = load_source_slots(src_data, src_root, temp_dir)
-                    missing.extend(f"{name}/{m}" for m in gone)
-                    unportable.update(mrl3_port_tex.unportable(arrays))
-                    written, size_notes = port_textures(
-                        src_data, dst_data, name.removesuffix('_UseSC'),
-                        arrays, pngs, dst_cfg, dst_root, dst_base, temp_dir)
-                    tex_written += written
-                    notes.extend(f"{name}/{n}" for n in size_notes)
-                built += 1
-        finally:
-            import shutil
-            shutil.rmtree(temp_dir, ignore_errors=True)
-
+        culled, missing = result["culled"], result["missing"]
         parts = [T("core.mrl3_port_ops.stat").format(
-            name=new_col.name, built=built, textures=tex_written,
-            migrated=params_ok, skipped=params_skip)]
+            name=result["collection"].name, built=result["built"],
+            textures=result["textures"], migrated=result["params_ok"],
+            skipped=result["params_skip"])]
         if culled:
             parts.append(T("core.mrl3_port_ops.culled").format(
                 n=len(culled), names=", ".join(sorted(culled)[:8])))
-        if failed:
-            parts.append(T("core.mrl3_port_ops.failed").format(n=failed))
+        if result["failed"]:
+            parts.append(T("core.mrl3_port_ops.failed").format(n=result["failed"]))
         if missing:
             parts.append(T("core.mrl3_port_ops.missing_tex").format(
                 n=len(missing), names="; ".join(missing[:4])))
-        if unportable:
+        if result["unportable"]:
             parts.append(T("core.mrl3_port_ops.unportable").format(
-                names=", ".join(sorted(unportable))))
-        if notes:
+                names=", ".join(sorted(result["unportable"]))))
+        if result["notes"]:
             parts.append(T("core.mrl3_port_ops.rescaled").format(
-                n=len(notes), names="; ".join(notes[:4])))
-        self.report({'WARNING'} if (failed or missing) else {'INFO'},
+                n=len(result["notes"]), names="; ".join(result["notes"][:4])))
+        self.report({'WARNING'} if (result["failed"] or missing) else {'INFO'},
                     "  ".join(parts))
 
-        if self.target_game == _RELAY_TARGET and built:
-            ok, note = self._relay(context, new_col)
+        if result["relay"] is not None:
+            ok, note, _name = result["relay"]
             self.report({'INFO'} if ok else {'WARNING'}, note)
         return {'FINISHED'}
-
-    def _relay(self, context, mhws_col):
-        """Hand the MHWilds result to the ordinary MHWS -> MHRS material port.
-
-        The intermediate is removed on success, so the user is left with the one
-        collection they asked for rather than two -- but only on success: if the
-        second hop fails, the MHWilds materials are a real result and throwing
-        them away would turn a partial port into no port at all.
-
-        Textures are not converted again -- ``execute`` has already written them in
-        MHRS's own container and path convention, so there is nothing left to
-        convert.  But the material port skips its whole binding loop when
-        ``convert_textures`` is off, which would leave the new materials on
-        PL_Default's stock paths, so the bindings are carried over here by slot
-        type.  A plain name-keyed copy is enough: MHWilds and MHRS name all 15 slot
-        types identically and pack them identically, which is the same measurement
-        that makes the relay free in the first place.
-        """
-        stem = mhws_col.name
-        for suffix in (f"_{DST_GAME}.mdf2", ".mdf2"):
-            if stem.endswith(suffix):
-                stem = stem[:-len(suffix)]
-                break
-        try:
-            r = bpy.ops.modder.port_mdf_material_cross_game(
-                'EXEC_DEFAULT', source_game=DST_GAME, target_game=_RELAY_TARGET,
-                source_collection=mhws_col.name, convert_textures=False,
-                dest_base_path=self.dest_base_path.strip(),
-                migrate_params=self.migrate_params)
-        except (RuntimeError, TypeError) as e:
-            return False, T("core.mrl3_port_ops.relay_failed").format(err=e)
-        if 'FINISHED' not in r:
-            return False, T("core.mrl3_port_ops.relay_failed").format(err=", ".join(r))
-
-        made = next((c for c in bpy.data.collections
-                     if c.get("~TYPE") == "RE_MDF_COLLECTION"
-                     and c.name.startswith(mhws_col.name.removesuffix(".mdf2"))
-                     and c is not mhws_col), None)
-        if made is None:
-            return False, T("core.mrl3_port_ops.relay_no_result")
-        made.name = f"{stem}_{_RELAY_TARGET}.mdf2"
-        # Only the author's own textures move. The stock paths differ per game and
-        # the destination prefab already carries the right ones -- see
-        # carry_texture_bindings' docstring for what carrying them costs.
-        from .mdf_material_convert_base import (_load_vanilla_art_paths,
-                                                is_custom_tex_path)
-        src_cfg = mdf_port_tex.get_game_tex_config(DST_GAME) or {}
-        vanilla = _load_vanilla_art_paths(src_cfg.get("vanilla_asset_rel", ""))
-        carried = mrl3_port.carry_texture_bindings(
-            mhws_col, made, lambda p: is_custom_tex_path(p, vanilla))
-        n = len([o for o in made.objects if o.get("~TYPE") == "RE_MDF_MATERIAL"])
-        for obj in list(mhws_col.objects):
-            bpy.data.objects.remove(obj, do_unlink=True)
-        bpy.data.collections.remove(mhws_col)
-        return True, T("core.mrl3_port_ops.relayed").format(
-            name=made.name, n=n, tex=carried)
 
 
 classes = [MHWI_OT_PortMrl3ToMdf2]

@@ -1,4 +1,5 @@
 import bpy
+import contextlib
 import json
 import os
 import shutil
@@ -8,6 +9,7 @@ from ...core.re_mesh_compat import call_re_mesh_op, re_mesh_op_available
 from ...core.bone_utils import align_armatures_by_name
 from ...core import console_export
 from ...core import export_prep
+from ...core import lua_bone_system
 
 # MHRS 游戏级文件后缀常量
 MHRS_EXTS = {
@@ -225,23 +227,13 @@ def _find_auto_align_armature(scene, armor_id, gender, parts_mask):
     return _get_armature_from_collection(next(iter(mesh_cols)))
 
 
-def _do_shadow_export(context, natives_root, gender, align_arm):
+@contextlib.contextmanager
+def _imported_shadow(context, gender):
+    """临时导入内置的 {gender}_shadow 参考模型，产出 (集合名, 骨架)，退出时清理。
+
+    全局骨架导出要把它对齐后重新导出，LuaBoneSystem 导出要读它的骨骼静置坐标当
+    基准——两者要的是同一个文件、同一次导入、同一套善后，所以放在一处。
     """
-    导入内置的 {gender}_shadow 参考模型，将其骨架对齐到 align_arm，
-    导出到固定路径 natives/STM/player/mod/{gender}/bone/{gender}_shadow.mesh.###，
-    然后清理临时导入的集合。
-
-    返回 (ok: bool, message: str)。
-    """
-    if not re_mesh_op_available('importfile'):
-        return False, T("mhrs.batch_export.shadow_need_importer")
-    if align_arm is None or align_arm.type != 'ARMATURE':
-        return False, T("mhrs.batch_export.shadow_need_align_arm")
-
-    asset_path = _get_shadow_asset_path(gender)
-    if not os.path.isfile(asset_path):
-        return False, T("mhrs.batch_export.shadow_missing_asset").format(name=os.path.basename(asset_path))
-
     prev_active   = context.view_layer.objects.active
     prev_selected = [o for o in context.selected_objects]
     for o in prev_selected:
@@ -249,6 +241,7 @@ def _do_shadow_export(context, natives_root, gender, align_arm):
 
     imported_col_name = None
     try:
+        asset_path = _get_shadow_asset_path(gender)
         # 显式传入 createCollections=True / clearScene=False：
         # 脚本调用 bpy.ops 时未指定的属性会沿用 Blender 记住的“上次使用值”，
         # 而不是类声明的默认值，若之前手动导入时改过这些选项，
@@ -272,18 +265,7 @@ def _do_shadow_export(context, natives_root, gender, align_arm):
         if shadow_arm is None:
             raise RuntimeError(T("mhrs.batch_export.shadow_no_unique_armature"))
 
-        align_armatures_by_name(align_arm, shadow_arm, mode='FULL')
-
-        dest_path = _make_shadow_filepath(natives_root, gender)
-        os.makedirs(os.path.dirname(dest_path), exist_ok=True)
-        call_re_mesh_op('exportfile', filepath=dest_path, targetCollection=imported_col_name, **MESH_SETTINGS)
-
-        return True, T("mhrs.batch_export.shadow_export_done").format(name=os.path.basename(dest_path))
-
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return False, T("mhrs.batch_export.shadow_export_failed").format(err=e)
+        yield imported_col_name, shadow_arm
 
     finally:
         if imported_col_name and imported_col_name in bpy.data.collections:
@@ -295,6 +277,81 @@ def _do_shadow_export(context, natives_root, gender, align_arm):
         for o in prev_selected:
             if o.name in bpy.data.objects:
                 o.select_set(True)
+
+
+def _check_shadow_asset(gender, align_arm):
+    """两种骨架方案共同的前置条件，或 None。"""
+    if not re_mesh_op_available('importfile'):
+        return T("mhrs.batch_export.shadow_need_importer")
+    if align_arm is None or align_arm.type != 'ARMATURE':
+        return T("mhrs.batch_export.shadow_need_align_arm")
+    asset_path = _get_shadow_asset_path(gender)
+    if not os.path.isfile(asset_path):
+        return T("mhrs.batch_export.shadow_missing_asset").format(
+            name=os.path.basename(asset_path))
+    return None
+
+
+def _do_shadow_export(context, natives_root, gender, align_arm):
+    """
+    导入内置的 {gender}_shadow 参考模型，将其骨架对齐到 align_arm，
+    导出到固定路径 natives/STM/player/mod/{gender}/bone/{gender}_shadow.mesh.###，
+    然后清理临时导入的集合。
+
+    返回 (ok: bool, message: str)。
+    """
+    err = _check_shadow_asset(gender, align_arm)
+    if err:
+        return False, err
+
+    try:
+        with _imported_shadow(context, gender) as (imported_col_name, shadow_arm):
+            align_armatures_by_name(align_arm, shadow_arm, mode='FULL')
+
+            dest_path = _make_shadow_filepath(natives_root, gender)
+            os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+            call_re_mesh_op('exportfile', filepath=dest_path,
+                            targetCollection=imported_col_name, **MESH_SETTINGS)
+
+        return True, T("mhrs.batch_export.shadow_export_done").format(
+            name=os.path.basename(dest_path))
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return False, T("mhrs.batch_export.shadow_export_failed").format(err=e)
+
+
+def _do_lua_bone_export(context, natives_root, gender, armor_id, align_arm):
+    """把 align_arm 相对内置 shadow 骨架的静置差写成 LuaBoneSystem 的五份 json。
+
+    和全局骨架方案互斥，且解决的正是它的问题：全局方案覆盖 mod/{gender}/bone/ 下
+    唯一的那份骨架，一套装备的体型会套到所有装备上；这里写的是按装备 id 索引的
+    偏移表，只在穿着这套时生效。代价是玩家需要装 LuaBoneSystem 这个 REFramework
+    脚本，而全局方案不需要。
+
+    返回 (ok: bool, message: str)。
+    """
+    err = _check_shadow_asset(gender, align_arm)
+    if err:
+        return False, err
+
+    try:
+        with _imported_shadow(context, gender) as (_col_name, shadow_arm):
+            base = lua_bone_system.local_rest_positions(shadow_arm)
+        target = lua_bone_system.local_rest_positions(align_arm)
+        offsets = lua_bone_system.build_offsets(target, base)
+        written = lua_bone_system.write(natives_root, gender, armor_id, offsets)
+
+        missing = sorted(set(base) - set(target) - lua_bone_system.ZERO_JOINTS)
+        return True, T("mhrs.batch_export.lua_bone_export_done").format(
+            count=len(written), dir=os.path.basename(os.path.dirname(written[0])),
+            missing=len(missing))
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return False, T("mhrs.batch_export.lua_bone_export_failed").format(err=e)
 
 
 # ── 导出 Operator ──────────────────────────────────────────────
@@ -447,12 +504,19 @@ class MHRS_OT_BatchExport(bpy.types.Operator):
                     print(f"[MHRS] FAILED {label}: {err}")
                     fail_count += 1
 
-        # ── Shadow Mesh ──
-        if settings.mhrs_use_shadow_export:
+        # ── 体型方案：全局骨架 / LuaBoneSystem，二选一 ──
+        # 互斥不是取舍而是事实：两者都在改同一批关节，同时启用会让全局骨架先把
+        # 体型烘进 shadow.mesh，脚本再在它之上叠一份同样的偏移，结果是加倍。
+        mode = settings.mhrs_skeleton_mode      # ENUM_FLAG -> a set, possibly empty
+        if mode:
             align_arm = settings.mhrs_shadow_armature
             if align_arm is None:
                 align_arm = _find_auto_align_armature(scene, armor_id, gender, parts_mask)
-            ok, msg = _do_shadow_export(context, natives_root, gender, align_arm)
+            if 'SHADOW' in mode:
+                ok, msg = _do_shadow_export(context, natives_root, gender, align_arm)
+            else:
+                ok, msg = _do_lua_bone_export(context, natives_root, gender,
+                                              armor_id, align_arm)
             if ok:
                 self.report({'INFO'}, msg)
                 export_count += 1
