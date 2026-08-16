@@ -456,12 +456,17 @@ def _copy_inherited_chains(natives_root, gender, armor_id, inherited):
 
 
 def run(context, parts, *, target_game="MHRS", dest_base_path="",
-        src_root=None, dst_root=None, progress=None):
+        src_root=None, dst_root=None, progress=None, skip_textures=False):
     """Port every portable part in *parts*.  Returns a list of per-part results.
 
     *parts* is what ``discover`` returns.  *progress*, when given, is called as
     ``progress(index, total, part_code)`` before each part -- the batch has no
     report to build up, so this is the only thing that says where it got to.
+
+    *skip_textures* produces the mdf2 with its texture paths filled but writes no
+    ``.tex``.  For replacing a set's mesh/mdf2/ctc over textures an earlier run
+    already put on disk: the texture pass is the batch's dominant cost, and nothing
+    else in the flow depends on its output.
 
     A result carries the three output collections (``mesh``, ``mdf2``, ``chain``,
     any of which may be ``None``), the output armature, and ``skip``/``error`` when
@@ -494,7 +499,7 @@ def run(context, parts, *, target_game="MHRS", dest_base_path="",
                 context, part, target_game=target_game,
                 dest_base_path=dest_base_path, src_root=src_root,
                 dst_root=dst_root, temp_dir=temp_dir, tex_cache=tex_cache,
-                reference=reference))
+                reference=reference, skip_textures=skip_textures))
     finally:
         _discard_armature(reference)
         shutil.rmtree(temp_dir, ignore_errors=True)
@@ -656,7 +661,7 @@ def _discard_armature(obj):
 
 
 def _run_part(context, part, *, target_game, dest_base_path, src_root, dst_root,
-              temp_dir, tex_cache, reference):
+              temp_dir, tex_cache, reference, skip_textures=False):
     """Model, then materials, then physics, for one part.
 
     The order is forced rather than chosen: the material port needs the ``.mod3``
@@ -676,7 +681,8 @@ def _run_part(context, part, *, target_game, dest_base_path, src_root, dst_root,
     material = mrl3_port_ops.run_port(
         context, part["mrl3"], target_game,
         dest_base_path=dest_base_path, params_mode='BASIC',
-        convert_textures=True, cull_unused=True, mod3_col=part["mod3"],
+        convert_textures=not skip_textures, cull_unused=True,
+        mod3_col=part["mod3"], paths_only=skip_textures,
         src_root=src_root, dst_root=dst_root, temp_dir=temp_dir,
         tex_cache=tex_cache)
     if material["error"]:

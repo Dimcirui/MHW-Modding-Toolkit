@@ -208,6 +208,75 @@ def written_props(mode):
     return names
 
 
+# ── the MHRS dissolve rule ──────────────────────────────────────────────────────
+#
+# MHRS only.  MHWilds' ``basic`` has no ``Nuki_Dissolve``; MHRS' ``PL_Default`` does,
+# and it is how that shader spells "this surface is uniformly see-through".
+#
+# The shape of the rule is a recognition problem, not a conversion one.  A MHWI
+# material that is *flatly* translucent carries no texture saying so -- its albedo is
+# white with a constant alpha, or the null_white stand-in, and the transparency lives
+# entirely in ``fBaseMapFactor__uiColor``'s A.  Nothing downstream can recover that:
+# the albedo's A becomes the ``alpha`` plane and is routed into
+# ``AlphaTranslucentOcclusionSSSMap.R``, while the factor goes to ``ColorParam`` --
+# both correct for MHWilds, and neither is what MHRS reads for a flat dissolve.
+#
+# So the two facts are multiplied back together and written where MHRS looks.  The
+# emissive test is a guard rather than an input: a material with a patterned emissive
+# is doing something the flat reading would misdescribe, so it is left alone.
+
+#: The MHRS property this writes.  ``UseNuki_Dissolve`` is deliberately not touched --
+#: it is already 1.0 in the shipped ``assets/mdf_presets/mhrs/standard.json``, and a
+#: material the rule does not fire on keeps that prefab's own ``Nuki_Dissolve`` too.
+NUKI_TARGET_PROP = "Nuki_Dissolve"
+
+#: The mrl3 field whose A is the other half of the product (user, 2026-08-17).
+NUKI_FACTOR_FIELD = "fBaseMapFactor__uiColor"
+
+#: The two slots the rule reads.  Kept as a pair so the ops layer can decode exactly
+#: these when the batch was told to skip textures -- the rule still has to be right
+#: then, which is the user's decision (2026-08-17).
+NUKI_ALBEDO_SLOT = "AlbedoMap"
+NUKI_EMISSIVE_SLOT = "EmissiveMap"
+NUKI_SLOTS = (NUKI_ALBEDO_SLOT, NUKI_EMISSIVE_SLOT)
+
+#: MHWI's stand-ins, by what they hold.  ``mrl3_port_ops._is_null_tex`` only asks
+#: *whether* a binding is one of these; the rule needs to know which.
+NULL_TEX_KINDS = {"null_white": "white", "null_black": "black"}
+
+
+def null_tex_kind(value):
+    """``'white'`` / ``'black'`` / None for an mrl3 binding value.
+
+    Substring rather than equality: the binding is a bare backslash path
+    (``Assets\\default_tex\\null_white``) whose folder half varies.
+    """
+    low = (value or "").lower().replace("\\", "/")
+    for token, kind in NULL_TEX_KINDS.items():
+        if token in low:
+            return kind
+    return None
+
+
+def nuki_dissolve(albedo_strength, emissive_flat, factor_alpha):
+    """The ``Nuki_Dissolve`` value, or None when the rule does not apply.
+
+    *albedo_strength* is the albedo's constant opacity (``mrl3_port_tex.
+    albedo_alpha_strength``, or 1.0 when the binding is ``null_white`` -- a stand-in
+    is opaque and there is nothing to measure).  *emissive_flat* says the emissive is
+    a null stand-in or a uniform white/black image.  Both are required: this only
+    describes materials whose transparency is a single number.
+
+    Clamped to 0..1 because the destination is a dissolve amount, while mrl3's factor
+    is a plain float that authors do push past 1 -- ``split_emissive`` exists because
+    of the same habit on the emissive side.  Clamping rather than rejecting, since a
+    factor over 1 means "fully opaque, and then some", which 1.0 says correctly.
+    """
+    if albedo_strength is None or not emissive_flat:
+        return None
+    return max(0.0, min(1.0, float(albedo_strength) * float(factor_alpha)))
+
+
 # ── relay support ───────────────────────────────────────────────────────────────
 # Used when the port is asked for MHRS: the material half goes through the ordinary
 # MHWS -> MHRS port, which skips its whole texture-binding loop when it is told not

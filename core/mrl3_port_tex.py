@@ -149,3 +149,64 @@ def unportable(slot_arrays):
     """Slots the source uses that MHWilds has nowhere to put."""
     return sorted(s for s in slot_arrays
                   if s in UNPORTABLE_SLOTS and slot_arrays[s] is not None)
+
+
+# ── flat-texture measurement (the MHRS Nuki_Dissolve rule) ──────────────────────
+#
+# See ``mrl3_port.nuki_dissolve`` for what the answers are used for.  The reading is
+# here because it is pixel work, and it is numpy so it stays offline-checkable.
+
+#: How far a channel may wander and still count as flat.  **Not zero, and it cannot
+#: be**: MHWI's ``.tex`` are block-compressed, and BC1/BC7 are lossy, so a texture
+#: authored as pure white decodes to values a hair under 1.0 that differ per block.
+#: One 8-bit step is the smallest tolerance that survives that without admitting a
+#: gradient -- a real dissolve mask spans far more than 1/255.
+FLAT_TOL = 1.0 / 255.0
+
+
+def flat_value(arr, index, tol=FLAT_TOL):
+    """The channel's value if it is one value across the whole image, else None.
+
+    The midpoint of the observed range rather than any single pixel, so a channel
+    that decoded to 0.996..1.000 answers with its centre instead of whichever corner
+    happened to be sampled.
+    """
+    channel = arr[..., index]
+    lo, hi = float(channel.min()), float(channel.max())
+    if hi - lo > tol:
+        return None
+    return (lo + hi) / 2.0
+
+
+def is_flat_rgb(arr, value, tol=FLAT_TOL):
+    """Is every RGB pixel *value*?  Alpha is not looked at."""
+    rgb = arr[..., :3]
+    return bool(float(np.abs(rgb - value).max()) <= tol)
+
+
+def albedo_alpha_strength(arr, tol=FLAT_TOL):
+    """The constant opacity of a white albedo, or None if it is not one.
+
+    "Not one" covers both halves of the test: an albedo with actual colour in it is
+    carrying the material's look and must not be reduced to a dissolve number, and an
+    albedo whose alpha varies per pixel is a real cutout mask, which a single scalar
+    cannot stand in for either.
+    """
+    if arr is None:
+        return None
+    if not is_flat_rgb(arr, 1.0, tol):
+        return None
+    return flat_value(arr, 3, tol)
+
+
+def is_flat_emissive(arr, tol=FLAT_TOL):
+    """Is the emissive map uniformly white or uniformly black?
+
+    Either way it holds no pattern, which is what the rule needs to know; the two are
+    not distinguished because the emissive *factor* is what scales them, and a flat
+    map of either colour leaves the surface's dissolve unaffected.  Alpha is ignored
+    for the same reason it is in ``is_flat_rgb``.
+    """
+    if arr is None:
+        return False
+    return is_flat_rgb(arr, 1.0, tol) or is_flat_rgb(arr, 0.0, tol)

@@ -198,7 +198,7 @@ def new_tex_cache():
     return {"png": {}, "arr": {}, "composed": {}}
 
 
-def load_source_slots(mat_data, natives_root, temp_dir, cache=None):
+def load_source_slots(mat_data, natives_root, temp_dir, cache=None, slots=None):
     """``({slot: array}, {slot: png path}, [missing], {slot: source path})``.
 
     The PNGs are kept alongside the arrays because the two slots that cross over
@@ -207,10 +207,16 @@ def load_source_slots(mat_data, natives_root, temp_dir, cache=None):
 
     The source paths come back too so the caller can tell whether two materials were
     built from the same pixels; nothing here uses them.
+
+    *slots* narrows the work to the named slots.  The Nuki rule needs two of them
+    read even in a run that writes no textures at all, and decoding is three hops per
+    file -- so "decode everything and use two" is not an option there.
     """
     arrays, pngs, missing, sources = {}, {}, [], {}
     for item in mat_data.mapList_items:
         slot = item.name
+        if slots is not None and slot not in slots:
+            continue
         if not item.value or _is_null_tex(item.value):
             continue
         if slot not in mrl3_port_tex.DECODE_MAP and slot not in mrl3_port_tex.DIRECT_SLOTS:
@@ -386,6 +392,127 @@ def port_textures(mat_data, dst_data, tex_name, arrays, pngs, dst_cfg,
     return written, notes
 
 
+def source_slots_present(mat_data, natives_root=None):
+    """The source slots that hold a real texture this port can read.
+
+    The same three tests ``load_source_slots`` applies -- bound, not a null stand-in,
+    a slot with a decode or direct rule -- minus the decode itself.  The file-exists
+    test is only made when *natives_root* is known, since without a root there is
+    nothing to look in and the binding is still the author's stated intent.
+    """
+    out = set()
+    for item in mat_data.mapList_items:
+        slot = item.name
+        if not item.value or _is_null_tex(item.value):
+            continue
+        if slot not in mrl3_port_tex.DECODE_MAP and slot not in mrl3_port_tex.DIRECT_SLOTS:
+            continue
+        if natives_root:
+            path = source_tex_path(natives_root, item.value)
+            if not path or not os.path.isfile(path):
+                continue
+        out.add(slot)
+    return out
+
+
+def port_texture_paths(mat_data, dst_data, tex_name, dst_cfg, dst_base,
+                       natives_root=None):
+    """Fill the bindings ``port_textures`` would fill, writing no pixels.  ``filled``.
+
+    This is the "skip textures" half of the batch: the point of that run is to swap
+    in a new mesh/mdf2/ctc against textures that are *already on disk* from an
+    earlier full run, so the paths have to come out identical to what the full path
+    would have produced -- otherwise the mdf2 points at nothing.
+
+    Which slots get a path is the one thing that has to be re-derived rather than
+    copied, and it is derivable: ``port_textures`` decides per destination slot by
+    asking whether any PBR plane it reads was produced, and which planes exist
+    follows from *which source slots are bound* through ``DECODE_MAP`` alone -- the
+    pixel values never enter that decision.  So the two selections agree by
+    construction, and ``tests/test_mrl3_port_tex.py`` pins them together.
+
+    One case it cannot reproduce: ``_compose_channels`` returning None for a slot it
+    was asked to build, which skips the binding in the full path and cannot be known
+    without composing.  That leaves a path pointing at a ``.tex`` the full run did not
+    write -- reported by the pre-export check rather than silently.
+    """
+    from .mdf_tex_processor_base import BASE_SLOT_CHANNEL_MAPS, make_mdf_path
+
+    have = source_slots_present(mat_data, natives_root)
+    planes = {pbr for slot in have if slot in mrl3_port_tex.DECODE_MAP
+              for pbr, _index in mrl3_port_tex.DECODE_MAP[slot].values()}
+
+    filled = 0
+    for binding in dst_data.textureBindingList_items:
+        slot = binding.textureType
+        direct = any(dst == slot and src in have
+                     for src, dst in mrl3_port_tex.DIRECT_SLOTS.items())
+        if not direct:
+            if not planes or slot not in BASE_SLOT_CHANNEL_MAPS:
+                continue
+            needed = {src[0] for src in BASE_SLOT_CHANNEL_MAPS[slot].values()
+                      if isinstance(src, tuple)}
+            if not (needed & planes):
+                continue
+        binding.path = make_mdf_path(dst_base, tex_name, slot,
+                                     dst_cfg['abbrev_map'], dst_cfg['use_art_prefix'])
+        filled += 1
+    return filled
+
+
+# ── the MHRS dissolve rule ──────────────────────────────────────────────────────
+
+def read_nuki_dissolve(src_data, arrays):
+    """One material's ``Nuki_Dissolve``, or None when the rule does not apply.
+
+    *arrays* is what ``load_source_slots`` decoded -- which may hold only the two
+    slots the rule reads, or nothing at all when the source root is unset.  A slot
+    that is absent from it is either a null stand-in (read from the binding instead,
+    which is the only way to tell white from black) or unreadable, and an unreadable
+    albedo means no rule: guessing opaque there would write a dissolve the material
+    never asked for.
+    """
+    bindings = {item.name: item.value for item in src_data.mapList_items}
+
+    albedo_kind = mrl3_port.null_tex_kind(bindings.get(mrl3_port.NUKI_ALBEDO_SLOT))
+    if albedo_kind == "white":
+        strength = 1.0
+    elif albedo_kind is not None:
+        strength = None          # a black stand-in is not the flat-white case
+    else:
+        strength = mrl3_port_tex.albedo_alpha_strength(
+            arrays.get(mrl3_port.NUKI_ALBEDO_SLOT))
+
+    emissive = bindings.get(mrl3_port.NUKI_EMISSIVE_SLOT)
+    if mrl3_port.null_tex_kind(emissive) is not None or not emissive:
+        emissive_flat = True
+    else:
+        emissive_flat = mrl3_port_tex.is_flat_emissive(
+            arrays.get(mrl3_port.NUKI_EMISSIVE_SLOT))
+
+    factor = _mrl3_values(src_data).get(mrl3_port.NUKI_FACTOR_FIELD)
+    if factor is None or len(factor) < 4:
+        return None
+    return mrl3_port.nuki_dissolve(strength, emissive_flat, factor[3])
+
+
+def apply_nuki_dissolve(col, values):
+    """Write the collected values onto the finished MHRS materials.  ``written``.
+
+    After the relay, not before: the property is MHRS', and the intermediate the
+    relay reads is built on MHWilds' ``basic`` prefab, which has no such property to
+    carry across.
+    """
+    written = 0
+    for name, data in mrl3_port._materials_by_name(col).items():
+        value = values.get(name)
+        if value is None:
+            continue
+        if _set_mdf_prop(data, mrl3_port.NUKI_TARGET_PROP, value, "scalar"):
+            written += 1
+    return written
+
+
 # ── operator ────────────────────────────────────────────────────────────────────
 
 _collection_item_cache = []
@@ -460,8 +587,14 @@ def used_material_names(mod3_col):
 def run_port(context, src_col, target_game, *, dest_base_path="",
              params_mode='BASIC', convert_textures=True, cull_unused=True,
              mod3_col=None, src_root=None, dst_root=None, temp_dir=None,
-             tex_cache=None):
+             tex_cache=None, paths_only=False):
     """Port one MHWI ``.mrl3`` collection to *target_game*.  The port, minus the UI.
+
+    *paths_only* builds the materials in full but writes no texture files, filling
+    the bindings with the paths a full run would have produced.  For re-porting a set
+    whose textures are already on disk, where the decode/compose/encode pass is the
+    whole cost of the run.  The MHRS dissolve rule still reads its two slots -- it has
+    to stay right, so the mode is "skip the writes", not "skip the pixels".
 
     Split out of the operator for the batch path.  Two of the parameters exist only
     for it:
@@ -519,15 +652,18 @@ def run_port(context, src_col, target_game, *, dest_base_path="",
     if dst_root is None:
         dst_root = context.scene.get(dst_cfg["natives_root_key"], "")
     dst_base = mdf_port_tex.full_base_path(dst_cfg, (dest_base_path or "").strip())
-    convert = convert_textures and bool(src_root)
+    convert = convert_textures and bool(src_root) and not paths_only
+    # MHRS only: MHWilds' basic prefab has no Nuki_Dissolve to write.
+    want_nuki = target_game == _RELAY_TARGET
 
     owns_temp = temp_dir is None
     if owns_temp:
         temp_dir = tempfile.mkdtemp(prefix="mrl3_port_")
     new_col = _new_mdf_collection(src_col)
-    built = failed = tex_written = 0
+    built = failed = tex_written = tex_paths = 0
     params_ok = params_skip = 0
     missing, notes, unportable = [], [], set()
+    nuki_values = {}
 
     try:
         for obj in materials:
@@ -544,6 +680,7 @@ def run_port(context, src_col, target_game, *, dest_base_path="",
             params_ok += ok
             params_skip += skip
 
+            arrays = {}
             if convert:
                 arrays, pngs, gone, sources = load_source_slots(
                     src_data, src_root, temp_dir, tex_cache)
@@ -555,6 +692,20 @@ def run_port(context, src_col, target_game, *, dest_base_path="",
                     tex_cache, sources)
                 tex_written += written
                 notes.extend(f"{name}/{n}" for n in size_notes)
+            else:
+                if want_nuki and src_root:
+                    arrays, _p, gone, _s = load_source_slots(
+                        src_data, src_root, temp_dir, tex_cache,
+                        slots=mrl3_port.NUKI_SLOTS)
+                    missing.extend(f"{name}/{m}" for m in gone)
+                if paths_only:
+                    tex_paths += port_texture_paths(
+                        src_data, dst_data, name.removesuffix('_UseSC'),
+                        dst_cfg, dst_base, src_root)
+            if want_nuki:
+                value = read_nuki_dissolve(src_data, arrays)
+                if value is not None:
+                    nuki_values[name] = value
             built += 1
     finally:
         if owns_temp:
@@ -563,17 +714,20 @@ def run_port(context, src_col, target_game, *, dest_base_path="",
 
     result = {
         "error": None, "collection": new_col, "built": built, "failed": failed,
-        "textures": tex_written, "params_ok": params_ok, "params_skip": params_skip,
+        "textures": tex_written, "tex_paths": tex_paths,
+        "params_ok": params_ok, "params_skip": params_skip,
         "culled": culled, "missing": missing, "notes": notes,
         "unportable": unportable,
-        "source_root_missing": convert_textures and not src_root,
-        "relay": None,
+        "source_root_missing": convert_textures and not paths_only and not src_root,
+        "relay": None, "nuki": 0,
     }
     if target_game == _RELAY_TARGET and built:
         result["relay"] = relay(context, new_col, dest_base_path=dest_base_path,
                                 params_mode=params_mode)
         if result["relay"][0]:
             result["collection"] = bpy.data.collections.get(result["relay"][2])
+            if result["collection"] is not None:
+                result["nuki"] = apply_nuki_dissolve(result["collection"], nuki_values)
     return result
 
 
