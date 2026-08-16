@@ -1385,6 +1385,16 @@ STRINGS = {
         "ZH": "移植后的装备覆盖哪一套原版装备"},
     "core.mhwi_batch_port_ops.target_armor": {
         "EN": "Target Armor", "ZH": "目标装备"},
+    "core.mhwi_batch_port_ops.skip_textures": {
+        "EN": "Skip Textures", "ZH": "不处理贴图"},
+    # No key for the checkbox's own tooltip: Blender reads a property's
+    # ``description`` once at registration, so a T() there would freeze whichever
+    # language was active at import.  The caveat is drawn as a label instead, which
+    # is re-translated every redraw.
+    "core.mhwi_batch_port_ops.skip_textures_hint": {
+        "EN": "Paths are filled, but the .tex must already be on disk from an "
+              "earlier full port",
+        "ZH": "路径照常填写，但 .tex 须已由此前的完整移植写入磁盘"},
     "core.mhwi_batch_port_ops.import_failed": {
         "EN": "Import failed - is MHW Model Editor enabled?",
         "ZH": "导入失败 —— 是否已启用 MHW Model Editor？"},

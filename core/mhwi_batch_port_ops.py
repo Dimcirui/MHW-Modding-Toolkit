@@ -244,6 +244,11 @@ class MHWI_OT_BatchPortMHRS(bpy.types.Operator):
     #: 动态枚举存的是一个会被重建的列表的下标，换装备包后同一个值指向的会是
     #: 另一套装备。
     armor_query: bpy.props.StringProperty(name="Target Armor", default="")
+    #: Off by default: a first port of a set has no textures on disk to reuse, and
+    #: an mdf2 pointing at .tex that were never written loads as a black model.
+    skip_textures: bpy.props.BoolProperty(
+        name="Skip Textures", default=False,
+        description="Skip texture output, keeping the paths")
 
     def invoke(self, context, event):
         # Scanned on open, so the common case -- root already set, one set in the
@@ -328,6 +333,11 @@ class MHWI_OT_BatchPortMHRS(bpy.types.Operator):
         layout.prop(self, "dest_base_path",
                     text=T("core.mrl3_port_ops.dest_base_path"))
         layout.label(text=T("core.mrl3_port_ops.base_path_example"))
+        layout.prop(self, "skip_textures",
+                    text=T("core.mhwi_batch_port_ops.skip_textures"))
+        if self.skip_textures:
+            layout.label(text=T("core.mhwi_batch_port_ops.skip_textures_hint"),
+                         icon='INFO')
 
     def execute(self, context):
         # Before anything reads the scan.  The stored paths are absolute, so a scan
@@ -380,7 +390,7 @@ class MHWI_OT_BatchPortMHRS(bpy.types.Operator):
             context, parts, target_game="MHRS",
             dest_base_path=self.dest_base_path.strip() or default_base_path(entry),
             src_root=context.scene.get("mhwi_natives_root", ""),
-            dst_root=dst_root)
+            dst_root=dst_root, skip_textures=self.skip_textures)
 
         # Before the export, not after: the export needs only the ported
         # collections, and clearing first means a failed export still leaves a clean
