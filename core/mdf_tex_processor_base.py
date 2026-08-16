@@ -636,19 +636,15 @@ def _compose_channels(slot_type, pbr_paths, pbr_channels, temp_dir, tex_name, pb
                   f"{len(colour_channels)} colour channel(s) at strength {strength:.2f}")
 
     abbrev   = BASE_TEXTURE_TYPE_ABBREV.get(slot_type, slot_type)
-    out_name = f"{tex_name}_{abbrev}_composed.png"
+    # Staged as TGA rather than PNG: this file exists only to hand the buffer to
+    # texconv, and a zlib round trip is by far the most expensive thing that
+    # happened to it.  Same 8 bits per channel either way, so the compressor sees
+    # identical bytes -- see core/tga_file.py for why not DDS.
+    out_name = f"{tex_name}_{abbrev}_composed.tga"
     out_path = os.path.join(temp_dir, out_name)
 
-    tmp_out = f"__mdf_compose_out_{abbrev}"
-    if tmp_out in bpy.data.images:
-        bpy.data.images.remove(bpy.data.images[tmp_out])
-    out_img = bpy.data.images.new(tmp_out, width=ref_w, height=ref_h, alpha=True)
-    out_img.colorspace_settings.name = 'Non-Color'
-    array_to_image(out_img, result)
-    out_img.filepath_raw = out_path
-    out_img.file_format = 'PNG'
-    out_img.save()
-    bpy.data.images.remove(out_img)
+    from . import tga_file
+    tga_file.write_tga_rgba8(out_path, result)
     return out_path
 
 

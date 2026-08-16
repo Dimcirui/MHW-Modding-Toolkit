@@ -215,6 +215,10 @@ def repack_slot(src_tex_path, src_slot_type, dst_slot_type, temp_dir, tex_name,
       for nothing.
     * ``("png", composed_path)`` -- layouts differ, so the channels genuinely
       have to be taken apart and rebuilt, and the result must be encoded.
+      The tag is historical: the payload is whatever staging format
+      ``_compose_channels`` writes (a TGA since the PNG round trip was dropped),
+      and nothing dispatches on it beyond "is this already a .tex" --
+      ``slot_resolver.write_slot_tex`` goes by the real extension.
     """
     from .mdf_tex_processor_base import BASE_SLOT_CHANNEL_MAPS, _compose_channels
 

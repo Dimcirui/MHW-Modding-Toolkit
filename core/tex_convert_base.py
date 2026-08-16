@@ -14,6 +14,13 @@ import tempfile
 import shutil
 
 from .i18n import T
+# Same two helpers the MDF processor uses, for the same reason: img.pixels[:]
+# materialises one Python float per channel (67 million objects for a 4K
+# texture) and `pixels[:] = arr.flatten().tolist()` builds the same list going
+# the other way.  This module had kept the slow form on every one of its six
+# pixel transfers, and a single convert can chain three of them.
+from .mdf_tex_processor_base import image_to_array
+from .tga_file import write_tga_rgba8
 
 _CH = {'R': 0, 'G': 1, 'B': 2, 'A': 3}
 _CH_ITEMS = [('R', 'R', ''), ('G', 'G', ''), ('B', 'B', ''), ('A', 'A', '')]
@@ -357,7 +364,7 @@ def _compose_channels(channel_map, path_a, path_b, out_dir, name_hint, encode_oc
         iw, ih = img.size
         if iw != ref_w or ih != ref_h:
             img.scale(ref_w, ref_h)
-        loaded[key] = np.array(img.pixels[:], dtype=np.float32).reshape(ref_h, ref_w, 4)
+        loaded[key] = image_to_array(img)
         bpy.data.images.remove(img)
 
     result = np.zeros((ref_h, ref_w, 4), dtype=np.float32)
@@ -384,18 +391,8 @@ def _compose_channels(channel_map, path_a, path_b, out_dir, name_hint, encode_oc
         a = result[:, :, _CH['A']]
         result[:, :, _CH['G']], result[:, :, _CH['A']] = encode_normal_ga(g, a)
 
-    out_path = os.path.join(out_dir, f"{name_hint}_composed.png")
-    tmp_out = "__tex_convert_out"
-    if tmp_out in bpy.data.images:
-        bpy.data.images.remove(bpy.data.images[tmp_out])
-    out_img = bpy.data.images.new(tmp_out, width=ref_w, height=ref_h, alpha=True)
-    out_img.colorspace_settings.name = 'Non-Color'
-    out_img.pixels[:] = result.flatten().tolist()
-    out_img.filepath_raw = out_path
-    out_img.file_format = 'PNG'
-    out_img.save()
-    bpy.data.images.remove(out_img)
-    return out_path
+    out_path = os.path.join(out_dir, f"{name_hint}_composed.tga")
+    return write_tga_rgba8(out_path, result)
 
 
 # ── Detail normal map overlay (SINGLE mode only) ────────────────────────────
@@ -439,8 +436,7 @@ def _blend_detail_normal(base_path, detail_path, tiling_x, tiling_y, out_dir, na
         img = bpy.data.images.load(path, check_existing=False)
         img.name = tmp_name
         img.colorspace_settings.name = 'Non-Color'
-        w, h = img.size
-        arr = np.array(img.pixels[:], dtype=np.float32).reshape(h, w, 4)
+        arr = image_to_array(img)
         bpy.data.images.remove(img)
         return arr
 
@@ -461,18 +457,8 @@ def _blend_detail_normal(base_path, detail_path, tiling_x, tiling_y, out_dir, na
     result[:, :, 2] = z * 0.5 + 0.5
     result[:, :, 3] = base_arr[:, :, 3]
 
-    out_path = os.path.join(out_dir, f"{name_hint}.png")
-    tmp_out = "__tex_convert_detail_out"
-    if tmp_out in bpy.data.images:
-        bpy.data.images.remove(bpy.data.images[tmp_out])
-    out_img = bpy.data.images.new(tmp_out, width=w, height=h, alpha=True)
-    out_img.colorspace_settings.name = 'Non-Color'
-    out_img.pixels[:] = result.flatten().tolist()
-    out_img.filepath_raw = out_path
-    out_img.file_format = 'PNG'
-    out_img.save()
-    bpy.data.images.remove(out_img)
-    return out_path
+    out_path = os.path.join(out_dir, f"{name_hint}.tga")
+    return write_tga_rgba8(out_path, result)
 
 
 # ── Color adjust (COLOR preset only) ────────────────────────────────────────
@@ -513,34 +499,21 @@ def _apply_color_adjust(rgb, exposure, saturation, vibrance):
 
 def _apply_color_adjustments(path, exposure, saturation, vibrance, out_dir, name_hint):
     """Load *path*, run _apply_color_adjust over its RGB (alpha untouched),
-    and save the result as a new PNG in out_dir. Mirrors the load/save pattern
-    _blend_detail_normal uses above."""
-    import numpy as np
-
+    and save the result as a new staging TGA in out_dir. Mirrors the load/save
+    pattern _blend_detail_normal uses above."""
     tmp_name = "__tex_convert_coloradj"
     if tmp_name in bpy.data.images:
         bpy.data.images.remove(bpy.data.images[tmp_name])
     img = bpy.data.images.load(path, check_existing=False)
     img.name = tmp_name
     img.colorspace_settings.name = 'Non-Color'
-    w, h = img.size
-    arr = np.array(img.pixels[:], dtype=np.float32).reshape(h, w, 4)
+    arr = image_to_array(img)
     bpy.data.images.remove(img)
 
     arr[:, :, :3] = _apply_color_adjust(arr[:, :, :3], exposure, saturation, vibrance)
 
-    out_path = os.path.join(out_dir, f"{name_hint}.png")
-    tmp_out = "__tex_convert_coloradj_out"
-    if tmp_out in bpy.data.images:
-        bpy.data.images.remove(bpy.data.images[tmp_out])
-    out_img = bpy.data.images.new(tmp_out, width=w, height=h, alpha=True)
-    out_img.colorspace_settings.name = 'Non-Color'
-    out_img.pixels[:] = arr.flatten().tolist()
-    out_img.filepath_raw = out_path
-    out_img.file_format = 'PNG'
-    out_img.save()
-    bpy.data.images.remove(out_img)
-    return out_path
+    out_path = os.path.join(out_dir, f"{name_hint}.tga")
+    return write_tga_rgba8(out_path, arr)
 
 
 def _import_mhwtex_convert():
