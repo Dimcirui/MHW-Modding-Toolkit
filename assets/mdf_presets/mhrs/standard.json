@@ -149,7 +149,7 @@
         {
             "Property Name": "Emissive_intensity",
             "Data Type": "FLOAT",
-            "Value": 0.30000001192092896,
+            "Value": 0.5,
             "Padding": 0
         },
         {

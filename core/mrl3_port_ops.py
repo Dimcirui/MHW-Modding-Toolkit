@@ -606,7 +606,11 @@ def relay(context, mhws_col, *, dest_base_path="", params_mode='BASIC'):
             'EXEC_DEFAULT', source_game=DST_GAME, target_game=_RELAY_TARGET,
             source_collection=mhws_col.name, convert_textures=False,
             dest_base_path=(dest_base_path or "").strip(),
-            migrate_params=params_mode)
+            migrate_params=params_mode,
+            # Only what this port actually wrote.  The rest of the intermediate is
+            # MHWilds' prefab defaults, and the migration would carry them over
+            # MHRS' own -- see mrl3_port.written_props.
+            migrate_only=",".join(sorted(mrl3_port.written_props(params_mode))))
     except (RuntimeError, TypeError) as e:
         return False, T("core.mrl3_port_ops.relay_failed").format(err=e), None
     if 'FINISHED' not in r:

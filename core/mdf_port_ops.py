@@ -273,6 +273,20 @@ class MODDER_OT_PortMdfMaterialCrossGame(bpy.types.Operator):
     #: and the first item is BASIC anyway -- same shape as the same-game convert's
     #: `migrate_mode`.
     migrate_params: EnumProperty(name="Migrate Params", items=_migrate_params_items)
+    #: Comma-separated source property names the migration is allowed to read, or
+    #: empty for "all of them".  Not shown in the dialog -- it exists for callers
+    #: that know the source material is not fully authored.
+    #:
+    #: ``core/mrl3_port_ops.py``'s relay is the one such caller: the MHWS material
+    #: it hands over was itself built from MHWS' ``basic`` prefab minutes earlier
+    #: and carries that prefab's defaults everywhere the mrl3 port did not write,
+    #: which the migration cannot tell apart from a value the author chose.  Left
+    #: unrestricted, MHWS' ``Emissive_Intensity`` of 1.0 lands on MHRS as though it
+    #: were authored, overwriting the MHRS prefab's own default -- and the same for
+    #: ``Emissive_Color``.  A user porting a real MHWS material sets nothing here
+    #: and keeps the old behaviour, which is correct for them: every value in
+    #: *their* source is one they could have chosen.
+    migrate_only: StringProperty(name="Migrate Only", default="", options={'HIDDEN'})
     #: Same opt-in as the processors and generators carry, and off for the same
     #: reason -- see octahedral_normals_prop.
     octahedral_normals: octahedral_normals_prop()
@@ -374,6 +388,8 @@ class MODDER_OT_PortMdfMaterialCrossGame(bpy.types.Operator):
     def execute(self, context):
         src_game = self.source_game
         dst_game = self.target_game
+        allow_src = ({n for n in (s.strip() for s in self.migrate_only.split(",")) if n}
+                     or None) if self.migrate_only else None
         if not dst_game or dst_game == 'NONE':
             self.report({'ERROR'}, T("core.mdf_port_ops.no_target_selected"))
             return {'CANCELLED'}
@@ -477,6 +493,8 @@ class MODDER_OT_PortMdfMaterialCrossGame(bpy.types.Operator):
 
                     src_items = {p.prop_name: p for p in old_data.propertyList_items}
                     dst_items = {p.prop_name: p for p in new_data.propertyList_items}
+                    if allow_src is not None:
+                        src_items = {n: p for n, p in src_items.items() if n in allow_src}
                     for src_name, dst_name in mdf_port_params.migration_pairs(
                             src_game, {n: p.data_type for n, p in src_items.items()},
                             dst_game, {n: p.data_type for n, p in dst_items.items()},

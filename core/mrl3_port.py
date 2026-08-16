@@ -190,6 +190,24 @@ def param_pairs(mode):
     return pairs
 
 
+def written_props(mode):
+    """The MDF property names this port can actually write, for *mode*.
+
+    Everything else in the material it produces is the ``basic`` prefab's own
+    default, untouched -- which matters to the relay: the MHWS -> MHRS hop cannot
+    tell a prefab default from an authored value, so without this list it carries
+    MHWS' defaults into MHRS and overwrites MHRS' own.  ``Emissive_Intensity`` is
+    the visible case (1.0 over MHRS' 0.3), ``Emissive_Color`` the quiet one.
+
+    Derived from the pair tables rather than hand-listed, so a param added there
+    is carried by the relay automatically instead of being silently dropped.
+    """
+    names = {dst for _src, dst, _conv in param_pairs(mode)}
+    if mode == "ALL":
+        names.update(EMISSIVE_TARGETS)
+    return names
+
+
 # ── relay support ───────────────────────────────────────────────────────────────
 # Used when the port is asked for MHRS: the material half goes through the ordinary
 # MHWS -> MHRS port, which skips its whole texture-binding loop when it is told not
