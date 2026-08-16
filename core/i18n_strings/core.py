@@ -1354,6 +1354,16 @@ STRINGS = {
         "EN": "Set the MHWI mod root first", "ZH": "请先设置 MHWI Mod 根目录"},
     "core.mhwi_batch_port_ops.not_scanned": {
         "EN": "Not scanned yet", "ZH": "尚未解析"},
+    "core.mhwi_batch_port_ops.scan_stale": {
+        "EN": "This list was scanned from a different MHWI root - it will be "
+              "re-scanned before porting",
+        "ZH": "这个列表来自另一个 MHWI 根目录 —— 移植前会自动重新解析"},
+    "core.mhwi_batch_port_ops.rescanned": {
+        "EN": "MHWI root changed - re-scanned before porting",
+        "ZH": "MHWI 根目录已变更 —— 移植前已重新解析"},
+    "core.mhwi_batch_port_ops.set_gone": {
+        "EN": "That set is not in the new MHWI root - pick one again",
+        "ZH": "新的 MHWI 根目录里没有这套装备，请重新选择"},
     "core.mhwi_batch_port_ops.nothing_found": {
         "EN": "No armor found under nativePC/pl/{f,m}_equip",
         "ZH": "在 nativePC/pl/{f,m}_equip 下没有找到装备"},

@@ -26,6 +26,13 @@ from .i18n import T
 #: it.  JSON rather than a PropertyGroup: it is written whole and read whole, never
 #: edited item by item, so a collection property would be three registrations and a
 #: pair of clear/extend loops to express the same thing.
+#:
+#: Stored as ``{"root": <the root it was taken under>, "sets": [...]}``.  The root has
+#: to travel with the result because ``batch.scan`` records **absolute** paths and
+#: nothing invalidates them when ``mhwi_natives_root`` changes -- so without it, a run
+#: after a root change imports the old set's files while resolving its textures under
+#: the new root, which is a mixture that reports nothing and looks like a success.
+#: See ``_scan_is_stale``.
 SCAN_KEY = "mhwi_batch_port_scan"
 
 #: The MHRS part-name and gender keys, borrowed rather than restated -- see the note
@@ -54,11 +61,59 @@ _SKIP_LABEL = {
 }
 
 
-def load_scan(scene):
+def _read_scan(scene):
+    """The whole stored blob, normalised.  ``{"root": str, "sets": list}``.
+
+    A bare list is what earlier versions wrote.  It is read as "root unknown" rather
+    than "root matches": a scan whose origin cannot be established is exactly the
+    case the staleness check exists for, and treating it as current would let the one
+    saved .blend that predates this key through unchecked.
+    """
+    raw = scene.get(SCAN_KEY, "") or ""
     try:
-        return json.loads(scene.get(SCAN_KEY, "") or "[]")
+        data = json.loads(raw) if raw else None
     except ValueError:
-        return []
+        return {"root": "", "sets": []}
+    if isinstance(data, list):
+        return {"root": "", "sets": data}
+    if isinstance(data, dict):
+        return {"root": data.get("root", "") or "",
+                "sets": data.get("sets") or []}
+    return {"root": "", "sets": []}
+
+
+def load_scan(scene):
+    return _read_scan(scene)["sets"]
+
+
+def scan_root(scene):
+    """The MHWI root the stored scan was taken under, or ``""`` if not recorded."""
+    return _read_scan(scene)["root"]
+
+
+def _same_root(a, b):
+    """Do two root paths name the same directory?
+
+    Compared as normalised absolute paths, case-insensitively -- this is Windows, and
+    the same folder reached through the file browser twice can come back with
+    different separators or a different drive-letter case.  A spurious "stale" would
+    be harmless but would make the warning noise the user learns to ignore.
+    """
+    def norm(p):
+        return os.path.normcase(os.path.abspath(p.rstrip("/\\"))) if p else ""
+    return norm(a) == norm(b)
+
+
+def _scan_is_stale(scene):
+    """Was the stored scan taken somewhere other than the current MHWI root?
+
+    False when there is no scan at all -- "nothing scanned" is a separate condition
+    with its own message, and reporting both at once says neither clearly.
+    """
+    data = _read_scan(scene)
+    if not data["sets"]:
+        return False
+    return not _same_root(data["root"], scene.get("mhwi_natives_root", ""))
 
 
 # ── 目标装备的搜索式选择 ──────────────────────────────────────────
@@ -162,7 +217,10 @@ class MHWI_OT_BatchPortScan(bpy.types.Operator):
             self.report({'ERROR'}, T("core.mhwi_batch_port_ops.source_root_missing"))
             return {'CANCELLED'}
         found = batch.scan(root)
-        context.scene[SCAN_KEY] = json.dumps(found)
+        # The root is stored beside the result, not derived from it later: a set with
+        # no parts leaves nothing to derive it from, and that is precisely the case
+        # where the user is most likely to go change the root and try again.
+        context.scene[SCAN_KEY] = json.dumps({"root": root, "sets": found})
         if not found:
             self.report({'WARNING'}, T("core.mhwi_batch_port_ops.nothing_found"))
         return {'FINISHED'}
@@ -226,6 +284,10 @@ class MHWI_OT_BatchPortMHRS(bpy.types.Operator):
 
         entry = _selected_entry(context, self.source_group)
         layout.prop(self, "source_group", text=T("core.mhwi_batch_port_ops.source_group"))
+        # Warned about here and fixed in execute, rather than re-scanned on the spot:
+        # draw runs on every redraw and must not touch the scene.
+        if _scan_is_stale(context.scene):
+            layout.label(text=T("core.mhwi_batch_port_ops.scan_stale"), icon='ERROR')
 
         # ── what the scan found, part by part ──
         box = layout.box()
@@ -268,6 +330,23 @@ class MHWI_OT_BatchPortMHRS(bpy.types.Operator):
         layout.label(text=T("core.mrl3_port_ops.base_path_example"))
 
     def execute(self, context):
+        # Before anything reads the scan.  The stored paths are absolute, so a scan
+        # from another root would import that root's files while the textures below
+        # resolve under the current one -- and nothing downstream can notice, since
+        # both halves are individually valid.
+        #
+        # Re-scanned rather than refused: the user changed the root deliberately, and
+        # "do it again with the right files" is what they meant.  The one thing not
+        # guessed at is *which* set, which is why a name that does not survive the
+        # rescan stops here instead of falling back to some other set.
+        if _scan_is_stale(context.scene):
+            if bpy.ops.mhwi.batch_port_scan('EXEC_DEFAULT') != {'FINISHED'}:
+                return {'CANCELLED'}
+            if _selected_entry(context, self.source_group) is None:
+                self.report({'ERROR'}, T("core.mhwi_batch_port_ops.set_gone"))
+                return {'CANCELLED'}
+            self.report({'INFO'}, T("core.mhwi_batch_port_ops.rescanned"))
+
         entry = _selected_entry(context, self.source_group)
         if entry is None:
             self.report({'ERROR'}, T("core.mhwi_batch_port_ops.not_scanned"))
