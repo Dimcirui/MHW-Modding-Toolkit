@@ -111,20 +111,28 @@ def merge_vgroups_multi(obj, source_names, target_name):
     if not active_sources:
         return
 
+    # 遍历顶点自己的 groups，而不是对每个组问一次 vg.weight()——后者对不在组里的
+    # 顶点会抛 RuntimeError，等于把异常当控制流用，顶点一多开销就很可观。
+    source_indices = {vg.index for vg in active_sources}
+    target_index = target_vg.index
+
+    # 先收集再写入：写入会改变顶点的所属组，边遍历 vert.groups 边写有可能读到
+    # 正在变动的集合。
+    pending = []
     for vert in obj.data.vertices:
         total_src_w = 0.0
-        for src_vg in active_sources:
-            try:
-                total_src_w += src_vg.weight(vert.index)
-            except RuntimeError:
-                pass
+        tgt_w = 0.0
+        for g in vert.groups:
+            if g.group in source_indices:
+                total_src_w += g.weight
+            elif g.group == target_index:
+                tgt_w = g.weight
         if total_src_w <= 0.0:
             continue
-        try:
-            tgt_w = target_vg.weight(vert.index)
-        except RuntimeError:
-            tgt_w = 0.0
-        target_vg.add([vert.index], min(tgt_w + total_src_w, 1.0), 'REPLACE')
+        pending.append((vert.index, min(tgt_w + total_src_w, 1.0)))
+
+    for vert_index, weight in pending:
+        target_vg.add([vert_index], weight, 'REPLACE')
 
     for src_vg in active_sources:
         obj.vertex_groups.remove(src_vg)
@@ -142,16 +150,23 @@ def rename_or_merge_vgroup(obj, old_name, new_name):
     if existing_vg is None:
         old_vg.name = new_name
         return True
+    old_index = old_vg.index
+    existing_index = existing_vg.index
+    pending = []
     for vert in obj.data.vertices:
-        try:
-            old_w = old_vg.weight(vert.index)
-        except RuntimeError:
+        old_w = None
+        existing_w = 0.0
+        for g in vert.groups:
+            if g.group == old_index:
+                old_w = g.weight
+            elif g.group == existing_index:
+                existing_w = g.weight
+        if old_w is None:
             continue
-        try:
-            existing_w = existing_vg.weight(vert.index)
-        except RuntimeError:
-            existing_w = 0.0
-        existing_vg.add([vert.index], min(existing_w + old_w, 1.0), 'REPLACE')
+        pending.append((vert.index, min(existing_w + old_w, 1.0)))
+
+    for vert_index, weight in pending:
+        existing_vg.add([vert_index], weight, 'REPLACE')
     obj.vertex_groups.remove(old_vg)
     return True
 
@@ -275,12 +290,11 @@ def bone_has_weights(bone_name, mesh_objects):
         vg = obj.vertex_groups.get(bone_name)
         if vg is None:
             continue
+        vg_index = vg.index
         for v in obj.data.vertices:
-            try:
-                if vg.weight(v.index) > 0:
+            for g in v.groups:
+                if g.group == vg_index and g.weight > 0:
                     return True
-            except RuntimeError:
-                pass
     return False
 
 
