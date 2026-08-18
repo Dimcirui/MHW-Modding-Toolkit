@@ -290,7 +290,20 @@ def discard_source(group_col, is_source_collection):
             find(child)
 
     find(group_col)
+    return discard_collections(roots, prune_from=group_col)
 
+
+def discard_collections(roots, prune_from=None):
+    """Delete *roots* and everything under them, data-blocks included.
+
+    Split out of ``discard_source`` because the MHWS importer produces no wrapper
+    tree to walk down from -- RE Mesh Editor names its collections deterministically
+    and links them flat, so that flow already *has* the roots and only needs the
+    careful half.  Which is this: delete the objects before reading their
+    data-blocks' user counts, and only remove a data-block that nobody else kept.
+
+    *prune_from*, when given, is a wrapper tree to tidy afterwards.
+    """
     cols, objs = [], []
 
     def walk(col):
@@ -328,7 +341,8 @@ def discard_source(group_col, is_source_collection):
             coll.remove(data)
             n_data += 1
 
-    n_col += _prune_empty(group_col)
+    if prune_from is not None:
+        n_col += _prune_empty(prune_from)
     return {"objects": n_obj, "collections": n_col, "data": n_data}
 
 
