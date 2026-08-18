@@ -1,0 +1,479 @@
+{
+    "presetType": "MHW_MRL3_MATERIAL",
+    "Material Header": {
+        "materialName": "PL_Mt",
+        "materialNameHash": "720458092",
+        "mmtrHash": "2773732684",
+        "mmtrName": "PL_Mt",
+        "shaderHash": "2288872799",
+        "surfaceCoef": [
+            0,
+            225
+        ],
+        "alphaCoef": [
+            128,
+            112,
+            4,
+            4
+        ]
+    },
+    "Map List": [
+        {
+            "name": "AlbedoMap",
+            "value": "Assets\\default_tex\\null_white",
+            "code": "338649"
+        },
+        {
+            "name": "NormalMap",
+            "value": "Assets\\default_tex\\null_NM",
+            "code": "795973"
+        },
+        {
+            "name": "DetailNormalMap",
+            "value": "Assets\\default_tex\\null_NM",
+            "code": "920768"
+        },
+        {
+            "name": "RMTMap",
+            "value": "Assets\\default_tex\\null_RMT",
+            "code": "606118"
+        },
+        {
+            "name": "EmissiveMap",
+            "value": "Assets\\default_tex\\null_black",
+            "code": "485414"
+        },
+        {
+            "name": "ColorMaskMap",
+            "value": "Assets\\default_tex\\null_black",
+            "code": "756669"
+        },
+        {
+            "name": "FxMap",
+            "value": "Assets\\default_tex\\null_black",
+            "code": "77130"
+        },
+        {
+            "name": "FurMap",
+            "value": "Assets\\default_tex\\noise_LIN",
+            "code": "934456"
+        },
+        {
+            "name": "FurVelocityMap",
+            "value": "Assets\\default_tex\\null_black",
+            "code": "312167"
+        },
+        {
+            "name": "PanoramaMap",
+            "value": "Assets\\default_tex\\null_gray_LIN",
+            "code": "454415"
+        },
+        {
+            "name": "AlbedoBlendMap",
+            "value": "Assets\\default_tex\\null_black",
+            "code": "275936"
+        }
+    ],
+    "Sampler List": [
+        {
+            "name": "Albedo",
+            "value": 1,
+            "code": "552381"
+        },
+        {
+            "name": "Normal",
+            "value": 1,
+            "code": "680683"
+        },
+        {
+            "name": "Emissive",
+            "value": 1,
+            "code": "857864"
+        },
+        {
+            "name": "RMT",
+            "value": 1,
+            "code": "188801"
+        },
+        {
+            "name": "DetailNormal",
+            "value": 1,
+            "code": "238852"
+        },
+        {
+            "name": "ColorMask",
+            "value": 1,
+            "code": "666808"
+        },
+        {
+            "name": "Fur",
+            "value": 1,
+            "code": "578823"
+        },
+        {
+            "name": "Fx",
+            "value": 1,
+            "code": "847471"
+        },
+        {
+            "name": "FurVelocity",
+            "value": 1,
+            "code": "1535"
+        },
+        {
+            "name": "AlbedoBlend",
+            "value": 1,
+            "code": "660359"
+        },
+        {
+            "name": "PanoramaMap",
+            "value": 1,
+            "code": "125033"
+        }
+    ],
+    "Property List": [
+        {
+            "blockName": "MhMaterialPLLocal",
+            "code": "73912",
+            "props": [
+                {
+                    "prop_name": "BaseMapFactor",
+                    "ori_name": "fBaseMapFactor__uiColor",
+                    "data_type": "COLOR",
+                    "value": [
+                        0.20000000298023224,
+                        0.20000000298023224,
+                        0.20000000298023224,
+                        1.0
+                    ]
+                },
+                {
+                    "prop_name": "EmissiveMapFactor",
+                    "ori_name": "fEmissiveMapFactor__uiColor",
+                    "data_type": "COLOR",
+                    "value": [
+                        5.0,
+                        5.0,
+                        5.0,
+                        1.0
+                    ]
+                },
+                {
+                    "prop_name": "Metalic",
+                    "ori_name": "fMetalic__uiUNorm",
+                    "data_type": "FLOAT",
+                    "value": 1.0
+                },
+                {
+                    "prop_name": "Roughness",
+                    "ori_name": "fRoughness__uiUNorm",
+                    "data_type": "FLOAT",
+                    "value": 1.0
+                },
+                {
+                    "prop_name": "Specular",
+                    "ori_name": "fSpecular__uiUNorm",
+                    "data_type": "FLOAT",
+                    "value": 1.0
+                },
+                {
+                    "prop_name": "SubSurfaceBlend",
+                    "ori_name": "fSubSurfaceBlend__uiUNorm",
+                    "data_type": "FLOAT",
+                    "value": 0.0
+                },
+                {
+                    "prop_name": "SubSurfaceProfile",
+                    "ori_name": "iSubSurfaceProfile",
+                    "data_type": "UINT",
+                    "value": 0
+                },
+                {
+                    "prop_name": "Translucency",
+                    "ori_name": "fTranslucency__uiUNorm",
+                    "data_type": "FLOAT",
+                    "value": 0.0
+                },
+                {
+                    "prop_name": "BaseColorEmissive",
+                    "ori_name": "bBaseColorEmissive",
+                    "data_type": "BOOL",
+                    "value": 1
+                },
+                {
+                    "prop_name": "BackFaceNormalFilp",
+                    "ori_name": "bBackFaceNormalFilp",
+                    "data_type": "BOOL",
+                    "value": 1
+                },
+                {
+                    "prop_name": "AnimEmitMin",
+                    "ori_name": "fAnimEmitMin",
+                    "data_type": "FLOAT",
+                    "value": 1.0
+                },
+                {
+                    "prop_name": "AnimEmitSpeed",
+                    "ori_name": "fAnimEmitSpeed",
+                    "data_type": "FLOAT",
+                    "value": 0.0
+                },
+                {
+                    "prop_name": "UseCMM",
+                    "ori_name": "bUseCMM",
+                    "data_type": "BOOL",
+                    "value": 0
+                },
+                {
+                    "prop_name": "AddColorA",
+                    "ori_name": "fAddColorA__uiColor",
+                    "data_type": "COLOR",
+                    "value": [
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.0
+                    ]
+                },
+                {
+                    "prop_name": "AddColorB",
+                    "ori_name": "fAddColorB__uiColor",
+                    "data_type": "COLOR",
+                    "value": [
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.0
+                    ]
+                },
+                {
+                    "prop_name": "AddColorC",
+                    "ori_name": "fAddColorC__uiColor",
+                    "data_type": "COLOR",
+                    "value": [
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.0
+                    ]
+                },
+                {
+                    "prop_name": "AddColorD",
+                    "ori_name": "fAddColorD__uiColor",
+                    "data_type": "COLOR",
+                    "value": [
+                        0.5,
+                        0.5,
+                        0.5,
+                        0.0
+                    ]
+                },
+                {
+                    "prop_name": "FurParam",
+                    "ori_name": "fFurParam__uiUNorm",
+                    "data_type": "FLOAT[4]",
+                    "value": [
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "prop_name": "FurTile",
+                    "ori_name": "fFurTile",
+                    "data_type": "FLOAT",
+                    "value": 4.0
+                },
+                {
+                    "prop_name": "SnowControl",
+                    "ori_name": "fSnowControl",
+                    "data_type": "FLOAT[4]",
+                    "value": [
+                        -10.0,
+                        -70.0,
+                        0.0,
+                        0.10000000149011612
+                    ]
+                },
+                {
+                    "prop_name": "MaterialSnowBlendA",
+                    "ori_name": "fMaterialSnowBlendA",
+                    "data_type": "FLOAT",
+                    "value": 0.0
+                },
+                {
+                    "prop_name": "MaterialSnowBlendB",
+                    "ori_name": "fMaterialSnowBlendB",
+                    "data_type": "FLOAT",
+                    "value": 0.0
+                },
+                {
+                    "prop_name": "SnowTile",
+                    "ori_name": "fSnowTile",
+                    "data_type": "FLOAT",
+                    "value": 4.0
+                },
+                {
+                    "prop_name": "SnowColor",
+                    "ori_name": "fSnowColor__uiColor",
+                    "data_type": "COLOR",
+                    "value": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        0.0
+                    ]
+                },
+                {
+                    "prop_name": "SnowMatControl",
+                    "ori_name": "fSnowMatControl__uiUNorm",
+                    "data_type": "FLOAT[4]",
+                    "value": [
+                        0.10000000149011612,
+                        0.0,
+                        0.5,
+                        0.5
+                    ]
+                },
+                {
+                    "prop_name": "SnowUVOffset",
+                    "ori_name": "fSnowUVOffset__uiUNorm",
+                    "data_type": "FLOAT[2]",
+                    "value": [
+                        0.0,
+                        0.0
+                    ]
+                },
+                {
+                    "prop_name": "AnimEmitWave",
+                    "ori_name": "fAnimEmitWave",
+                    "data_type": "FLOAT",
+                    "value": 64.0
+                },
+                {
+                    "prop_name": "UseWaveEmit",
+                    "ori_name": "bUseWaveEmit",
+                    "data_type": "BOOL",
+                    "value": 0
+                },
+                {
+                    "prop_name": "FilmThickness",
+                    "ori_name": "fFilmThickness__uiUNorm",
+                    "data_type": "FLOAT",
+                    "value": 0.5
+                },
+                {
+                    "prop_name": "FilmBlend",
+                    "ori_name": "fFilmBlend__uiUNorm",
+                    "data_type": "FLOAT",
+                    "value": 0.0
+                },
+                {
+                    "prop_name": "FilmIOR",
+                    "ori_name": "fFilmIOR__uiUNorm",
+                    "data_type": "FLOAT",
+                    "value": 0.5
+                },
+                {
+                    "prop_name": "RefractBlend",
+                    "ori_name": "fRefractBlend__uiUNorm",
+                    "data_type": "FLOAT",
+                    "value": 0.0
+                },
+                {
+                    "prop_name": "Refraction",
+                    "ori_name": "fRefraction__uiSNorm",
+                    "data_type": "FLOAT",
+                    "value": 0.5
+                },
+                {
+                    "prop_name": "PanoramaTile",
+                    "ori_name": "fPanoramaTile",
+                    "data_type": "FLOAT",
+                    "value": 1.0
+                },
+                {
+                    "prop_name": "EmissiveBlendColor",
+                    "ori_name": "fEmissiveBlendColor__uiColor",
+                    "data_type": "COLOR",
+                    "value": [
+                        0.0,
+                        0.0,
+                        0.0,
+                        1.0
+                    ]
+                },
+                {
+                    "prop_name": "EmissiveBlendColorBlend",
+                    "ori_name": "fEmissiveBlendColorBlend__uiUNorm",
+                    "data_type": "FLOAT",
+                    "value": 0.0
+                },
+                {
+                    "prop_name": "EmissiveBlendRimParam",
+                    "ori_name": "fEmissiveBlendRimParam",
+                    "data_type": "FLOAT[3]",
+                    "value": [
+                        0.30000001192092896,
+                        0.15000000596046448,
+                        1.0
+                    ]
+                },
+                {
+                    "prop_name": "DetailNormalBlend",
+                    "ori_name": "fDetailNormalBlend__uiUNorm",
+                    "data_type": "FLOAT",
+                    "value": 0.0
+                },
+                {
+                    "prop_name": "UVTransformDetailNormal",
+                    "ori_name": "fUVTransformDetailNormal",
+                    "data_type": "FLOAT[4]",
+                    "value": [
+                        0.0,
+                        0.0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            ]
+        },
+        {
+            "blockName": "MaterialCommon",
+            "code": "730930",
+            "props": [
+                {
+                    "prop_name": "Bypass",
+                    "ori_name": "bBypass",
+                    "data_type": "BOOL",
+                    "value": 0
+                },
+                {
+                    "prop_name": "DecalMask",
+                    "ori_name": "bDecalMask",
+                    "data_type": "BOOL",
+                    "value": 1
+                },
+                {
+                    "prop_name": "Emissive",
+                    "ori_name": "bEmissive",
+                    "data_type": "BOOL",
+                    "value": 1
+                },
+                {
+                    "prop_name": "GBufferId",
+                    "ori_name": "iGBufferId",
+                    "data_type": "UINT",
+                    "value": 0
+                },
+                {
+                    "prop_name": "OutlineId",
+                    "ori_name": "iOutlineId",
+                    "data_type": "UINT",
+                    "value": 0
+                }
+            ]
+        }
+    ]
+}

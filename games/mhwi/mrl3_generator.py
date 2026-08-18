@@ -14,7 +14,7 @@ from ...core.mdf_generator_base import (
     _emissive_strength_is_zero, _is_emissive_slot, _is_albedo_slot,
     _make_source_id, _try_downgrade_slot, _generate_solid_texture_path,
     _detect_max_tex_size, _find_meshes_by_material,
-    load_mhwi_preset_enum_items,
+    load_mhwi_preset_enum_items, bundled_mhwi_preset,
     _import_mhwi_tex_convert, _call_mhwi_read_preset, _import_mhwi_create_collection,
     BAKE_SIZE_DEFAULT,
 )
@@ -27,6 +27,7 @@ from ...core.slot_sources import (
     find_shader_slot_supplies, shader_pbr_contributions,
 )
 from ...core.slot_resolver import resolve_dds_format, write_slot_tex
+from .mrl3_coef_rules import transparent_coefs
 from .mrl3_tex_processor import (
     MHWI_SLOT_CHANNEL_MAPS, MHWI_NULL_TEX,
     MHWI_SRGB_SLOT_TYPES,
@@ -36,6 +37,61 @@ from .mrl3_tex_processor import (
 
 def _mhwi_get_presets(self, context):
     return load_mhwi_preset_enum_items()
+
+
+#: {(path, mtime, size): bool} -- alpha measurement is per file and a batch
+#: reuses the same albedo across materials, so measuring once is worth caching.
+_ALPHA_WHITE_CACHE = {}
+
+#: Below this the alpha counts as painted rather than as 8-bit rounding noise
+#: (254/255 = 0.996).
+_ALPHA_WHITE_EPS = 0.99
+
+#: The measurement is a yes/no question, so it is taken on a downscaled copy --
+#: a 4K albedo is 67 million floats to read in full, and any transparent region
+#: big enough to matter survives the scale.
+_ALPHA_PROBE_SIZE = 128
+
+
+def _albedo_alpha_is_white(path):
+    """True if the image's alpha is uniformly white, False if not, None if it
+    could not be read.  Never raises: a failed probe must not fail a generate."""
+    if not path or not os.path.isfile(path):
+        return None
+    try:
+        st = os.stat(path)
+        key = (os.path.normcase(os.path.abspath(path)), st.st_mtime_ns, st.st_size)
+    except OSError:
+        return None
+    if key in _ALPHA_WHITE_CACHE:
+        return _ALPHA_WHITE_CACHE[key]
+
+    from ...core.mdf_tex_processor_base import image_to_array
+
+    img = None
+    try:
+        img = bpy.data.images.load(path, check_existing=False)
+        if not img.has_data or img.channels < 4:
+            result = True
+        else:
+            w, h = img.size
+            if max(w, h) > _ALPHA_PROBE_SIZE:
+                scale = _ALPHA_PROBE_SIZE / max(w, h)
+                img.scale(max(1, int(w * scale)), max(1, int(h * scale)))
+            result = bool(image_to_array(img)[..., 3].min() >= _ALPHA_WHITE_EPS)
+    except Exception as e:
+        print(f"[MRL3 Gen]   could not read the albedo alpha of "
+              f"{os.path.basename(path)}: {e}")
+        result = None
+    finally:
+        if img is not None:
+            try:
+                bpy.data.images.remove(img)
+            except Exception:
+                pass
+
+    _ALPHA_WHITE_CACHE[key] = result
+    return result
 
 
 def _mhwi_find_meshes_by_material(mod3_col, material_name):
@@ -319,7 +375,13 @@ class MHWI_OT_Mrl3GenProcess(bpy.types.Operator):
 
         preset_path = mat_entry.material_preset
         if not preset_path or preset_path == 'NONE':
-            raise ValueError(f"No preset selected for '{mat_name}'")
+            # Nothing to pick from -- MHW Model Editor ships MaterialPresets/
+            # empty -- so use the copy this addon bundles rather than refusing.
+            preset_path = bundled_mhwi_preset()
+            if not preset_path:
+                raise ValueError(f"No preset selected for '{mat_name}'")
+            print(f"[{self._log_tag}]   '{mat_name}': no preset selected, "
+                  f"using the bundled {os.path.basename(preset_path)}")
         if not os.path.isfile(preset_path):
             raise FileNotFoundError(f"Preset not found: {preset_path}")
 
@@ -420,6 +482,10 @@ class MHWI_OT_Mrl3GenProcess(bpy.types.Operator):
                    and not channel_maps_consume_ao(MHWI_SLOT_CHANNEL_MAPS))
 
         slot_binding_values = {}
+        #: {slot: source file on disk} -- only the albedo is read back (for
+        #: the transparency rule below), but recording every slot keeps the
+        #: write sites uniform.
+        slot_files = {}
 
         for slot_type in slot_types:
             # Emissive: skip composition if toon mode or strength is zero
@@ -453,6 +519,7 @@ class MHWI_OT_Mrl3GenProcess(bpy.types.Operator):
                 cached = comp_cache.get(direct_key)
                 if cached is not None:
                     slot_binding_values[slot_type] = cached[2]
+                    slot_files[slot_type] = cached[0]
                     continue
 
                 disk_path = _mhwi_disk_path(natives_root, base_path, tex_name, slot_type)
@@ -471,6 +538,7 @@ class MHWI_OT_Mrl3GenProcess(bpy.types.Operator):
 
                 binding = _mhwi_tex_binding(base_path, tex_name, slot_type)
                 slot_binding_values[slot_type] = binding
+                slot_files[slot_type] = staged
                 comp_cache[direct_key] = (staged, disk_path, binding)
                 print(f"[{self._log_tag}]   {slot_type} -> "
                       f"{os.path.basename(disk_path)} (槽位直连/{direct_auth})")
@@ -514,6 +582,7 @@ class MHWI_OT_Mrl3GenProcess(bpy.types.Operator):
                 cached = comp_cache.get(cache_key)
                 if cached is not None:
                     slot_binding_values[slot_type] = cached[2]
+                    slot_files[slot_type] = cached[0]
                     continue
 
                 # Only attempt downgrade for cacheable slots (no BAKE involved)
@@ -534,6 +603,7 @@ class MHWI_OT_Mrl3GenProcess(bpy.types.Operator):
 
                         binding = _mhwi_tex_binding(base_path, tex_name, slot_type)
                         slot_binding_values[slot_type] = binding
+                        slot_files[slot_type] = composed
                         comp_cache[cache_key] = (composed, disk_path, binding)
                         continue
 
@@ -563,6 +633,7 @@ class MHWI_OT_Mrl3GenProcess(bpy.types.Operator):
 
                 binding = _mhwi_tex_binding(base_path, tex_name, slot_type)
                 slot_binding_values[slot_type] = binding
+                slot_files[slot_type] = composed
 
                 if cache_key is not None:
                     comp_cache[cache_key] = (composed, disk_path, binding)
@@ -625,6 +696,23 @@ class MHWI_OT_Mrl3GenProcess(bpy.types.Operator):
         for map_item in mat_obj.mhw_mrl3_material.mapList_items:
             if map_item.name in slot_binding_values:
                 map_item.value = slot_binding_values[map_item.name]
+
+        # A preset carries one fixed pair of coefficients, and every preset in
+        # circulation is an opaque one -- so an albedo that came out with real
+        # transparency needs the transparent pair written over them.  See
+        # mrl3_coef_rules for why the rule is this narrow.
+        albedo_file = next((slot_files[st] for st in slot_types
+                            if st in albedo_slots and st in slot_files), None)
+        mmtr = (getattr(mat_obj.mhw_mrl3_material, 'mmtrName', '')
+                or preset_data.get("Material Header", {}).get("mmtrName", ""))
+        override = transparent_coefs(mmtr, _albedo_alpha_is_white(albedo_file))
+        if override:
+            surface_coef, alpha_coef = override
+            mat_obj.mhw_mrl3_material.surfaceCoef = surface_coef
+            mat_obj.mhw_mrl3_material.alphaCoef = alpha_coef
+            print(f"[{self._log_tag}]   '{mat_name}': albedo alpha is not white "
+                  f"and mmtr is {mmtr} -> surfaceCoef {list(surface_coef)}, "
+                  f"alphaCoef {list(alpha_coef)}")
 
 
 # ── Select Same Material operator ────────────────────────────────────────────────

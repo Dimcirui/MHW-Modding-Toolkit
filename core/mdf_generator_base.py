@@ -1575,19 +1575,37 @@ def get_mhwi_preset_dir():
     return d if os.path.isdir(d) else None
 
 
+def bundled_mhwi_preset():
+    """This addon's own copy of MHW Model Editor's ``Standard.json``, or None.
+
+    MHW Model Editor ships ``MaterialPresets/`` empty, so a fresh install has no
+    preset to pick and the generator refused to run at all.  The bundled copy is
+    the floor under that: a generic ``PL_Mt`` material, which is what the user
+    would have picked anyway.
+    """
+    path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                        'assets', 'mhwi', 'mrl3_presets', 'Standard.json')
+    return path if os.path.isfile(path) else None
+
+
 def load_mhwi_preset_enum_items():
-    """Return EnumProperty items from MHW Model Editor MaterialPresets."""
-    preset_dir = get_mhwi_preset_dir()
-    if not preset_dir:
-        return [('NONE', 'MHW Model Editor presets not found', '')]
+    """EnumProperty items from MHW Model Editor's MaterialPresets, else the
+    bundled fallback.  'NONE' is only reached when even that is missing."""
     items = []
-    try:
-        for entry in sorted(os.scandir(preset_dir), key=lambda e: e.name):
-            if entry.is_file() and entry.name.endswith('.json'):
-                items.append((entry.path, entry.name[:-5], entry.path))
-    except Exception:
-        pass
-    return items if items else [('NONE', 'No MHWI presets found', '')]
+    preset_dir = get_mhwi_preset_dir()
+    if preset_dir:
+        try:
+            for entry in sorted(os.scandir(preset_dir), key=lambda e: e.name):
+                if entry.is_file() and entry.name.endswith('.json'):
+                    items.append((entry.path, entry.name[:-5], entry.path))
+        except Exception:
+            pass
+    if items:
+        return items
+    fallback = bundled_mhwi_preset()
+    if fallback:
+        return [(fallback, T("core.mdf_generator_base.mhwi_preset_bundled"), fallback)]
+    return [('NONE', T("core.mdf_generator_base.mhwi_preset_none"), '')]
 
 
 def _import_mhwi_create_collection():
