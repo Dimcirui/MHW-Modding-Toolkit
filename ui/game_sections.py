@@ -27,6 +27,7 @@ import bpy
 from ..core.i18n import T
 from ..core.compat import MTK_SHADER_AVAILABLE
 from ..core.re_mesh_compat import re_mesh_op_available
+from ..core.port_consent import draw_gate
 
 
 # ── Dependency guards ─────────────────────────────────────────────────────────
@@ -391,4 +392,8 @@ def draw_section(layout, game_key):
         label_key, icon = GROUP_LABELS[group]
         sub = box.box()
         sub.label(text=T(label_key), icon=icon)
+        # The heading stays visible while locked, so the group reads as
+        # 'not yet unlocked' rather than 'not available for this game'.
+        if group == 'port' and not draw_gate(sub):
+            continue
         _draw_group(sub, entries, guard_state)

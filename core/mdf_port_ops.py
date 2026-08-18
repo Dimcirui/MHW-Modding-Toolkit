@@ -39,6 +39,7 @@ from .mdf_tex_processor_base import (
     mdf_collection_poll, _import_tex_utils, octahedral_normals_prop)
 from .mdf_generator_base import (
     import_read_preset_json, PLACEHOLDER_SLOT_TYPES, _resolve_placeholder_slot)
+from .port_consent import gate
 
 #: Fallback for the PLACEHOLDER_SLOT_TYPES slots when the port cannot write a
 #: real placeholder (textures off, or no destination mod root). Values are the
@@ -236,6 +237,7 @@ def _new_port_collection(src_col, suffix):
     return new_col
 
 
+@gate
 class MODDER_OT_PortMdfMaterialCrossGame(bpy.types.Operator):
     bl_idname = "modder.port_mdf_material_cross_game"
     bl_label = "Port MDF Material to Another Game"

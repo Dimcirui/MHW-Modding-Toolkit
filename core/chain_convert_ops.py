@@ -22,6 +22,7 @@ from .chain_convert import (apply_target_game_settings, duplicate_chain_collecti
                             remap_collider_attachments)
 from .i18n import T
 from .mesh_port_ops import collection_armatures, is_mesh_collection, mesh_collections
+from .port_consent import gate
 
 #: Games this is offered for, keyed by the ``game_code`` in the bone preset -- which
 #: is **not** always the section key, though it now agrees for every game here.
@@ -154,6 +155,7 @@ def _collection_game_code(collection):
     return mgr.preset_info.get("game_code")
 
 
+@gate
 class MODDER_OT_ConvertChainCrossGame(bpy.types.Operator):
     bl_idname = "modder.convert_chain_cross_game"
     bl_label = "Port Chain to Another Game"

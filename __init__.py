@@ -27,6 +27,7 @@ from .core import tex_convert_base
 from .core import shader_ops
 from .core import chain_convert_ops
 from .core import mesh_port_ops
+from .core import port_consent
 from .core import mhwi_port_ops
 from .core import mdf_port_ops
 from .core import mrl3_port_ops
@@ -100,6 +101,10 @@ modules = [
     mdf_tex_processor_base,
     tex_convert_base,
     shader_ops,
+    # Before every cross-game port operator: they read its consent state in
+    # their poll, and its own operator has to exist for the locked panel to
+    # have a button to draw.
+    port_consent,
     chain_convert_ops,
     mesh_port_ops,
     # After mesh_port_ops: it reuses that module's plan execution helpers and its

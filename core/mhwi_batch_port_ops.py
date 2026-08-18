@@ -21,6 +21,7 @@ import bpy
 
 from . import mhwi_batch_port as batch
 from .i18n import T
+from .port_consent import gate
 
 #: Where the scan result is parked between the scan button and the draw that shows
 #: it.  JSON rather than a PropertyGroup: it is written whole and read whole, never
@@ -226,6 +227,7 @@ class MHWI_OT_BatchPortScan(bpy.types.Operator):
         return {'FINISHED'}
 
 
+@gate
 class MHWI_OT_BatchPortMHRS(bpy.types.Operator):
     bl_idname = "mhwi.batch_port_mhrs"
     bl_label = "MHWI Batch Port to MHRS"

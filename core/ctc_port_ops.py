@@ -38,6 +38,7 @@ from . import chain_convert, ctc_port, mhwi_port, re_chain_utils
 from .bone_correction import relocalise_frame
 from .bone_mapper import build_cross_game_map
 from .i18n import T
+from .port_consent import gate
 
 SRC_PRESET = "mhwi_world.json"
 
@@ -769,6 +770,7 @@ def run_port(context, col, arm, target_game, migrate_flags='BASIC'):
     return {"error": None, "collection": out, "report": report, "bad": bad}
 
 
+@gate
 class MHWI_OT_PortPhysicsToMHWS(bpy.types.Operator):
     bl_idname = "mhwi.port_physics_to_mhws"
     bl_label = "MHWI Physics Port"

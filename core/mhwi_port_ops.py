@@ -44,6 +44,7 @@ from mathutils import Matrix, Vector
 from . import bone_utils, mhwi_port, pose_bake, ref_model, ref_model_ops
 from .bone_mapper import build_cross_game_map
 from .i18n import T
+from .port_consent import gate
 
 SRC_PRESET = "mhwi_world.json"
 
@@ -573,6 +574,7 @@ def _collection_items(self, context):
     return _collection_item_cache
 
 
+@gate
 class MHWI_OT_PortToMHWS(bpy.types.Operator):
     bl_idname = "mhwi.port_to_mhws"
     bl_label = "MHWI Model Port"

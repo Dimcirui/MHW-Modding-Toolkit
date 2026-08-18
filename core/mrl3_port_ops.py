@@ -33,6 +33,7 @@ import bpy
 from . import mdf_port_tex, mrl3_port, mrl3_port_tex
 from .i18n import T
 from .mdf_port_ops import import_read_preset_json
+from .port_consent import gate
 
 #: The game this port actually builds against.  It stays MHWilds even when the user
 #: asks for MHRS, because MHWilds is the only game MHWI's material model has been
@@ -795,6 +796,7 @@ def relay(context, mhws_col, *, dest_base_path="", params_mode='BASIC'):
         name=made.name, n=n, tex=carried), made.name
 
 
+@gate
 class MHWI_OT_PortMrl3ToMdf2(bpy.types.Operator):
     bl_idname = "mhwi.port_mrl3_to_mdf2"
     bl_label = "MHWI Material Port"

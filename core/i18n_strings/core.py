@@ -1408,6 +1408,23 @@ STRINGS = {
     "core.mhwi_batch_port_ops.stat": {
         "EN": "Batch port done: {ported} part(s) ported, {skipped} skipped -> {armor}",
         "ZH": "批量移植完成：移植 {ported} 个部位，跳过 {skipped} 个 → {armor}"},
+
+    # ── MHWS -> MHRS batch ──
+    # Per-step failures, recorded on the part rather than raised: one part failing
+    # does not stop the set.  Each is reported when the step's own output
+    # collection is not there afterwards, which is the only reliable signal --
+    # the operators return FINISHED whether or not their dynamic enum inputs
+    # resolved.  The traceback, when there is one, goes to the console.
+    "core.mhws_batch_port.mesh_failed": {
+        "EN": "Model port produced nothing", "ZH": "模型移植没有产出"},
+    "core.mhws_batch_port.mdf_failed": {
+        "EN": "Material port produced nothing", "ZH": "材质移植没有产出"},
+    "core.mhws_batch_port.chain_failed": {
+        "EN": "Physics port produced nothing", "ZH": "物理移植没有产出"},
+    "core.mhws_batch_port.skip_no_mesh": {
+        "EN": "no .mesh - skipped", "ZH": "缺 mesh，跳过"},
+    "core.mhws_batch_port.skip_no_mdf2": {
+        "EN": "no .mdf2 - skipped", "ZH": "缺 mdf2，跳过"},
     "core.ctc_port_ops.target_label": {"EN": "Target Game", "ZH": "目标游戏"},
     "core.ctc_port_ops.target_mhws": {"EN": "MHWS", "ZH": "怪猎荒野"},
     "core.ctc_port_ops.target_mhws_desc": {
@@ -1768,4 +1785,50 @@ STRINGS = {
     "core.stale_cleanup_ops.done_with_errors": {
         "EN": "Removed {files} file(s), {n} could not be deleted (see the console)",
         "ZH": "已删除 {files} 个文件，{n} 个删不掉（详见控制台）"},
+
+    # ── MHWI mrl3 preset dropdown (core/mdf_generator_base.py) ────────────
+    "core.mdf_generator_base.mhwi_preset_bundled": {
+        "EN": "Standard (bundled)", "ZH": "Standard（内置）"},
+    "core.mdf_generator_base.mhwi_preset_none": {
+        "EN": "No MHWI presets found", "ZH": "未找到 MHWI 材质预设"},
+
+    # ══════════════════════════════════════════════════════════════════════
+    # core/port_consent.py
+    # ══════════════════════════════════════════════════════════════════════
+    # Line breaks in the body are hard-coded: UILayout does not wrap, and the
+    # two languages break in different places.
+
+    "core.port_consent.title": {
+        "EN": "Cross-Game Porting -- Before You Start",
+        "ZH": "跨游戏移植 · 使用须知"},
+    "core.port_consent.body_1": {
+        "EN": "This is for porting assets you made yourself, or that you have the\n"
+              "author's permission to use.",
+        "ZH": "本功能用于移植你自己创作的资产，或你已获得作者授权的资产。"},
+    "core.port_consent.body_2": {
+        "EN": "Before porting someone else's work -- including a publicly released\n"
+              "mod -- get the original author's permission first.",
+        "ZH": "移植他人作品（包括已公开发布的 mod）前，请先取得原作者许可。"},
+    "core.port_consent.body_3": {
+        "EN": "Credit the original author and keep the source noted.\n"
+              "Passing off others' work as your own, or selling it, is not what\n"
+              "this tool is for.",
+        "ZH": "移植后请保留出处与原作者署名。\n"
+              "将他人作品据为己有或用于牟利，不属于本工具的用途。"},
+    "core.port_consent.confirm": {
+        "EN": "I have read this", "ZH": "我已阅读并确认"},
+    "core.port_consent.btn_unlock": {
+        "EN": "Read Before Using", "ZH": "使用前请阅读"},
+    "core.port_consent.btn_unlock_desc": {
+        "EN": "Read the cross-game porting notice. Confirming unlocks these tools "
+              "for good -- it is asked once, and survives updates",
+        "ZH": "阅读跨游戏移植的使用须知。确认后这组功能将永久解锁 —— 只问一次，"
+              "更新后也不会重置"},
+    "core.port_consent.gate_hint": {
+        "EN": "The porting tools unlock once you have read this",
+        "ZH": "阅读并确认后即可使用移植功能"},
+    "core.port_consent.poll_blocked": {
+        "EN": "Read the cross-game porting notice first -- see the 移植 group in "
+              "the Modding Toolkit panel",
+        "ZH": "请先阅读并确认跨游戏移植使用须知（面板中的“移植”一组）"},
 }

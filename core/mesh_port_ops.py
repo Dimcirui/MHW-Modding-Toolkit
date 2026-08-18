@@ -37,6 +37,7 @@ from .i18n import T
 from .mesh_port import PLUMBING_BONES, build_port_plan, origin_shift
 from .ref_skeleton import get_reference_skeleton_items, import_reference_armature
 from .weight_utils import merge_weights_and_delete_bones
+from .port_consent import gate
 
 #: Games sharing one axis convention: a port between any two of them needs no C.
 #: RE9 is the only registered member of the other family.
@@ -545,6 +546,7 @@ def _reference_items(self, context):
     return _cached("reference", list(get_reference_skeleton_items(game)))
 
 
+@gate
 class MODDER_OT_PortMeshCrossGame(bpy.types.Operator):
     bl_idname = "modder.port_mesh_cross_game"
     bl_label = "Port Mesh to Another Game"
