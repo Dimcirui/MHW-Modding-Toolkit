@@ -120,12 +120,22 @@ def origin_shift(source_game, target_game):
 #:                               ``MHWS_OT_OptimizeAuxBones`` tables.
 #: ``("ref_offset", None)``   -- head goes at the offset from its parent that the
 #:                               bundled reference model has, unscaled.
+#: ``("drop", (a, b))``       -- head takes X/Y from joint *a* and Z from joint *b*:
+#:                               straight down from *a* to *b*'s height.  For a joint
+#:                               that sits under another one at ground level, this is
+#:                               the only rule that scales with the model -- colocate
+#:                               puts it at the wrong height and ref_offset hands it
+#:                               the reference character's leg length.
 #:
 #: ``{s}`` expands to ``L`` and ``R``.  Keys are target-game bone names.
 _INSERT_RULES = {
     "RE9": {
-        # RE9 splits the ankle into two joints; the extra one rides on the ankle.
-        "{s}_Leg_Foot": ("colocate", "{s}_Leg_Ankle"),
+        # RE9 splits the ankle into two joints, and the extra one does *not* ride on
+        # the ankle -- measured on three native RE9 rigs (the two bundled references
+        # plus a hand-made one), it sits directly below it at the toe joint's height:
+        # X/Y within 0.5 mm of the ankle, Z within 1.3 mm of the toes.  Colocating it
+        # with the ankle put it ~70 mm too high, which pivots the whole forefoot.
+        "{s}_Leg_Foot": ("drop", ("{s}_Leg_Ankle", "{s}_Leg_Toes")),
         "{s}_Hand_Palm": ("colocate", "{s}_Arm_Hand"),
         "Spine_0": ("colocate", "Hip"),
         "Neck_0": ("colocate", "Neck_1"),
@@ -229,8 +239,13 @@ def insert_rules_for(game_code, extra_rules=None):
     for template, (rule, anchor) in (_INSERT_RULES.get(game_code) or {}).items():
         if "{s}" in template:
             for side in ("L", "R"):
-                out[template.format(s=side)] = (
-                    rule, anchor.format(s=side) if anchor else None)
+                # An anchor is one bone name or a pair of them (midpoint / drop);
+                # both sides of a pair need the same expansion.
+                if isinstance(anchor, (tuple, list)):
+                    sided = tuple(a.format(s=side) for a in anchor)
+                else:
+                    sided = anchor.format(s=side) if anchor else None
+                out[template.format(s=side)] = (rule, sided)
         else:
             out[template] = (rule, anchor)
     if extra_rules:

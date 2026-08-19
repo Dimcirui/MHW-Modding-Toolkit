@@ -262,6 +262,12 @@ def _insert_bones(arm_obj, inserts, ref_arm):
                     continue
                 head = (a.head + b.head) / 2.0
                 parent = eb.get(ref.parent.name) if (ref and ref.parent) else a
+            elif rule == "drop":
+                a, b = (eb.get(n) for n in anchor)
+                if a is None or b is None:
+                    continue
+                head = Vector((a.head.x, a.head.y, b.head.z))
+                parent = eb.get(ref.parent.name) if (ref and ref.parent) else a
             else:                                   # ref_offset
                 if ref is None or ref.parent is None:
                     continue
@@ -688,7 +694,7 @@ class MODDER_OT_PortMeshCrossGame(bpy.types.Operator):
             self._lines = [err]
             return
 
-        detected = auto_detect_preset(arm, False)
+        detected = auto_detect_preset(arm, False, prefer_game=self.source_game)
         if detected:
             mgr = BoneMapManager()
             code = mgr.preset_info.get("game_code") if mgr.load_preset(detected) else None
