@@ -262,6 +262,13 @@ def _insert_bones(arm_obj, inserts, ref_arm):
                     continue
                 head = (a.head + b.head) / 2.0
                 parent = eb.get(ref.parent.name) if (ref and ref.parent) else a
+            elif rule == "fraction":
+                a_name, b_name, t = anchor
+                a, b = eb.get(a_name), eb.get(b_name)
+                if a is None or b is None:
+                    continue
+                head = a.head + (b.head - a.head) * t
+                parent = eb.get(ref.parent.name) if (ref and ref.parent) else a
             elif rule == "drop":
                 a, b = (eb.get(n) for n in anchor)
                 if a is None or b is None:
@@ -420,9 +427,64 @@ def apply_corrections(arm_obj, correction_set):
     return changed
 
 
+def _sync_topology(arm_obj, plan, ref_arm):
+    """Give the bones the port produced the parent the target game's rig gives them.
+
+    Renaming a bone carries its weights but not its place in the hierarchy, and the
+    two games do not agree on it.  RE4 hangs every twist helper straight off the limb
+    bone; RE9 chains them ``main -> Twist_0 -> Twist_1 -> Twist_2 -> Twist_3``.  An
+    RE Engine animation is a *relative* transform against the parent, so a twist bone
+    with the wrong parent accumulates the wrong rotation even though its name hash
+    resolves.
+
+    Deliberately narrow: only bones this port itself produced (renamed or inserted)
+    are touched, and only when the reference gives them a parent that exists here.
+    The model's own hair and cloth bones are in neither set, so nothing the user
+    built gets re-hung.
+    """
+    if ref_arm is None:
+        return 0
+    ref_bones = ref_arm.data.bones
+    produced = {dst for _src, dst in plan.renames}
+    produced |= {name for name, _r, _a in plan.inserts}
+    if not produced:
+        return 0
+
+    bpy.context.view_layer.objects.active = arm_obj
+    bpy.ops.object.mode_set(mode='EDIT')
+    eb = arm_obj.data.edit_bones
+    changed = 0
+    try:
+        for name in sorted(produced):
+            bone = eb.get(name)
+            ref = ref_bones.get(name)
+            if bone is None or ref is None or ref.parent is None:
+                continue
+            want = eb.get(ref.parent.name)
+            # Compared by name: Blender hands out a fresh wrapper per RNA access, so
+            # ``bone.parent is want`` is False even for the same bone.
+            if want is None or want.name == name:
+                continue
+            if bone.parent is not None and bone.parent.name == want.name:
+                continue
+            # A cycle would be silently accepted and then corrupt the rig.
+            walk = want
+            while walk is not None and walk.name != name:
+                walk = walk.parent
+            if walk is not None:
+                continue
+            bone.parent = want
+            bone.use_connect = False
+            changed += 1
+    finally:
+        bpy.ops.object.mode_set(mode='OBJECT')
+    return changed
+
+
 def execute_port(arm_obj, plan, ref_arm=None, correction_set=None, base_names=None):
     """Run *plan* on *arm_obj* (already a copy).  Returns a counts dict."""
-    counts = {"merged": 0, "renamed": 0, "inserted": 0, "corrected": 0, "synced": 0}
+    counts = {"merged": 0, "renamed": 0, "inserted": 0, "corrected": 0, "synced": 0,
+              "reparented": 0}
 
     if plan.merges:
         # (keep, delete) is the order merge_weights_and_delete_bones expects; it also
@@ -441,6 +503,7 @@ def execute_port(arm_obj, plan, ref_arm=None, correction_set=None, base_names=No
     # Insertion comes last because its rules are written in target-game names, and
     # the bones it copies orientation from are already in the target convention.
     counts["inserted"] = _insert_bones(arm_obj, plan.inserts, ref_arm)
+    counts["reparented"] = _sync_topology(arm_obj, plan, ref_arm)
 
     # Last, and only when the convention actually changed: the non-base bones follow
     # the base bones they hang off.  Runs after the renames so *base_names* -- which

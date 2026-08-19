@@ -168,6 +168,35 @@ class BoneMapManager:
 
 # 预设覆盖 51 个标准槽，槽外的骨它不管。下表补的是**确认存在于真实骨架、但预设里查不到**
 # 的骨，值为它应归入的标准键。只收录已验证条目，别凭猜测扩表。
+#: 源游戏骨名 -> 目标游戏骨名，专给**标准键覆盖不到的辅助骨**用，按游戏对索引。
+#:
+#: 扭转骨两边都有、都带权重，只是命名规则完全不同，标准键系统里又没有它们的位置。
+#: 原先它们落不进 cross map，于是按"未映射的原生骨"被并进了父骨——权重堆到上臂/前臂
+#: 主骨上，RE9 自己那套 Twist 一根都没建，上臂扭转的形变就没了（表现为肩膀不对）。
+#: 参考脚本 RE4_to_RE9_Convert 的 handle_twist_bones 做的正是这件事：改名 + 接进
+#: RE9 的串联链。缺的那几节（Twist_0/_3）由 core/mesh_port.py 的插骨规则补。
+#:
+#: 只列**两边都真实存在**的骨：RE4 没有 Twist_0，反向也就没什么可映射的，让它照旧
+#: 并进主骨。
+def _re4_re9_twists():
+    out = {}
+    for s_ in ("L", "R"):
+        out[f"{s_}_UpperArm_Twist_s1"] = f"{s_}_Arm_Upper_Twist_1"
+        out[f"{s_}_UpperArm_Twist_s2"] = f"{s_}_Arm_Upper_Twist_2"
+        out[f"{s_}_Forearm_Twist_s1"]  = f"{s_}_Arm_Lower_Twist_1"
+        out[f"{s_}_Forearm_Twist_s2"]  = f"{s_}_Arm_Lower_Twist_2"
+        out[f"{s_}_Wrist_Twist_s"]     = f"{s_}_Arm_Lower_Twist_3"
+        out[f"{s_}_Thigh_Twist_s"]     = f"{s_}_Leg_Upper_Twist_1"
+        out[f"{s_}_Shin_Twist_s"]      = f"{s_}_Leg_Lower_Twist_1"
+    return out
+
+
+_HELPER_NAME_MAP = {
+    ("RE4", "RE9"): _re4_re9_twists(),
+    ("RE9", "RE4"): {v: k for k, v in _re4_re9_twists().items()},
+}
+
+
 _PRESET_GAP_FILL = {
     # RE4R 脚尖末端，re4.json 只到 L_Toe。RE9 没有 ToesEnd（参考脚本 CORRECTION_DATA
     # 58 条里唯二解析不了的就是这对），跨到 RE9 时必须能收敛到 toe_*。
@@ -222,8 +251,13 @@ def build_cross_game_map(src_preset, dst_preset):
     for std_key, entry in src.mapping_data.items():
         for name in entry.get("main", ()):
             src_to_std.setdefault(name, std_key)
+    #: 纯 aux 的源骨（没有在任何标准键里当过 main）。它们有资格落到目标的 aux 上，
+    #: 见下面的一对一规则。
+    src_only_aux = set()
     for std_key, entry in src.mapping_data.items():
         for name in entry.get("aux", ()):
+            if name not in src_to_std:
+                src_only_aux.add(name)
             src_to_std.setdefault(name, std_key)
     for name, std_key in src_extra.items():
         src_to_std.setdefault(name, std_key)
@@ -238,8 +272,34 @@ def build_cross_game_map(src_preset, dst_preset):
 
         # 同名骨在目标预设的同一标准键下也存在时保留原名，别无谓塌到主骨上
         # （辅助骨系统各游戏不同名，但偶有共享名，如脚背/掌心一类）
-        dst_names = set(dst_main) | set(dst_entry.get("aux", ()))
-        result.mapping[src_name] = src_name if src_name in dst_names else dst_main[0]
+        dst_aux = tuple(dst_entry.get("aux", ()))
+        dst_names = set(dst_main) | set(dst_aux)
+        if src_name in dst_names:
+            result.mapping[src_name] = src_name
+            continue
+
+        # 两边这个标准键都**只有一根** aux 时，aux 对 aux —— 不塌到主骨上。
+        #
+        # 掌骨就是这条规则的由来：RE4 的 L_Palm 是 hand_L 的 aux，RE9 的 L_Hand_Palm
+        # 也是，两边一一对应且毫无歧义；可原来只认 main，于是 L_Palm 的位置和权重都
+        # 被并进了 L_Arm_Hand，再由插骨规则新造一根与手骨同位置的 L_Hand_Palm。掌骨
+        # 正好夹在手和手指之间，手指的形变因此不对。第三方参考脚本
+        # RE4_to_RE9_Convert 是直接 L_Palm -> L_Hand_Palm 的。
+        #
+        # 严格限制在"两边各恰好一根"：aux 列表之间没有位置对应关系（荒野 foot_L 是
+        # L_Instep + L_Foot_HJ_00，RE9 是 L_Leg_Foot，按下标配对只会张冠李戴），
+        # 一对一是唯一不需要猜的情形。实测这条规则只改变掌骨的去向。
+        src_aux = tuple(src.mapping_data.get(std_key, {}).get("aux", ()))
+        if src_name in src_only_aux and len(src_aux) == 1 and len(dst_aux) == 1:
+            result.mapping[src_name] = dst_aux[0]
+            continue
+
+        result.mapping[src_name] = dst_main[0]
+
+    # 标准键之外的辅助骨。setdefault：预设永远优先，这张表只补预设够不到的。
+    for src_name, dst_name in _HELPER_NAME_MAP.get(
+            (result.src_game, result.dst_game), {}).items():
+        result.mapping.setdefault(src_name, dst_name)
 
     for src_name, dst_name in result.mapping.items():
         result.collapsed.setdefault(dst_name, []).append(src_name)

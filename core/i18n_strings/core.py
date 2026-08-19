@@ -1158,9 +1158,11 @@ STRINGS = {
         "EN": "Cannot port: {detail}", "ZH": "无法移植：{detail}"},
     "core.mesh_port_ops.done": {
         "EN": "Ported to {game} as {name}: {renamed} renamed, {merged} merged, "
-              "{inserted} inserted, {corrected} re-oriented, {synced} synced to parent",
+              "{inserted} inserted, {corrected} re-oriented, {reparented} re-parented, "
+              "{synced} synced to parent",
         "ZH": "已移植到 {game}，产出 {name}：{renamed} 根重命名，{merged} 根合并，"
-              "{inserted} 根新增，{corrected} 根改轴，{synced} 根同步父骨朝向"},
+              "{inserted} 根新增，{corrected} 根改轴，{reparented} 根改挂父骨，"
+              "{synced} 根同步父骨朝向"},
     "core.mesh_port_ops.rejected": {
         "EN": "{n} bone(s) kept the source convention (no trustworthy correction): "
               "{names}",

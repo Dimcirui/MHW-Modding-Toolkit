@@ -120,6 +120,11 @@ def origin_shift(source_game, target_game):
 #:                               ``MHWS_OT_OptimizeAuxBones`` tables.
 #: ``("ref_offset", None)``   -- head goes at the offset from its parent that the
 #:                               bundled reference model has, unscaled.
+#: ``("fraction", (a, b, t))`` -- head goes *t* of the way from joint *a* to joint *b*,
+#:                               so it scales with the model.  RE9's twist helpers sit
+#:                               on exact thirds of the bone they ride (measured on two
+#:                               native rigs: t = 0, 1/3, 2/3, 1, perpendicular offset
+#:                               0.0 mm on all sixteen).
 #: ``("drop", (a, b))``       -- head takes X/Y from joint *a* and Z from joint *b*:
 #:                               straight down from *a* to *b*'s height.  For a joint
 #:                               that sits under another one at ground level, this is
@@ -137,6 +142,27 @@ _INSERT_RULES = {
         # with the ankle put it ~70 mm too high, which pivots the whole forefoot.
         "{s}_Leg_Foot": ("drop", ("{s}_Leg_Ankle", "{s}_Leg_Toes")),
         "{s}_Hand_Palm": ("colocate", "{s}_Arm_Hand"),
+        # RE9's four-segment twist chains.  The ones RE4 also has are *renamed* into
+        # place by bone_mapper's _HELPER_NAME_MAP, weights and all; these rules only
+        # build what is genuinely missing, which for RE4 is Twist_0 everywhere plus
+        # Twist_2/_3 on the legs.  Fractions measured, not guessed -- see the module
+        # docstring on "fraction".
+        "{s}_Arm_Upper_Twist_0": ("fraction", ("{s}_Arm_Upper", "{s}_Arm_Lower", 0.0)),
+        "{s}_Arm_Upper_Twist_1": ("fraction", ("{s}_Arm_Upper", "{s}_Arm_Lower", 1 / 3)),
+        "{s}_Arm_Upper_Twist_2": ("fraction", ("{s}_Arm_Upper", "{s}_Arm_Lower", 2 / 3)),
+        "{s}_Arm_Upper_Twist_3": ("fraction", ("{s}_Arm_Upper", "{s}_Arm_Lower", 1.0)),
+        "{s}_Arm_Lower_Twist_0": ("fraction", ("{s}_Arm_Lower", "{s}_Arm_Hand", 0.0)),
+        "{s}_Arm_Lower_Twist_1": ("fraction", ("{s}_Arm_Lower", "{s}_Arm_Hand", 1 / 3)),
+        "{s}_Arm_Lower_Twist_2": ("fraction", ("{s}_Arm_Lower", "{s}_Arm_Hand", 2 / 3)),
+        "{s}_Arm_Lower_Twist_3": ("fraction", ("{s}_Arm_Lower", "{s}_Arm_Hand", 1.0)),
+        "{s}_Leg_Upper_Twist_0": ("fraction", ("{s}_Leg_Upper", "{s}_Leg_Lower", 0.0)),
+        "{s}_Leg_Upper_Twist_1": ("fraction", ("{s}_Leg_Upper", "{s}_Leg_Lower", 1 / 3)),
+        "{s}_Leg_Upper_Twist_2": ("fraction", ("{s}_Leg_Upper", "{s}_Leg_Lower", 2 / 3)),
+        "{s}_Leg_Upper_Twist_3": ("fraction", ("{s}_Leg_Upper", "{s}_Leg_Lower", 1.0)),
+        "{s}_Leg_Lower_Twist_0": ("fraction", ("{s}_Leg_Lower", "{s}_Leg_Ankle", 0.0)),
+        "{s}_Leg_Lower_Twist_1": ("fraction", ("{s}_Leg_Lower", "{s}_Leg_Ankle", 1 / 3)),
+        "{s}_Leg_Lower_Twist_2": ("fraction", ("{s}_Leg_Lower", "{s}_Leg_Ankle", 2 / 3)),
+        "{s}_Leg_Lower_Twist_3": ("fraction", ("{s}_Leg_Lower", "{s}_Leg_Ankle", 1.0)),
         "Spine_0": ("colocate", "Hip"),
         "Neck_0": ("colocate", "Neck_1"),
         "{s}_Leg_ToesEnd": ("ref_offset", None),
@@ -242,7 +268,8 @@ def insert_rules_for(game_code, extra_rules=None):
                 # An anchor is one bone name or a pair of them (midpoint / drop);
                 # both sides of a pair need the same expansion.
                 if isinstance(anchor, (tuple, list)):
-                    sided = tuple(a.format(s=side) for a in anchor)
+                    sided = tuple(a.format(s=side) if isinstance(a, str) else a
+                                  for a in anchor)
                 else:
                     sided = anchor.format(s=side) if anchor else None
                 out[template.format(s=side)] = (rule, sided)
@@ -436,7 +463,8 @@ def build_port_plan(src_bones, cross_map, dst_game=None, src_main_names=(),
     placeable = []
     for name, rule, anchor in plan.inserts:
         needed = () if anchor is None else (
-            anchor if isinstance(anchor, (tuple, list)) else (anchor,))
+            tuple(a for a in anchor if isinstance(a, str))
+            if isinstance(anchor, (tuple, list)) else (anchor,))
         if any(a not in available for a in needed):
             plan.uninsertable.append(name)
         else:
