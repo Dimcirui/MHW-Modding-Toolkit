@@ -140,13 +140,18 @@ def _collection_armature(collection):
     return None
 
 
-def _collection_game_code(collection):
+def _collection_game_code(collection, prefer_game=None):
     """Game code detected from the armature *collection*'s colliders are
-    bound to, or None when there's no armature or no matching preset."""
+    bound to, or None when there's no armature or no matching preset.
+
+    *prefer_game* settles a tie in the caller's favour: RE4R and MHWilds name the
+    standard bones identically, so both presets score 1.0 on either rig and the
+    winner was decided by filename order -- which reported every RE4 rig as MHWS.
+    """
     arm = _collection_armature(collection)
     if arm is None:
         return None
-    detected = auto_detect_preset(arm, False)
+    detected = auto_detect_preset(arm, False, prefer_game=prefer_game)
     if not detected:
         return None
     mgr = BoneMapManager()
@@ -208,7 +213,7 @@ class MODDER_OT_ConvertChainCrossGame(bpy.types.Operator):
         if obj is not None:
             for col in _chain_collections():
                 if any(o == obj for o in col.all_objects):
-                    code = _collection_game_code(col)
+                    code = _collection_game_code(col, self.source_game)
                     if code is None or code == self.source_game:
                         source_col = col
                         try:
@@ -291,7 +296,7 @@ class MODDER_OT_ConvertChainCrossGame(bpy.types.Operator):
 
         # The section fixed the source game, so make sure the collection agrees --
         # otherwise clicking this in the wrong section converts the wrong direction.
-        code = _collection_game_code(col)
+        code = _collection_game_code(col, self.source_game)
         if code and self.source_game and code != self.source_game:
             return None, None, None, ('ERROR', T(
                 "core.chain_convert_ops.wrong_source_game").format(

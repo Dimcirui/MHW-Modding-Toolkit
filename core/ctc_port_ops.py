@@ -699,8 +699,13 @@ def _game_label(game_code):
 _detect_cache = {}
 
 
-def detect_armature_game(arm_obj):
+def detect_armature_game(arm_obj, prefer_game=None):
     """Which game's rig *arm_obj* looks like, by bone names, or ``None``.
+
+    *prefer_game* settles a genuine tie -- RE4R and MHWilds give the standard bones
+    the same names, so both presets score 1.0 on either rig and the answer used to
+    come down to filename order.  Naming the game the user already chose turns that
+    into "yes, consistent" instead of a mismatch nobody can act on.
 
     The same >= 95% standard-slot coverage test the bone tools already use to
     auto-pick a preset -- asking the armature instead of telling the user what to
@@ -713,14 +718,14 @@ def detect_armature_game(arm_obj):
     """
     if arm_obj is None or arm_obj.type != 'ARMATURE':
         return None
-    key = (arm_obj.name, len(arm_obj.data.bones))
+    key = (arm_obj.name, len(arm_obj.data.bones), prefer_game)
     if key in _detect_cache:
         return _detect_cache[key]
 
     from .bone_mapper import BoneMapManager, auto_detect_preset
     game = None
     try:
-        preset = auto_detect_preset(arm_obj, False)
+        preset = auto_detect_preset(arm_obj, False, prefer_game=prefer_game)
         if preset:
             mgr = BoneMapManager()
             if mgr.load_preset(preset):
@@ -814,7 +819,7 @@ class MHWI_OT_PortPhysicsToMHWS(bpy.types.Operator):
         # a target -- and it could only ever describe the mistake, never catch it.
         box = layout.box()
         arm = bpy.data.objects.get(self.target_armature)
-        detected = detect_armature_game(arm)
+        detected = detect_armature_game(arm, self.target_game)
         if detected is None:
             box.label(text=T("core.ctc_port_ops.detect_unknown"), icon='QUESTION')
         elif detected == "MHWI":

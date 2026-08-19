@@ -260,14 +260,25 @@ def _list_preset_files(is_import_x):
     return sorted(f for f in os.listdir(preset_dir) if f.endswith('.json'))
 
 
-def auto_detect_preset(armature_obj, is_import_x):
+def auto_detect_preset(armature_obj, is_import_x, prefer_game=None):
     """遍历所有预设文件，对每个预设在骨架的 47 个标准骨骼上做匹配测试，
-    返回覆盖率最高的文件名。覆盖率 >= 95% 才视为匹配成功，否则返回 None。"""
+    返回覆盖率最高的文件名。覆盖率 >= 95% 才视为匹配成功，否则返回 None。
+
+    *prefer_game*：并列第一时优先返回该 game_code 的预设。
+
+    ⚠ **并列是真的分不出来，不是判据不够好。** RE4R 与荒野同属一个骨骼约定族，
+    标准键覆盖的主链骨骼**名字逐个相同**（见 core/pose_ops.py 的 _RE4R_LIMBS 注释），
+    所以两份预设在一具 RE4R 骨架上都是 1.0（实测 cha000_00：re4.json 与 mhws.json
+    双双满分）。原先靠文件名排序决定谁赢，于是 RE4 骨架一律被报成"看起来是 MHWS"，
+    跨游戏移植的预检直接拦下正确的选择。
+
+    区分它们只能靠标准键之外的信号（RE4R 的 _Twist_s / _Help_ 辅助骨 vs 荒野的
+    _HJ_）；在那之前，并列时听调用方的——移植对话框知道用户选的是哪个源游戏，而
+    "用户说是 RE4、名字也确实对得上 RE4"没有任何理由报成冲突。
+    """
     from .ui_config import OPTIONAL_BONES
 
-    best_preset = None
-    best_ratio = 0.0
-
+    scored = []
     for filename in _list_preset_files(is_import_x):
         mapper = BoneMapManager()
         if not mapper.load_preset(filename, is_import_x):
@@ -285,14 +296,21 @@ def auto_detect_preset(armature_obj, is_import_x):
 
         if total == 0:
             continue
-        ratio = matched / total
-        if ratio > best_ratio:
-            best_ratio = ratio
-            best_preset = filename
-        if ratio >= 1.0:
-            break
+        scored.append((matched / total, filename,
+                       mapper.preset_info.get("game_code")))
 
-    return best_preset if best_ratio >= 0.95 else None
+    if not scored:
+        return None
+    best_ratio = max(ratio for ratio, _f, _g in scored)
+    if best_ratio < 0.95:
+        return None
+    # 不能提前 break 在 1.0：那样就看不到并列，而并列正是要处理的情况。
+    tied = [(f, g) for ratio, f, g in scored if ratio >= best_ratio - 1e-9]
+    if prefer_game:
+        for filename, game_code in tied:
+            if game_code == prefer_game:
+                return filename
+    return tied[0][0]
 
 
 def resolve_preset(preset_value, arm_obj, is_import_x):
