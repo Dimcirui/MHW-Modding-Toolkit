@@ -1136,11 +1136,6 @@ STRINGS = {
     "core.mesh_port_ops.unplaceable": {
         "EN": "{n} bone(s) the target game needs have no placement rule: {names}",
         "ZH": "{n} 根目标游戏需要的骨骼没有放置规则：{names}"},
-    "core.mesh_port_ops.needs_correction": {
-        "EN": "Crosses axis conventions: a reference skeleton is required, and both "
-              "rigs must be in the same pose (run REE to T-Pose on both)",
-        "ZH": "跨轴向约定：必须提供参考骨架，且两套骨架需处于同一姿态"
-              "（对两者各跑一次「REE 转 T-Pose」）"},
     "core.mesh_port_ops.all_resolved": {
         "EN": "Every bone has a destination", "ZH": "每根骨骼都有去处"},
     "core.mesh_port_ops.need_reference": {

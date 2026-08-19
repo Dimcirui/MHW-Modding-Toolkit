@@ -782,8 +782,18 @@ class MODDER_OT_PortMeshCrossGame(bpy.types.Operator):
             self._lines.append(('ERROR', T("core.mesh_port_ops.unplaceable").format(
                 n=len(plan.uninsertable),
                 names=", ".join(plan.uninsertable[:4]))))
-        if self.target_game not in FAMILY_A or self.source_game not in FAMILY_A:
-            self._lines.append(('INFO', T("core.mesh_port_ops.needs_correction")))
+        # Only when it is actually missing.  The line that used to sit here was
+        # unconditional, and neither half of it earned its space: the reference
+        # dropdown is built by scanning the shipped assets, so there is always one
+        # selected unless the install is broken, and the "run REE to T-Pose on both
+        # rigs first" half stopped being true five commits after it was written --
+        # the port T-poses throwaway copies itself.  Following it meant running a
+        # rest-level change on your own rig for nothing.
+        cross_convention = (self.target_game not in FAMILY_A
+                            or self.source_game not in FAMILY_A)
+        if cross_convention and (not self.reference_skeleton
+                                 or self.reference_skeleton == "NONE"):
+            self._lines.append(('ERROR', T("core.mesh_port_ops.need_reference")))
         if plan.ok:
             self._lines.append(('CHECKMARK', T("core.mesh_port_ops.all_resolved")))
         self._blocked = not plan.ok
