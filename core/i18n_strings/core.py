@@ -1613,7 +1613,8 @@ STRINGS = {
     "core.pre_export_check_ops.will_run": {
         "EN": "This run will:", "ZH": "本次将执行："},
     "core.pre_export_check_ops.run_tex": {
-        "EN": "Check for missing textures", "ZH": "检查贴图缺失"},
+        "EN": "Check for missing textures, and the size of the ones that are there",
+        "ZH": "检查贴图缺失，以及已有贴图的边长"},
     "core.pre_export_check_ops.run_match": {
         "EN": "Check that meshes and materials match", "ZH": "检查网格与材质是否匹配"},
     "core.pre_export_check_ops.run_names": {
@@ -1636,6 +1637,10 @@ STRINGS = {
         "EN": "No Texture Found At All", "ZH": "找不到任何贴图"},
     "core.pre_export_check_ops.cat_tex_empty": {
         "EN": "Empty Texture Path", "ZH": "贴图路径为空"},
+    "core.pre_export_check_ops.cat_tex_not_pow2": {
+        "EN": "Texture Size Not A Power Of Two", "ZH": "贴图边长不是 2 的幂"},
+    "core.pre_export_check_ops.cat_tex_unreadable": {
+        "EN": "Not A Readable .tex", "ZH": "无法识别为 .tex"},
     "core.pre_export_check_ops.cat_mesh_unmatched": {
         "EN": "Dangling Meshes", "ZH": "悬空网格"},
     "core.pre_export_check_ops.cat_mat_unmatched": {
@@ -1663,6 +1668,20 @@ STRINGS = {
     "core.pre_export_check_ops.desc_tex_empty": {
         "EN": "These texture slots have no path filled in at all.",
         "ZH": "以下贴图槽位没有填写任何路径。"},
+    "core.pre_export_check_ops.desc_tex_not_pow2": {
+        "EN": "Both sides of a texture must be a power of two (256, 512, 1024, 2048 "
+              "...). These files are not, so the game may load them wrong or not at "
+              "all. Only the mod's own textures are checked -- vanilla ones live in "
+              "the game's paks.",
+        "ZH": "贴图的长和宽都必须是 2 的幂（256、512、1024、2048……）。"
+              "以下文件不满足，游戏可能加载异常或直接加载不出来。"
+              "只检查 mod 自己的贴图——原版贴图在游戏 pak 里。"},
+    "core.pre_export_check_ops.desc_tex_unreadable": {
+        "EN": "These files exist under the Mod Root but have no readable .tex header. "
+              "Most often this is a .png or .dds that was renamed to .tex instead of "
+              "being converted.",
+        "ZH": "以下文件在 Mod 根目录下存在，但读不出 .tex 文件头。"
+              "最常见的原因是把 .png 或 .dds 直接改了后缀，而不是真正做了转换。"},
     "core.pre_export_check_ops.desc_mesh_unmatched": {
         "EN": "These meshes derive a material name that no material in the mdf "
               "collection provides, so they will not export correctly.",

@@ -47,6 +47,7 @@ from .compat import HAS_DIALOG_TITLE
 from . import pre_export_check as pc
 from .mdf_material_convert_base import _load_vanilla_art_paths
 from .mdf_port_tex import get_game_tex_config
+from .tex_file import read_tex_size
 from .mdf_port_ops import mdf_material_collections, _draw_mod_root_row
 from .mesh_port_ops import mesh_collections
 
@@ -202,6 +203,8 @@ def _check_textures(materials, cfg, natives_root):
     n_found = 0
     missing = []   # (obj, material name, slot, path)
     empty = []     # (obj, material name, slot)
+    found = {}     # path -> [obj], deduped: the same texture is usually bound
+                   # by several materials, and the file is one file
     for obj in materials:
         md = obj.re_mdf_material
         mat_name = md.materialName
@@ -209,6 +212,7 @@ def _check_textures(materials, cfg, natives_root):
             verdict = pc.classify_tex_binding(b.path, vanilla, exists)
             if verdict == pc.TEX_FOUND:
                 n_found += 1
+                found.setdefault(b.path, []).append(obj)
             elif verdict == pc.TEX_MISSING:
                 missing.append((obj, mat_name, b.textureType, b.path))
             elif verdict == pc.TEX_EMPTY:
@@ -244,6 +248,8 @@ def _check_textures(materials, cfg, natives_root):
             'objects': [o.name for o, _m, _s, _p in missing],
         })
 
+    entries += _check_tex_sizes(found, natives_root, tex_version)
+
     if empty:
         entries.append({
             'code': 'tex_empty',
@@ -252,6 +258,48 @@ def _check_textures(materials, cfg, natives_root):
             'detail': T(_K + "desc_tex_empty") + "\n\n" + "\n".join(
                 f"{mat}  [{slot}]" for _o, mat, slot in empty),
             'objects': [o.name for o, _m, _s in empty],
+        })
+    return entries
+
+
+def _check_tex_sizes(found, natives_root, tex_version):
+    """``[entry]`` for the shape of the texture files that did resolve.
+
+    Only the custom ones can be checked at all: a vanilla path lives inside the
+    game's paks, so there is no file here to read -- and no need, since the game
+    shipped it.
+
+    Reads 40 bytes per unique path (``tex_file.read_tex_size``), so this costs
+    one header read per texture the mod actually ships, not per binding.
+    """
+    bad_size = []      # (obj, path, width, height)
+    unreadable = []    # (obj, path)
+    for path, objs in found.items():
+        size = read_tex_size(pc.resolve_disk_path(natives_root, path, tex_version))
+        verdict = pc.classify_tex_size(size)
+        if verdict == pc.TEXF_NOT_POW2:
+            bad_size.append((objs[0], path, size[0], size[1]))
+        elif verdict == pc.TEXF_UNREADABLE:
+            unreadable.append((objs[0], path))
+
+    entries = []
+    if bad_size:
+        entries.append({
+            'code': 'tex_not_pow2',
+            'label': T(_K + "cat_tex_not_pow2"),
+            'count': len(bad_size),
+            'detail': T(_K + "desc_tex_not_pow2") + "\n\n" + "\n".join(
+                f"{w}x{h}  {path}" for _o, path, w, h in bad_size),
+            'objects': [o.name for o, _p, _w, _h in bad_size],
+        })
+    if unreadable:
+        entries.append({
+            'code': 'tex_unreadable',
+            'label': T(_K + "cat_tex_unreadable"),
+            'count': len(unreadable),
+            'detail': T(_K + "desc_tex_unreadable") + "\n\n" + "\n".join(
+                path for _o, path in unreadable),
+            'objects': [o.name for o, _p in unreadable],
         })
     return entries
 

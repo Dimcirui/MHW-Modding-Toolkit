@@ -60,6 +60,13 @@ TEX_EMPTY = 'empty'        # the binding has no path at all
 TEX_VANILLA = 'vanilla'    # a path in the game's own shipped asset list
 TEX_FOUND = 'found'        # the user's own asset, present under the mod root
 
+#: Texture *file* verdicts, for the ones that did resolve. Separate from the
+#: binding verdicts above because they answer a different question: not "is the
+#: file there" but "is the file itself built right".
+TEXF_OK = 'ok'
+TEXF_NOT_POW2 = 'not_pow2'      # a side that is not a power of two
+TEXF_UNREADABLE = 'unreadable'  # no readable .tex header -- often a renamed .png/.dds
+
 #: What the whole texture scan adds up to.
 TEXV_OK = 'ok'
 TEXV_ROOT_WRONG = 'root_wrong'   # nothing custom resolved -- wrong root, or no textures built
@@ -214,6 +221,29 @@ def classify_tex_binding(path, vanilla_set, exists_fn):
     if norm in vanilla_set:
         return TEX_VANILLA
     return TEX_FOUND if exists_fn(path) else TEX_MISSING
+
+
+def is_power_of_two(v):
+    return v > 0 and (v & (v - 1)) == 0
+
+
+def classify_tex_size(size):
+    """``TEXF_OK`` / ``TEXF_NOT_POW2`` / ``TEXF_UNREADABLE`` for one resolved
+    texture, given ``(width, height)`` or ``None``.
+
+    Both sides have to be a power of two.  The looser rule the block formats
+    actually enforce is "a multiple of four", but every non-power-of-two size is
+    worth flagging anyway -- mip chains stop halving cleanly -- and one rule
+    means one message instead of two tiers the user then has to rank.
+
+    ``None`` (the header would not parse) is a finding rather than a silent
+    skip: a file under the mod root that is not a .tex is usually one that was
+    renamed instead of converted, and the export will happily point at it.
+    """
+    if size is None:
+        return TEXF_UNREADABLE
+    w, h = size
+    return TEXF_OK if (is_power_of_two(w) and is_power_of_two(h)) else TEXF_NOT_POW2
 
 
 def classify_tex_path(path, vanilla_set, exists_fn):

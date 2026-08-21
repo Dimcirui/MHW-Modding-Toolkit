@@ -133,6 +133,33 @@ def write_tex_from_dds(dds_filepath, tex_version, out_path):
     return out_path
 
 
+def read_tex_size(filepath):
+    """``(width, height)`` from the 40-byte header alone, or ``None`` when the
+    file cannot be read as a .tex.
+
+    Deliberately reads only the header: the pre-export check runs this over
+    every custom texture a mod binds, and the dimensions sit in the header, so
+    decompressing any mip (which ``read_tex_to_dds`` must do) would be pure
+    waste.
+
+    ``None`` covers both "unreadable" and "the magic is not the .tex one" -- the
+    caller cannot act on the difference, and the common cause of the second is
+    a .png or .dds that was simply renamed to .tex, which is worth reporting in
+    the same breath as a wrong size.
+    """
+    try:
+        with open(filepath, 'rb') as f:
+            head = f.read(_HEADER_STRUCT.size)
+    except OSError:
+        return None
+    if len(head) < _HEADER_STRUCT.size:
+        return None
+    magic, _version, width, height = _HEADER_STRUCT.unpack(head)[:4]
+    if magic != TEX_MAGIC:
+        return None
+    return (width, height)
+
+
 def read_tex_to_dds(filepath, all_mips=False):
     """Read an RE Engine .tex file into a dds_file.DDSFile.
 
