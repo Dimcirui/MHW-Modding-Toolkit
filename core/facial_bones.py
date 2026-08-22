@@ -1,6 +1,7 @@
 import bpy
 import math
 import mathutils
+import re
 
 
 def _is_end_bone(name):
@@ -152,10 +153,24 @@ def apply_blink_fake_bone(arm_obj, bone_name, radius_mult=4.0):
         return False
     b = a.parent
 
+    # 重复执行时，graft_facial_bones 已经把 A 删了重建、重新挂回真实父级 B——
+    # 上一轮插入的假骨 B' 因此变成了 B 底下没有子级的孤儿，不会被 graft 清掉。
+    # 这里先按命名规律把它找出来删掉，否则每点一次就多一层孤儿假骨，且新一轮的
+    # 偏移是从 A 当前（已含上次偏移的）位置继续叠加
+    fake_pattern = re.compile(rf"^{re.escape(b.name)}(_[LR])?_Fake(\.\d+)?$")
+    for child in list(b.children):
+        if child is not a and fake_pattern.match(child.name):
+            edit_bones.remove(child)
+
     # 先量后改：算距离要读 A 的子关节，放在改动层级之前免得受任何后续编辑影响
     offset_y = blink_offset_from_radius(arm_obj, a, radius_mult)
 
-    b_prime = edit_bones.new(b.name + "_Fake")
+    # L/R 两侧的睑缘骨常共用同一个父级（如 FacialDef_Face），若只用 b.name +
+    # "_Fake" 命名会导致两侧假骨重名（被 Blender 自动加 .001）；按 A 的左右前缀
+    # 区分，前缀不存在时才退回原始命名
+    side = a.name[:2] if a.name[:2] in ("L_", "R_") else ""
+    fake_name = f"{b.name}_{side}Fake" if side else f"{b.name}_Fake"
+    b_prime = edit_bones.new(fake_name)
     b_prime.head = b.head.copy()
     b_prime.tail = b.tail.copy()
     b_prime.roll = b.roll
