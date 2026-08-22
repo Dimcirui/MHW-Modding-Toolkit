@@ -405,10 +405,22 @@ def make_disk_path(natives_root, base_path, tex_name, slot_type, abbrev_map, tex
 # backed by our own bundled texconv + .tex writer (core/texconv_native.py,
 # core/tex_file.py) instead of the external RE Mesh Editor addon.
 
-def _ImageListToDDS(imageConvertList, outDir, generateMipMaps):
+def _ImageListToDDS(imageConvertList, outDir, generateMipMaps, mipQuality='FAST'):
+    """mipQuality: 'FAST' (texconv's own recursive CUBIC pass) or 'QUALITY'
+    (core.texconv_native.convert_to_dds_area_mips -- box-averages every level
+    straight from the source instead of recursively re-filtering, see that
+    function's docstring). QUALITY needs power-of-two dimensions; falls back
+    to FAST automatically otherwise (that requirement is already the norm for
+    these game textures, so this is the rare case, not the common one)."""
     from . import texconv_native
     for in_path, dds_format in imageConvertList:
         try:
+            if generateMipMaps and mipQuality == 'QUALITY':
+                try:
+                    texconv_native.convert_to_dds_area_mips(in_path, dds_format, outDir)
+                    continue
+                except ValueError as err:
+                    print(f"[mip quality] falling back to Fast for {in_path}: {err}")
             texconv_native.convert_to_dds(in_path, dds_format, outDir, generate_mips=generateMipMaps)
         except Exception as err:
             print(f"Failed to convert {in_path} - {err}")
@@ -809,6 +821,14 @@ class MdfTexMaterialItem(bpy.types.PropertyGroup):
     pbr_expanded:      bpy.props.BoolProperty(default=False)
     other_expanded:    bpy.props.BoolProperty(default=False)
     generate_mipmaps:  bpy.props.BoolProperty(name="Generate MipMaps", default=True)
+    mipmap_strategy:   bpy.props.EnumProperty(
+        name="Mipmap Strategy",
+        items=lambda self, ctx: [
+            ('FAST', T("core.mip_strategy.fast"), T("core.mip_strategy.fast_desc")),
+            ('QUALITY', T("core.mip_strategy.quality"), T("core.mip_strategy.quality_desc")),
+        ],
+        default=0,  # 'FAST' -- dynamic items need an int index default
+    )
     skip_textures:     bpy.props.BoolProperty(
         name="Material Only",
         description="Skip texture composition/conversion; only update texture paths in the material definition",
@@ -1139,6 +1159,7 @@ class MdfTexProcessBase(bpy.types.Operator):
                             dds_fmt=resolve_dds_format(
                                 slot.texture_type, SRGB_SLOT_TYPES),
                             generate_mipmaps=effective_mipmaps,
+                            mip_quality=mat_item.mipmap_strategy,
                             image_to_dds=ImageListToDDS,
                             dds_to_tex=lambda p, o: DDSToTex(p, cls._tex_version, o),
                         )

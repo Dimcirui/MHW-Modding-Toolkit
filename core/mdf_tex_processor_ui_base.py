@@ -187,6 +187,8 @@ class MdfTexDialogBase(bpy.types.Operator):
             opt_row = box.row(align=True)
             opt_row.prop(mat, "generate_mipmaps",
                         text=T("core.mdf_tex_processor_base.generate_mipmaps_label"))
+            if mat.generate_mipmaps:
+                opt_row.prop(mat, "mipmap_strategy", text="")
             opt_row.prop(mat, "skip_textures",
                         text=T("core.mdf_tex_processor_base.skip_textures_label"))
 

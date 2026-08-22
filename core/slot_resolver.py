@@ -37,14 +37,17 @@ def resolve_dds_format(slot_type, srgb_slots):
 
 
 def write_slot_tex(src_img, disk_path, temp_dir, *,
-                   dds_fmt, generate_mipmaps,
+                   dds_fmt, generate_mipmaps, mip_quality='FAST',
                    image_to_dds, dds_to_tex):
     """Convert one source image into a .tex at ``disk_path``.
 
     ``src_img``     source file: .tex, .dds, or anything texconv reads
     ``dds_to_tex``  callable (dds_path_list, out_path) -> None, already bound
                     to the caller's tex version
-    ``image_to_dds`` callable ([(src, fmt)], out_dir, mipmaps) -> None
+    ``image_to_dds`` callable ([(src, fmt)], out_dir, mipmaps, mip_quality) -> None
+    ``mip_quality`` 'FAST' (texconv's own recursive CUBIC) or 'QUALITY'
+                    (core.texconv_native.convert_to_dds_area_mips); ignored
+                    when ``generate_mipmaps`` is False.
 
     Creates the destination directory.  Raises FileNotFoundError if texconv
     produced nothing, so a silent zero-byte texture cannot reach the game.
@@ -71,7 +74,7 @@ def write_slot_tex(src_img, disk_path, temp_dir, *,
     # (see slot_sources.stage_source_file) or two slots sharing a basename will
     # collide here under different sRGB flags.
     dds_path = os.path.join(temp_dir, os.path.splitext(src_name)[0] + '.dds')
-    image_to_dds([(src_img, dds_fmt)], temp_dir, generate_mipmaps)
+    image_to_dds([(src_img, dds_fmt)], temp_dir, generate_mipmaps, mip_quality)
     if not os.path.isfile(dds_path):
         raise FileNotFoundError(f"texconv output not found: {dds_path}")
     dds_to_tex([dds_path], disk_path)

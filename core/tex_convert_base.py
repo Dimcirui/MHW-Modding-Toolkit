@@ -125,6 +125,14 @@ def guess_dxgi_format(filepath):
     return None
 
 
+# Only BC7 (colour or linear) benefits from the box-average mip rebuild in
+# core.texconv_native.convert_to_dds_area_mips -- everything else here is
+# either uncompressed (nothing to alias) or a format this addon's own presets
+# never emit, so gating the "High Quality" option to these two keeps the UI
+# honest about where it actually does something.
+_QUALITY_MIP_FORMATS = {'BC7_UNORM', 'BC7_UNORM_SRGB'}
+
+
 # ── Format presets ───────────────────────────────────────────────────────────
 # REE-Content-Editor's TextureViewer.Presets model: one combo that sets both the
 # DXGI format and what to do with mipmaps, and drops to "custom" as soon as the
@@ -604,6 +612,14 @@ class TexConvertSettings(bpy.types.PropertyGroup):
 
     generate_mipmaps: bpy.props.BoolProperty(name="Generate Mipmaps", default=True,
                                              update=_on_format_or_mips_update)
+    mipmap_strategy: bpy.props.EnumProperty(
+        name="Mipmap Strategy",
+        items=lambda self, ctx: [
+            ('FAST', T("core.mip_strategy.fast"), T("core.mip_strategy.fast_desc")),
+            ('QUALITY', T("core.mip_strategy.quality"), T("core.mip_strategy.quality_desc")),
+        ],
+        default=0,  # 'FAST' -- dynamic items need an int index default
+    )
     output_path: bpy.props.StringProperty(name="Output Path", subtype='FILE_PATH')
     target: bpy.props.EnumProperty(name="Target Format", items=get_target_items, default=0)
     resize_enabled: bpy.props.BoolProperty(
@@ -692,7 +708,10 @@ class MT_OT_TexConvertDialog(bpy.types.Operator):
         fmt_row.operator("mt.tex_convert_guess_format", text="", icon='FILE_REFRESH')
         if s.src_a and not s.format_guess_ok:
             layout.label(text=T("core.tex_convert_base.guess_fallback_warning"), icon='ERROR')
-        layout.prop(s, "generate_mipmaps", text=T("core.tex_convert_base.generate_mipmaps_name"))
+        mip_row = layout.row(align=True)
+        mip_row.prop(s, "generate_mipmaps", text=T("core.tex_convert_base.generate_mipmaps_name"))
+        if s.generate_mipmaps and s.format in _QUALITY_MIP_FORMATS:
+            mip_row.prop(s, "mipmap_strategy", text="")
 
         layout.separator()
 
@@ -887,9 +906,20 @@ class MT_OT_TexConvertDialog(bpy.types.Operator):
 
             from . import texconv_native
             resize = (s.out_width, s.out_height) if s.resize_enabled else None
-            dds_path = texconv_native.convert_to_dds(
-                png_path, s.format, temp_dir, generate_mips=s.generate_mipmaps,
-                size=resize)
+            dds_path = None
+            if (s.generate_mipmaps and s.mipmap_strategy == 'QUALITY'
+                    and s.format in _QUALITY_MIP_FORMATS):
+                try:
+                    dds_path = texconv_native.convert_to_dds_area_mips(
+                        png_path, s.format, temp_dir, size=resize)
+                except ValueError:
+                    size = output_size(s) or (0, 0)
+                    self.report({'WARNING'}, T("core.mip_strategy.pot_fallback").format(
+                        name=os.path.basename(out_path), w=size[0], h=size[1]))
+            if dds_path is None:
+                dds_path = texconv_native.convert_to_dds(
+                    png_path, s.format, temp_dir, generate_mips=s.generate_mipmaps,
+                    size=resize)
 
             os.makedirs(os.path.dirname(out_path), exist_ok=True)
 
@@ -948,6 +978,14 @@ class MT_OT_TexDropToDDS(bpy.types.Operator):
     generate_mipmaps: bpy.props.BoolProperty(
         name="Generate Mipmaps", default=True,
         description="Generate a full mipmap chain")
+    mipmap_strategy: bpy.props.EnumProperty(
+        name="Mipmap Strategy",
+        items=lambda self, ctx: [
+            ('FAST', T("core.mip_strategy.fast"), T("core.mip_strategy.fast_desc")),
+            ('QUALITY', T("core.mip_strategy.quality"), T("core.mip_strategy.quality_desc")),
+        ],
+        default=0,  # 'FAST' -- dynamic items need an int index default
+    )
 
     @classmethod
     def description(cls, context, properties):
@@ -979,7 +1017,10 @@ class MT_OT_TexDropToDDS(bpy.types.Operator):
             row = box.row(align=True)
             row.label(text=os.path.basename(entry.filepath))
             row.prop(entry, "format", text="")
-        layout.prop(self, "generate_mipmaps", text=T("core.tex_convert_base.generate_mipmaps_name"))
+        mip_row = layout.row(align=True)
+        mip_row.prop(self, "generate_mipmaps", text=T("core.tex_convert_base.generate_mipmaps_name"))
+        if self.generate_mipmaps and any(e.format in _QUALITY_MIP_FORMATS for e in items):
+            mip_row.prop(self, "mipmap_strategy", text="")
 
     def execute(self, context):
         from . import texconv_native
@@ -991,8 +1032,16 @@ class MT_OT_TexDropToDDS(bpy.types.Operator):
             out_path = os.path.splitext(src)[0] + ".dds"
             temp_dir = tempfile.mkdtemp(prefix="tex_drop_")
             try:
-                dds_path = texconv_native.convert_to_dds(
-                    src, entry.format, temp_dir, generate_mips=self.generate_mipmaps)
+                dds_path = None
+                if (self.generate_mipmaps and self.mipmap_strategy == 'QUALITY'
+                        and entry.format in _QUALITY_MIP_FORMATS):
+                    try:
+                        dds_path = texconv_native.convert_to_dds_area_mips(src, entry.format, temp_dir)
+                    except ValueError:
+                        dds_path = None  # not power-of-two -- fall back to Fast below
+                if dds_path is None:
+                    dds_path = texconv_native.convert_to_dds(
+                        src, entry.format, temp_dir, generate_mips=self.generate_mipmaps)
                 shutil.copy2(dds_path, out_path)
                 done += 1
             except Exception as err:

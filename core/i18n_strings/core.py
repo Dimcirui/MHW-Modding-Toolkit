@@ -367,6 +367,28 @@ STRINGS = {
         "EN": "Keep the existing path unchanged", "ZH": "保持现有路径不变"},
 
     "core.mdf_tex_processor_base.generate_mipmaps_label": {"EN": "Generate MipMaps", "ZH": "生成 MipMaps"},
+    "core.mip_strategy.label": {"EN": "Mipmap Strategy", "ZH": "Mipmap 策略"},
+    "core.mip_strategy.fast": {"EN": "Fast", "ZH": "快速"},
+    "core.mip_strategy.fast_desc": {
+        "EN": "One recursive CUBIC pass (texconv default). Good for smooth textures; "
+              "fine repeating detail (weave, quilting) can alias into visible noise at distance.",
+        "ZH": "递归 CUBIC 一次生成（texconv 默认）。平滑贴图没问题；精细的重复纹理"
+              "（布纹、菱格纹等）在远处 mip 可能走样出噪点。"},
+    "core.mip_strategy.quality": {"EN": "High Quality (Anti-Alias)", "ZH": "高质量（抗走样）"},
+    "core.mip_strategy.quality_desc": {
+        "EN": "Box-average every mip level directly from the full-resolution source instead of "
+              "recursively re-filtering the previous level. Cleanly removes fine repeating/high-contrast "
+              "detail that would otherwise alias at distance (measured 40x-2700x less residual aliasing "
+              "energy on a baked-in fabric weave). Only helps textures with that kind of detail; costs "
+              "one texconv encode per mip level instead of one call total. Requires power-of-two "
+              "dimensions -- falls back to Fast automatically otherwise.",
+        "ZH": "每一级 mip 都直接从原图重新取平均，而不是在上一级基础上递归滤波。"
+              "能干净地压掉那种远处会走样的精细重复/高对比图案（实测在一张烘焙布纹法线上"
+              "残留走样能量降低了 40~2700 倍）。只对带这类细节的贴图有用；比默认方式慢，"
+              "因为每一级 mip 都要单独编码一次。需要尺寸是二次幂，否则会自动回退到快速模式。"},
+    "core.mip_strategy.pot_fallback": {
+        "EN": "{name}: High Quality mip needs power-of-two size ({w}x{h} is not) — used Fast instead",
+        "ZH": "{name}：高质量 mip 需要二次幂尺寸（{w}x{h} 不是），已自动回退到快速模式"},
     "core.mdf_tex_processor_base.skip_textures_label": {"EN": "Material Only", "ZH": "仅生成材质"},
     "core.mdf_tex_processor_base.skip_textures_desc": {
         "EN": "Skip texture composition/conversion; only update texture paths in the material definition",
