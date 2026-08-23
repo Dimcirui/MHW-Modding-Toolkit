@@ -508,6 +508,78 @@ touching the split vertices, sharp edges or material borders the game needs
         finally:
             if back_to_edit:
                 bpy.ops.object.mode_set(mode='EDIT')
+class MHW_OT_FixShapeKeyNormals(bpy.types.Operator):
+    """Re-encode the custom split normals against the shape-keyed geometry, so
+the directions that were authored survive the deformation instead of drifting
+with the encoding basis (see core/normal_utils.py)"""
+    bl_idname = "mhw.fix_shape_key_normals"
+    bl_label = "Fix Shape Key Normals"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    reset_intent: bpy.props.BoolProperty(
+        name="Reset Target To Current Normals",
+        default=False,
+        description="Take the mesh's current normals as the new target. "
+                    "Only needed after re-baking the normals by other means",
+    )
+
+    @classmethod
+    def poll(cls, context):
+        obj = context.active_object
+        return (obj is not None and obj.type == 'MESH'
+                and obj.data.shape_keys is not None
+                and len(obj.data.shape_keys.key_blocks) > 1)
+
+    @classmethod
+    def description(cls, context, properties):
+        return T("ui.main_panel.fsk_tip")
+
+    def draw(self, context):
+        self.layout.prop(self, "reset_intent",
+                         text=T("ui.main_panel.fsk_field_reset"))
+
+    def execute(self, context):
+        import numpy as np
+        from . import normal_utils, shapekey_utils
+
+        obj = context.active_object
+        back_to_edit = context.mode == 'EDIT_MESH'
+        if back_to_edit:
+            bpy.ops.object.mode_set(mode='OBJECT')
+        try:
+            me = obj.data
+            if not me.polygons:
+                self.report({'ERROR'}, T("ui.main_panel.fn_err_no_faces"))
+                return {'CANCELLED'}
+
+            co = shapekey_utils.shape_key_mix(obj)
+            if co is None:
+                self.report({'ERROR'}, T("ui.main_panel.fsk_err_absolute"))
+                return {'CANCELLED'}
+
+            base = np.empty(len(me.vertices) * 3, np.float32)
+            me.shape_keys.reference_key.data.foreach_get("co", base)
+            moved = int((np.linalg.norm(
+                co - base.reshape(-1, 3).astype(np.float64), axis=1) > 1e-9).sum())
+            if not moved:
+                # Every key sits at zero, so the stored encoding already decodes
+                # against the geometry it was written for
+                self.report({'WARNING'}, T("ui.main_panel.fsk_warn_no_deform"))
+                return {'CANCELLED'}
+
+            n, fresh, resid = normal_utils.reencode_for_shape(
+                me, co, reset_intent=self.reset_intent)
+        finally:
+            if back_to_edit:
+                bpy.ops.object.mode_set(mode='EDIT')
+
+        self.report({'INFO'}, T("ui.main_panel.fsk_done").format(
+            n=n, verts=moved, mean=f"{resid.mean():.3f}", max=f"{resid.max():.2f}"))
+        if fresh:
+            self.report({'INFO'}, T("ui.main_panel.fsk_note_captured"))
+        return {'FINISHED'}
+
+
 class MHW_OT_ApplyModifiersKeepShapeKeys(bpy.types.Operator):
     """Apply the viewport-enabled modifiers to a mesh that has shape keys,
 rebuilding every key on top of the result (see core/shapekey_utils.py)"""
@@ -726,6 +798,7 @@ classes = [
     MHW_OT_MMDFaceWeights,
     MHW_OT_CylindricalFaceNormals,
     MHW_OT_ResetFaceNormals,
+    MHW_OT_FixShapeKeyNormals,
     MHW_OT_ApplyModifiersKeepShapeKeys,
     MHW_OT_SeparateByMaterials,
     MHW_OT_CreateOutline,

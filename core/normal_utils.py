@@ -354,6 +354,7 @@ def reset_normals(objects, distance=1e-5, angle_limit=180.0, shade_smooth=True):
             local = -local
         if shade_smooth:
             me.polygons.foreach_set("use_smooth", [True] * len(me.polygons))
+        clear_intent(me)
         me.normals_split_custom_set(local.tolist())
         me.update()
 
@@ -419,8 +420,117 @@ def apply_cylindrical(me, axis=2, center=None, face_mask=None,
     w[on_axis] = 0.0
     w *= strength
 
+    clear_intent(me)
     me.normals_split_custom_set(slerp(base, target[lv], w[lv]).tolist())
     me.update()
 
     n_boundary = int(((w > 0.02) & (w < 0.98)).sum())
     return int(face_mask.sum()), n_boundary
+
+
+# ── keeping custom normals through a shape key ─────────────────────────────
+
+# Why a re-encode and not a re-bake
+# ---------------------------------
+# Blender stores a custom split normal as ``INT16_2D``: not the direction, but
+# the direction *encoded in that corner's normal space*, and that space is
+# derived from the surrounding geometry.  Move a vertex with a shape key and the
+# stored bytes do not change, but the basis they decode against does — so the
+# direction the viewport shades with, and the one an exporter reads off the
+# evaluated mesh, drifts away from what was authored.
+#
+# Measured on a shipped face (7013 verts, 14 non-zero keys, 6.7mm of travel):
+# the base mesh's decode and the shape-keyed decode differ by a mean of only
+# 1.58 degrees, but 1565 corners exceed 5 degrees, 230 exceed 20, and the worst
+# reaches 165 — a flip.  On unmoved vertices it is 0.009 degrees, so it is
+# entirely deformation-driven.  Those few hundred corners are the blotches that
+# show up around the eyes and mouth after the keys are dialled in.
+#
+# The fix is to write the wanted directions onto a throwaway mesh whose geometry
+# *is* the deformed geometry, let Blender encode them against that basis, and
+# copy the raw INT16_2D back.  Residual after the round trip: mean 0.005
+# degrees, max 0.73, nothing above 5.  Note this deliberately makes the
+# undeformed base mesh decode to something else — which costs nothing, because
+# the mesh is always shown and exported with its keys applied, and the game's
+# blend shapes carry position deltas only, so one normal set is all there is.
+#
+# The target field is kept in an attribute rather than re-read each run, so
+# running twice is idempotent: the second run must not treat the already
+# re-encoded result as the new intent, or the error compounds.
+
+INTENT_ATTR = "mhw_normal_intent"
+
+
+def clear_intent(me):
+    """Forget the stored target field.
+
+    Anything that rewrites the custom normals invalidates it — the stored
+    directions describe what the *base* mesh used to decode to, which a re-bake
+    replaces outright.
+    """
+    attr = me.attributes.get(INTENT_ATTR)
+    if attr is not None:
+        me.attributes.remove(attr)
+
+
+def _intent_field(me, data=None):
+    """Read (data=None) or write the stored target field."""
+    attr = me.attributes.get(INTENT_ATTR)
+    if data is None:
+        if attr is None:
+            return None
+        a = np.empty(len(me.loops) * 3, np.float32)
+        attr.data.foreach_get("vector", a)
+        return normalize(a.reshape(-1, 3).astype(np.float64))
+    if attr is not None and (attr.domain != 'CORNER'
+                             or attr.data_type != 'FLOAT_VECTOR'):
+        me.attributes.remove(attr)
+        attr = None
+    if attr is None:
+        attr = me.attributes.new(INTENT_ATTR, 'FLOAT_VECTOR', 'CORNER')
+    attr.data.foreach_set("vector", data.astype(np.float32).ravel())
+    return data
+
+
+def reencode_for_shape(me, deformed_co, reset_intent=False):
+    """Re-encode the custom split normals against ``deformed_co``.
+
+    ``deformed_co`` is the mesh's vertex positions under the deformation the
+    normals have to survive — for a shape key, the mixed positions.  Nothing
+    about the mesh's geometry, keys or topology is touched; only the stored
+    encoding changes.
+
+    Returns (corners written, whether the target field was captured now,
+    per-corner residual in degrees between the deformed decode and the target).
+    """
+    import bpy  # only needed for the throwaway mesh; the rest of this file is numpy
+
+    if me.attributes.get("custom_normal") is None:
+        # Nothing authored to preserve yet — pin down what the mesh shades with
+        # now, so there is a target to re-encode at all
+        me.normals_split_custom_set(corner_normals(me).tolist())
+        me.update()
+
+    target = None if reset_intent else _intent_field(me)
+    fresh = target is None
+    if fresh:
+        target = normalize(corner_normals(me))
+        _intent_field(me, target)
+
+    enc = me.copy()
+    try:
+        enc.vertices.foreach_set("co", np.asarray(deformed_co, np.float32).ravel())
+        enc.update()
+        enc.normals_split_custom_set(target.tolist())
+        raw = np.empty(len(enc.loops) * 2, np.int16)
+        enc.attributes["custom_normal"].data.foreach_get("value", raw)
+        # enc's own decode is the deformed decode, so the round-trip error can be
+        # measured here without going through the depsgraph
+        resid = np.degrees(np.arccos(np.clip(
+            (normalize(corner_normals(enc)) * target).sum(1), -1.0, 1.0)))
+    finally:
+        bpy.data.meshes.remove(enc)
+
+    me.attributes["custom_normal"].data.foreach_set("value", raw)
+    me.update()
+    return len(target), fresh, resid

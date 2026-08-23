@@ -490,6 +490,8 @@ class MHW_PT_MainPanel(bpy.types.Panel):
             row = col.row(align=True)
             row.operator("mhw.cylindrical_face_normals", text=T("ui.main_panel.btn_cylindrical_face_normals"), icon='NORMALS_FACE')
             row.operator("mhw.reset_face_normals", text=T("ui.main_panel.btn_reset_face_normals"), icon='FILE_REFRESH')
+            col.operator("mhw.fix_shape_key_normals",
+                         text=T("ui.main_panel.btn_fix_shape_key_normals"), icon='MOD_NORMALEDIT')
             col.operator("mhw.apply_modifiers_keep_shape_keys",
                          text=T("ui.main_panel.btn_apply_mods_keep_sk"), icon='MODIFIER')
             col.operator("mhw.separate_by_materials",

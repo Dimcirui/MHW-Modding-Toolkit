@@ -334,6 +334,25 @@ STRINGS = {
     "ui.main_panel.fn_warn_opposed":              {"EN": "{n} position(s) hold surfaces facing opposite ways and cancelled out; they kept their own face normal. Lower the angle limit to shade them separately",
                                                     "ZH": "有 {n} 处重合位置的面朝向相反、互相抵消，已保留各自的面法向。调低角度上限可让它们分开着色"},
 
+    # ── MHW_OT_FixShapeKeyNormals ────────────────────────────────────────────────
+    "ui.main_panel.btn_fix_shape_key_normals":    {"EN": "Fix Shape Key Normals", "ZH": "修复形态键法向"},
+    "ui.main_panel.fsk_tip": {
+        "EN": "Re-encode the custom normals against the shape-keyed geometry. Blender stores a custom normal relative to a basis derived from the surrounding geometry, so dialling in shape keys leaves the stored bytes untouched but swings the direction they decode to — a few hundred corners on a face can end up tens of degrees out, which is the blotching around the eyes and mouth. This restores the authored directions without re-baking them, so a stylised field is kept exactly as it is",
+        "ZH": "按形态键变形后的几何重新编码自定义法向。Blender 存的是法向在「由周围几何推出的基底」里的编码，所以调形态键时存的字节一个没变，解码出来的方向却歪了 —— 一张脸上会有几百个角点偏出几十度，那就是眼周和嘴部糊掉的斑块。此操作只恢复原本的方向，不重算，所以风格化的法向场分毫不动"},
+    "ui.main_panel.fsk_field_reset":              {"EN": "Reset Target To Current Normals", "ZH": "重设目标为当前法向"},
+    "ui.main_panel.fsk_err_absolute": {
+        "EN": "This mesh uses absolute shape keys, whose mixed positions cannot be derived here. Switch to relative keys",
+        "ZH": "这个网格用的是绝对形态键，无法在此推出混合后的坐标。请改用相对形态键"},
+    "ui.main_panel.fsk_warn_no_deform": {
+        "EN": "Every shape key sits at zero, so there is no deformation to correct for",
+        "ZH": "所有形态键的值都是 0，没有需要修正的形变"},
+    "ui.main_panel.fsk_done": {
+        "EN": "Re-encoded {n} corner(s) against {verts} moved vertex/vertices; residual mean {mean} deg, max {max} deg",
+        "ZH": "已按 {verts} 个移动顶点重新编码 {n} 个角点；残差平均 {mean} 度、最大 {max} 度"},
+    "ui.main_panel.fsk_note_captured": {
+        "EN": "Recorded the current normals as the target, so running this again is a no-op",
+        "ZH": "已把当前法向记为目标，所以再运行一次不会有变化"},
+
     # ── MHW_OT_ApplyModifiersKeepShapeKeys ───────────────────────────────────────
     "ui.main_panel.btn_apply_mods_keep_sk":  {"EN": "Apply Modifiers (Keep Shape Keys)", "ZH": "对有形态键网格应用修改器"},
     "ui.main_panel.amk_tip": {

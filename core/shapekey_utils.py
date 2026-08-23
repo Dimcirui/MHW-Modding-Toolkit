@@ -39,6 +39,68 @@ TOPOLOGY_UNSTABLE = {
 }
 
 
+def shape_key_mix(obj):
+    """The mesh's vertex positions with only the shape keys applied.
+
+    Deliberately not the evaluated mesh: custom split normals live in the
+    *undeformed* mesh, so the armature's pose must stay out of it — otherwise a
+    posed character's normals get treated as if the pose were part of the shape.
+
+    Relative keys are ``basis + sum(value * (key - relative_key))``, each term
+    optionally masked by the key's own vertex group.  Returns None for absolute
+    keys (``use_relative`` off), which have no closed form here.
+    """
+    me = obj.data
+    sk = me.shape_keys
+    n = len(me.vertices)
+    if sk is None:
+        co = np.empty(n * 3, np.float32)
+        me.vertices.foreach_get("co", co)
+        return co.reshape(-1, 3).astype(np.float64)
+    if not sk.use_relative:
+        return None
+
+    def block_co(kb):
+        a = np.empty(n * 3, np.float32)
+        kb.data.foreach_get("co", a)
+        return a.reshape(-1, 3).astype(np.float64)
+
+    ref = sk.reference_key
+    # The accumulator has to be a separate array from the cached basis: sharing
+    # one object means ``out += delta`` also rewrites the basis, and from the
+    # second key on the deltas are measured against the running total instead —
+    # the whole sum collapses to roughly its last term.  A single key hides this.
+    cache = {ref.name: block_co(ref)}
+    out = cache[ref.name].copy()
+    for kb in sk.key_blocks:
+        if kb == ref or kb.mute or kb.value == 0.0:
+            continue
+        rel = kb.relative_key or ref
+        if rel.name not in cache:
+            cache[rel.name] = block_co(rel)
+        delta = (block_co(kb) - cache[rel.name]) * kb.value
+        if kb.vertex_group:
+            w = _vgroup_weights(obj, kb.vertex_group)
+            if w is not None:
+                delta *= w[:, None]
+        out += delta
+    return out
+
+
+def _vgroup_weights(obj, name):
+    vg = obj.vertex_groups.get(name)
+    if vg is None:
+        return None
+    idx = vg.index
+    w = np.zeros(len(obj.data.vertices))
+    for i, v in enumerate(obj.data.vertices):
+        for g in v.groups:
+            if g.group == idx:
+                w[i] = g.weight
+                break
+    return w
+
+
 def target_modifiers(obj):
     """Modifiers that will be applied — the viewport-enabled ones, matching
     what the user sees."""
