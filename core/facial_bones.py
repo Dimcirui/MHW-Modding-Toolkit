@@ -156,11 +156,17 @@ def apply_blink_fake_bone(arm_obj, bone_name, radius_mult=4.0):
     # 重复执行时，graft_facial_bones 已经把 A 删了重建、重新挂回真实父级 B——
     # 上一轮插入的假骨 B' 因此变成了 B 底下没有子级的孤儿，不会被 graft 清掉。
     # 这里先按命名规律把它找出来删掉，否则每点一次就多一层孤儿假骨，且新一轮的
-    # 偏移是从 A 当前（已含上次偏移的）位置继续叠加
+    # 偏移是从 A 当前（已含上次偏移的）位置继续叠加。
+    # L/R 两侧共用同一个父级 B（如 FacialDef_Face），所以命名规律无法区分左右——
+    # 必须额外用「没有子级」确认它确实是孤儿，否则处理完 L 侧后再处理 R 侧时，
+    # 会把刚插入、正挂着 A(L) 的假骨当成孤儿一并删掉。
     fake_pattern = re.compile(rf"^{re.escape(b.name)}(_[LR])?_Fake(\.\d+)?$")
     for child in list(b.children):
-        if child is not a and fake_pattern.match(child.name):
-            edit_bones.remove(child)
+        if child is a or not fake_pattern.match(child.name):
+            continue
+        if child.children:
+            continue
+        edit_bones.remove(child)
 
     # 先量后改：算距离要读 A 的子关节，放在改动层级之前免得受任何后续编辑影响
     offset_y = blink_offset_from_radius(arm_obj, a, radius_mult)
@@ -187,5 +193,12 @@ def apply_blink_fake_bone(arm_obj, bone_name, radius_mult=4.0):
     b_prime.tail += local_offset
     a.head += local_offset
     a.tail += local_offset
+
+    # Edit-bone coordinates are absolute, so A's own children (e.g. the lid-margin
+    # joint) do not move when A does -- carry the whole subtree so their rest pose
+    # relative to A stays exactly what it was, unbroken and still visually attached.
+    for descendant in a.children_recursive:
+        descendant.head += local_offset
+        descendant.tail += local_offset
 
     return True
