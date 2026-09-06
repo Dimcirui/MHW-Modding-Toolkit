@@ -73,6 +73,57 @@ TEXV_ROOT_WRONG = 'root_wrong'   # nothing custom resolved -- wrong root, or no 
 TEXV_MISSING = 'missing'         # some resolved, some did not -- genuinely absent files
 
 
+#: Object-transform verdicts.  RE Mesh's exporter bakes ``obj.matrix_world``
+#: into the mesh it writes (``blender_re_mesh.py``, ``evaluatedSubMeshData
+#: .transform(subMeshWorldMatrix)``), unconditionally and without touching the
+#: custom split normals.  ``Mesh.transform`` does not handle a negative
+#: determinant for those: a custom normal is stored relative to a basis derived
+#: from the surrounding geometry, and mirroring the geometry flips that basis,
+#: so the same stored bytes decode to a different direction.  Measured on one
+#: face mesh, only the matrix's sign changing: determinant +1 left the normals
+#: 0 degrees out, determinant -1 left 76% of corners more than 90 degrees out.
+#: The winding is *not* reordered, so this is not a corner-order problem and
+#: triangulating first does not help -- that guards a different mechanism.
+XFORM_OK = 'ok'
+XFORM_MIRRORED = 'mirrored'      # negative determinant: normals die on export
+XFORM_DEGENERATE = 'degenerate'  # a collapsed axis: nothing to export from
+
+
+#: 判定"权重总和等于 1"的容差。量化到 255 / 1023 的导出器本身有 1/255 ≈ 0.004 的
+#: 粒度，所以再严格没有意义；反过来 1e-4 足以把真正的作图偏差全捞出来（实测八具
+#: VRChat 头像：偏差最大的一具均值 0.7247，最小非零总和 0.1034）。
+WEIGHT_SUM_EPS = 1e-4
+
+
+def classify_weight_sum(total, eps=WEIGHT_SUM_EPS):
+    """``"ok"`` / ``"unweighted"`` / ``"under"`` / ``"over"``。
+
+    ``unweighted`` 与 ``under`` 必须分开，因为处置完全不同：``under`` 归一化就能修，
+    ``unweighted`` 是 0/0，归一化救不了——两个导出器都会为它写出全零权重行
+    （RE Mesh Editor 与 mod3 都有 ``boneWeightsArray[weightSums == 0] = 0``），
+    进游戏后那些顶点留在骨架原点。合成一条报，用户就分不出"顺手修掉"和"必须补权重"。
+    """
+    if total <= eps:
+        return "unweighted"
+    if total < 1.0 - eps:
+        return "under"
+    if total > 1.0 + eps:
+        return "over"
+    return "ok"
+
+
+def classify_transform(determinant, eps=1e-9):
+    """Verdict for an object's world matrix, from its determinant alone.
+
+    The determinant is the whole question: what breaks is the *sign*, and a
+    mirror, a single negative scale axis and three negative axes all reach it
+    the same way, so there is nothing else to inspect.
+    """
+    if determinant is None or abs(determinant) <= eps:
+        return XFORM_DEGENERATE
+    return XFORM_MIRRORED if determinant < 0 else XFORM_OK
+
+
 def strip_dedup_suffix(name):
     """``Foo.001`` -> ``Foo``.  Only the trailing three-digit suffix Blender
     adds itself; a dot anywhere else is the user's own and is a finding, not

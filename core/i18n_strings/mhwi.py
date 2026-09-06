@@ -5,6 +5,19 @@ Key naming convention: "mhwi.<module_name_without_.py>.<short_purpose>".
 """
 
 STRINGS = {
+    # ── MHWI_OT_EndfieldFaceRename ──────────────────────────────────────────
+    "mhwi.operators.endfield_face_rename_desc": {
+        "EN": "Batch-convert Endfield facial vertex group names to MHWorld format",
+        "ZH": "将 Endfield 面部顶点组名称批量转换为 MHWorld 格式"},
+    "mhwi.operators.endfield_face_rename_label": {
+        "EN": "Endfield Face Rename", "ZH": "Endfield 面部改名"},
+    "mhwi.operators.endfield_processed": {
+        "EN": "Renamed / merged {n} vertex group(s)",
+        "ZH": "已改名 / 合并 {n} 个顶点组"},
+    "mhwi.operators.endfield_map_missing": {
+        "EN": "assets/facial_maps/endfield_to_mhwi.json is missing or unreadable",
+        "ZH": "读不到 assets/facial_maps/endfield_to_mhwi.json"},
+
 
     # ══════════════════════════════════════════════════════════════════════
     # games/mhwi/operators.py

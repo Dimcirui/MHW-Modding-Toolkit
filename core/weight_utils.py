@@ -1,6 +1,8 @@
 import bpy
 from mathutils import Vector
 
+from . import pose_bake, twist_chain
+
 def merge_weights_and_delete_bones(armature_obj, bone_pairs):
     """
     bone_pairs: List of (keep_bone_name, delete_bone_name)
@@ -355,3 +357,150 @@ def build_chain_from_head(head_name, arm_obj):
         else:
             break
     return chain
+
+# ---------------------------------------------------------------------------
+# 权重归一化
+# ---------------------------------------------------------------------------
+
+# 纯判据住在 pre_export_check（bpy-free 那一层），本模块 import mathutils，
+# 离线测试装不进来。这里只做转发，保持单一实现。
+from .pre_export_check import WEIGHT_SUM_EPS, classify_weight_sum  # noqa: F401
+
+
+def deform_group_indices(mesh_obj, armature_obj):
+    """*mesh_obj* 上真正参与骨架形变的顶点组下标集合。
+
+    按骨名匹配，并且尊重 ``bone.use_deform``。**不能**图省事用全部顶点组：
+    头像网格上常有形状遮罩、UV 遮罩一类的非形变组，把它们一起归一化就是破坏数据。
+    """
+    if armature_obj is None:
+        return set()
+    deform = {b.name for b in armature_obj.data.bones if b.use_deform}
+    return {vg.index for vg in mesh_obj.vertex_groups if vg.name in deform}
+
+
+def normalize_deform_weights(mesh_objs, armature_obj, eps=WEIGHT_SUM_EPS):
+    """把每个网格的骨骼形变组逐顶点归一化到 1，返回统计 dict。
+
+    直接写 ``MeshVertex.groups[i].weight``，**不走** ``bpy.ops``：
+
+    - ``vertex_group_normalize_all`` 的 ``lock_active`` 默认 ``True``，会漏掉当前
+      活动组，而哪个组是活动的取决于 UI 状态 —— 结果不可复现。
+    - 它的 ``group_select_mode`` 是动态枚举、默认空字符串，留空会退到 ``ALL``，
+      把非形变顶点组一起归一化。
+    - 走操作符还得管模式和活动物体。
+
+    归一化**不改变当前外观**：Blender 的骨架形变本身就除以权重总和，RE Mesh Editor
+    与 mod3 的导出器同样先 ``/ weightSums`` 再量化到 255 / 1023。它的价值在于把隐患
+    拆掉 —— 总和跑偏的顶点一旦被刷过一笔，Auto Normalize 会把其余组按比例放大，
+    原本 0.02 的幽灵残留变成 0.2，从看不见变成看得见的错误影响；Smooth/Blur 则把
+    缺口摊给邻居。所以要在任何刷权重动作**之前**做。
+
+    总和为 0 的顶点跳过并单独计数：0/0 没有归一化可言，那是真的洞，只能上报。
+    """
+    stats = {"meshes": 0, "verts": 0, "fixed": 0, "unweighted": 0,
+             "worst_before": 1.0, "worst_mesh": None}
+    for mesh_obj in mesh_objs:
+        idx = deform_group_indices(mesh_obj, armature_obj)
+        if not idx:
+            continue
+        stats["meshes"] += 1
+        touched = False
+        for v in mesh_obj.data.vertices:
+            rows = [g for g in v.groups if g.group in idx]
+            if not rows:
+                continue
+            stats["verts"] += 1
+            total = sum(g.weight for g in rows)
+            verdict = classify_weight_sum(total, eps)
+            if verdict == "unweighted":
+                stats["unweighted"] += 1
+                continue
+            if verdict == "ok":
+                continue
+            if abs(total - 1.0) > abs(stats["worst_before"] - 1.0):
+                stats["worst_before"] = total
+                stats["worst_mesh"] = mesh_obj.name
+            for g in rows:
+                g.weight = g.weight / total
+            stats["fixed"] += 1
+            touched = True
+        if touched:
+            mesh_obj.data.update()
+    return stats
+
+
+def distribute_and_remove(arm_obj, splits, meshes=None, remove_bones=True):
+    """Distribute each split source's weights over its targets, then remove it.
+
+    *splits* is ``[(source_bone, [(target_bone, factor), ...]), ...]``.  Used by both
+    conversion paths: the cross-game port (where the targets are the destination
+    game's twist bones, built by the insert rules, so this must run **after** the
+    insertions) and the standardise path (where the targets are the source rig's own
+    surviving twist bones, so there is nothing to build first).
+
+    Callers must have routed the source bones out of any rename/merge handling --
+    this is the only place they are removed.
+
+    The distribution itself is ``twist_chain.apply_to_weights``, not a second copy
+    of the arithmetic: the offline tests assert weight conservation and roll
+    fidelity against that function, and a private reimplementation here would be
+    the one path those assertions do not cover.
+    """
+    if not splits:
+        return 0
+
+    # *meshes* overrides the attached set: the one-click converter works on the
+    # user's selection and never touches the armature, so it passes its own list
+    # together with remove_bones=False.
+    if meshes is None:
+        meshes = pose_bake.attached_meshes(arm_obj)
+    done = 0
+    for mesh_obj in meshes:
+        vgs = mesh_obj.vertex_groups
+        for src, rows in splits:
+            src_vg = vgs.get(src)
+            if src_vg is None:
+                continue
+            si = src_vg.index
+            # Only the vertices actually in the source group: vertex_group.weight()
+            # raises for a vertex it does not hold, so walking the whole mesh through
+            # the generic accessor would be one exception per miss.
+            ids = [v.index for v in mesh_obj.data.vertices
+                   if any(g.group == si for g in v.groups)]
+            if not ids:
+                continue
+            for dst, _factor in rows:
+                if vgs.get(dst) is None:
+                    vgs.new(name=dst)
+
+            def get_weight(group, vid, _vgs=vgs):
+                vg = _vgs.get(group)
+                if vg is None:
+                    return 0.0
+                try:
+                    return vg.weight(vid)
+                except RuntimeError:
+                    return 0.0
+
+            def set_weight(group, vid, w, _vgs=vgs):
+                _vgs[group].add([vid], w, 'REPLACE')
+
+            twist_chain.apply_to_weights(get_weight, set_weight, {src: rows}, ids)
+            vgs.remove(src_vg)
+            done += 1
+
+    # The bones go last, once every mesh has had its groups redistributed.
+    names = {src for src, _rows in splits} if remove_bones else set()
+    if names:
+        bpy.context.view_layer.objects.active = arm_obj
+        bpy.ops.object.mode_set(mode='EDIT')
+        try:
+            eb = arm_obj.data.edit_bones
+            for name in sorted(names):
+                bone = eb.get(name)
+                if bone is not None:
+                    eb.remove(bone)
+        finally:
+            bpy.ops.object.mode_set(mode='OBJECT')
+    return done

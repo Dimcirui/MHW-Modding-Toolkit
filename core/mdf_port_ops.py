@@ -289,6 +289,17 @@ class MODDER_OT_PortMdfMaterialCrossGame(bpy.types.Operator):
     #: and keeps the old behaviour, which is correct for them: every value in
     #: *their* source is one they could have chosen.
     migrate_only: StringProperty(name="Migrate Only", default="", options={'HIDDEN'})
+    #: Not shown in the dialog. A caller that already has the source game's
+    #: textures sitting under its own scratch directory -- rather than the
+    #: scene's real natives-root setting -- points here instead of that scene
+    #: key.
+    #:
+    #: ``core/mrl3_port_ops.py``'s relay is the one such caller: it builds its
+    #: MHWilds-shaped intermediate against a throwaway temp directory, never the
+    #: user's real MHWilds mod root (which may not even be set -- MHWilds is not
+    #: the game the user asked to port to), so this hop has to be told where
+    #: those files actually are instead of guessing at ``mhws_natives_root``.
+    source_natives_root_override: StringProperty(default="", options={'HIDDEN'})
     #: Same opt-in as the processors and generators carry, and off for the same
     #: reason -- see octahedral_normals_prop.
     octahedral_normals: octahedral_normals_prop()
@@ -419,7 +430,8 @@ class MODDER_OT_PortMdfMaterialCrossGame(bpy.types.Operator):
             return {'CANCELLED'}
 
         vanilla_set = _load_vanilla_art_paths(src_cfg.get("vanilla_asset_rel", ""))
-        src_natives_root = context.scene.get(src_cfg["natives_root_key"], "")
+        src_natives_root = (self.source_natives_root_override
+                           or context.scene.get(src_cfg["natives_root_key"], ""))
         dst_natives_root = context.scene.get(dst_cfg["natives_root_key"], "")
         # The game's own fixed segment goes on here, once, so every path built
         # below (textures and placeholders alike) agrees with the prefix the

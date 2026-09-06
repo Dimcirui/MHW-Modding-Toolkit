@@ -66,7 +66,7 @@ def _image_from_socket(socket):
             return None
         return _single_image(colour.links[0].from_node)
 
-    if src.type in ('SEPCOLOR', 'SEPRGB'):
+    if src.type in ('SEPARATE_COLOR', 'SEPCOLOR', 'SEPRGB'):
         ch = _SEP_CHANNEL.get(link.from_socket.name)
         if ch is None:
             return None

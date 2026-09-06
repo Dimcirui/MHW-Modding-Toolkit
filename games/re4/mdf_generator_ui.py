@@ -93,6 +93,9 @@ class RE4_OT_MdfGeneratorDialog(bpy.types.Operator):
                  text=T("core.mdf_generator_base.global_disable_mipmaps"))
         row.prop(settings, "global_use_toon",
                  text=T("core.mdf_generator_base.global_use_toon"))
+        grade_row = layout.row(align=True)
+        grade_row.label(text=T("core.color_grade.label"))
+        grade_row.prop(settings, "global_color_grade", text="")
 
         preset_dir = get_preset_dir_for_game(RE4_GEN_GAME)
         if not preset_dir:

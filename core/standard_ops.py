@@ -1,7 +1,9 @@
 import bpy, mathutils, json
 from .i18n import T
-from .bone_mapper import BoneMapManager, STANDARD_BONE_NAMES, _normalize_bone_name, auto_detect_preset, resolve_preset
-from . import weight_utils, bone_utils
+from .bone_mapper import (BoneMapManager, STANDARD_BONE_NAMES, _normalize_bone_name,
+                          auto_detect_preset, resolve_preset, standard_keys, is_aux_key,
+                          AUX_PARENT)
+from . import weight_utils, bone_utils, chain_classifier, twist_chain
 
 
 def _build_fuzzy_preset_bones(mapper, arm_obj):
@@ -21,6 +23,10 @@ def _build_fuzzy_preset_bones(mapper, arm_obj):
         preset_bones.update(aux_actuals)
     # exclude 骨骼：直接按名称并入（无需模糊匹配，使用者自行确保名称准确）
     preset_bones.update(mapper.exclude_bones & existing)
+    # 姿态驱动修正骨：预设里列了的已经在上面的 aux 里，这里补的是**没列到**的。
+    # 它们不是物理骨，落到物理那条路上会被当成链骨（终末地三具各有 28 / 16 / 0 根，
+    # 而 arknights.json 列了 58 条 —— 资产之间数量本来就不一样，靠列表兜不住）。
+    preset_bones.update(n for n in existing if chain_classifier.is_corrective_name(n))
     return preset_bones
 
 
@@ -69,6 +75,107 @@ def _apply_physics_bone_colors(arm_obj, preset_bones, protected_bones=None):
             continue
         _apply_bone_color(pb, pb.get("chain_role", "body"))
 
+def _survey_correctives(arm_obj, mesh_objs, mapped_bones):
+    """``(confirmed, heavy, suspects)``：可按修正骨处置的、其中权重离群的、以及结构不对的。
+
+    *mapped_bones* 是"有确定去处"的骨名集合（预设 main + 标准键本身），用来判定
+    父骨是否已映射。权重足迹按**每个带权重顶点的平均权重**算，不是总权重——总权重
+    随网格密度变，均值不变。
+    """
+    bones = arm_obj.data.bones
+    foot = {}
+    for m in mesh_objs:
+        idx2name = {vg.index: vg.name for vg in m.vertex_groups}
+        for v in m.data.vertices:
+            for g in v.groups:
+                n = idx2name.get(g.group)
+                if n is None or g.weight <= 0.0:
+                    continue
+                e = foot.setdefault(n, [0, 0.0])
+                e[0] += 1
+                e[1] += g.weight
+
+    confirmed, heavy, suspects = [], [], []
+    for b in bones:
+        if not chain_classifier.is_corrective_name(b.name):
+            continue
+        cnt, total = foot.get(b.name, [0, 0.0])
+        mean = (total / cnt) if cnt else None
+        verdict = chain_classifier.classify_corrective(
+            b.name, len(b.children) == 0,
+            b.parent is not None and b.parent.name in mapped_bones, mean)
+        row = (b.name, mean if mean is not None else 0.0)
+        if verdict == "suspect":
+            suspects.append(row)
+        elif verdict == "heavy":
+            # 照修正骨处置，但报出来 —— 权重不影响并入的正确性，只影响"它是不是修正骨"
+            confirmed.append(row)
+            heavy.append(row)
+        elif verdict == "corrective":
+            confirmed.append(row)
+    return confirmed, heavy, suspects
+
+
+def _normalize_weights_for(arm_obj):
+    """对绑定到 *arm_obj* 的所有网格做形变权重归一化；没有网格时返回 None。
+
+    用 pose_bake.attached_meshes 而不是 find_armature()：修改器目标为空的网格
+    find_armature() 看不见，但它照样带着权重（实测某 MHWI 模型 19 个网格里有 5 个
+    是这种），漏掉它们等于这个功能对它们无效。
+    """
+    from . import pose_bake
+    meshes = [m for m in pose_bake.attached_meshes(arm_obj) if m.type == 'MESH']
+    if not meshes:
+        return None
+    return weight_utils.normalize_deform_weights(meshes, arm_obj)
+
+
+def _normalize_weights_message(stats):
+    if not stats["fixed"] and not stats["unweighted"]:
+        return T("core.standard_ops.normalize_weights_clean").format(
+            verts=stats["verts"], meshes=stats["meshes"])
+    msg = T("core.standard_ops.normalize_weights_done").format(
+        fixed=stats["fixed"], verts=stats["verts"], meshes=stats["meshes"],
+        worst=round(stats["worst_before"], 4), name=stats["worst_mesh"] or "-")
+    if stats["unweighted"]:
+        # 0/0 归一化救不了，只能报：这些顶点根本没被任何骨骼驱动，会留在原地。
+        msg += " " + T("core.standard_ops.normalize_weights_unweighted").format(
+            n=stats["unweighted"])
+    return msg
+
+
+class MODDER_OT_NormalizeDeformWeights(bpy.types.Operator):
+    """把骨骼形变权重逐顶点归一化到 1。
+
+    越早做越好，最好在任何刷权重动作之前。归一化本身**不改变外观**——Blender 的
+    骨架形变、以及 RE Mesh Editor 与 mod3 的导出器，都是先除以权重总和再用；
+    所以总和跑偏可以一直不被发现。代价是在后续编辑里收：一旦在跑偏的顶点上刷一笔，
+    Auto Normalize 会把其余组按比例放大，原本 0.02 的幽灵残留变成 0.2，
+    从看不见变成看得见的错误影响，那时候再清理就贵了。
+    """
+    bl_idname = "modder.normalize_deform_weights"
+    bl_label = "Normalize Deform Weights"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    @classmethod
+    def description(cls, context, properties):
+        return T("core.standard_ops.normalize_weights_desc")
+
+    @classmethod
+    def poll(cls, context):
+        obj = context.active_object
+        return obj is not None and obj.type == 'ARMATURE'
+
+    def execute(self, context):
+        arm_obj = context.active_object
+        stats = _normalize_weights_for(arm_obj)
+        if stats is None:
+            self.report({'WARNING'}, T("core.standard_ops.normalize_weights_no_mesh"))
+            return {'CANCELLED'}
+        self.report({'INFO'}, _normalize_weights_message(stats))
+        return {'FINISHED'}
+
+
 class MODDER_OT_ApplyStandardX(bpy.types.Operator):
     bl_idname = "modder.apply_standard_x"
     bl_label = "1. Standardize Rename (X)"
@@ -82,6 +189,14 @@ class MODDER_OT_ApplyStandardX(bpy.types.Operator):
         settings = context.scene.mhw_suite_settings
         arm_obj = context.active_object
 
+        # 先归一化，再动任何权重：标准化本身就要合并 aux 的权重，而合并会把跑偏的
+        # 总和搅进目标组里，之后再想分辨哪部分是幽灵残留就没有依据了。这也是用户
+        # 对导入的头像按下的第一个按钮，正是"越早越好"的那个时机。
+        if getattr(settings, "normalize_weights_first", True):
+            stats = _normalize_weights_for(arm_obj)
+            if stats and (stats["fixed"] or stats["unweighted"]):
+                self.report({'INFO'}, _normalize_weights_message(stats))
+
         x_preset, err = resolve_preset(settings.import_preset_enum, arm_obj, True)
         if x_preset is None:
             self.report({'WARNING'}, err)
@@ -94,9 +209,14 @@ class MODDER_OT_ApplyStandardX(bpy.types.Operator):
             return {'CANCELLED'}
 
         # 2. 匹配分析
+        # 关掉辅助骨槽位时（默认），遍历的是原来那 52 个键，并把扭转骨/掌骨这些
+        # 折回父段的 aux —— 效果与加槽位之前一致。打开时它们各占一个键，于是被
+        # **改名保留**而不是并进主骨删掉。
+        use_aux = not getattr(settings, "ignore_aux_bones", True)
         analysis = {}
-        for std_key in STANDARD_BONE_NAMES:
-            main, auxs = mapper.get_matches_for_standard(arm_obj, std_key)
+        for std_key in standard_keys(use_aux):
+            main, auxs = mapper.get_matches_for_standard(
+                arm_obj, std_key, fold_aux=not use_aux)
             if main or auxs: analysis[std_key] = (main, auxs)
 
         # 3. 权重合并
@@ -129,9 +249,67 @@ class MODDER_OT_ApplyStandardX(bpy.types.Operator):
                     deleted_count += 1
 
         bpy.ops.object.mode_set(mode='OBJECT')
-        self.report({'INFO'}, T("core.standard_ops.standardize_done").format(
-            rename=rename_count, clean=deleted_count))
+        msg = T("core.standard_ops.standardize_done").format(
+            rename=rename_count, clean=deleted_count)
+
+        # 姿态驱动修正骨：并进父骨在静止与刚性跟随上是**恒等**的，丢掉的只有姿态驱动
+        # 的修正运动，而那需要源游戏的驱动数据（终末地既没有 jcns，FBX 里也没有约束）。
+        # 静悄悄发生的事要说出来，否则使用者会以为修正效果跟着过来了。
+        mapped = set(analysis) | {m for m, _a in analysis.values() if m}
+        confirmed, heavy, suspects = _survey_correctives(arm_obj, meshes, mapped)
+        level = 'INFO'
+        if confirmed:
+            msg += " " + T("core.standard_ops.correctives_merged").format(
+                n=len(confirmed))
+        if heavy:
+            msg += " " + T("core.standard_ops.correctives_heavy").format(
+                n=len(heavy),
+                names=", ".join("%s(%.2f)" % (n, w) for n, w in heavy[:3]))
+        if suspects:
+            # 名字匹配但结构不对：有子骨、父骨没映射、或权重足迹过大。不静默处置。
+            level = 'WARNING'
+            msg += " " + T("core.standard_ops.correctives_suspect").format(
+                n=len(suspects),
+                names=", ".join("%s(%.2f)" % (n, w) for n, w in suspects[:3]))
+        self.report({level}, msg)
         return {'FINISHED'}
+
+def _resample_twist_slots(arm_obj, mapper):
+    """目标游戏装不下的扭转槽，按位置分给**同段留下来的那几根**，而不是整根并进段骨。
+
+    这条路和跨游戏移植的关键差别：标准化只改名、不动骨，所以"目标侧"那几根扭转骨
+    就是源骨架自己的骨头，两边坐标都在场景里 —— 不需要参考骨架，也不需要假设等分
+    （实测 leon 的上臂扭转在 0.43/0.79，等分假设是错的）。
+
+    刻意**不做跨序号重编号**：目标游戏的 jcns 按骨名给滚转系数，把 slot_02 改名成
+    目标的 slot_01 等于静默换掉滚转量，而目标那几根真实的 t 我们并不知道。所以只在
+    目标叫得出名字的槽位之间分配；一根都叫不出来时退回并进段骨，也就是今天的行为。
+
+    返回 (分掉的根数, [钳位诊断], [整段无落点的段标签])。
+    """
+    bones = arm_obj.data.bones
+    std_to_bone, positions = {}, {}
+    for key in standard_keys(True):
+        b = bones.get(key)
+        if b is not None:
+            std_to_bone[key] = key
+            positions[key] = tuple(b.head_local)
+
+    kept = {k for k in std_to_bone
+            if is_aux_key(k) and (mapper.mapping_data.get(k) or {}).get("main")}
+    splits, reports = twist_chain.plan_slot_resample(std_to_bone, positions, kept)
+    if not splits and not reports:
+        return 0, [], []
+
+    done = weight_utils.distribute_and_remove(arm_obj, splits) if splits else 0
+    clamped, no_target = [], []
+    for label, rep in reports.items():
+        if rep.get("no_target"):
+            no_target.append(label)
+            continue
+        clamped += rep.get("clamped", [])
+    return len(splits) if done or splits else 0, clamped, no_target
+
 
 class MODDER_OT_ApplyStandardY(bpy.types.Operator):
     bl_idname = "modder.apply_standard_y"
@@ -156,16 +334,72 @@ class MODDER_OT_ApplyStandardY(bpy.types.Operator):
             self.report({'ERROR'}, T("core.standard_ops.cannot_load_y_preset"))
             return {'CANCELLED'}
 
+        # 重采样必须在改名之前：一改名就查不到标准键，也就分不清哪根是第几节。
+        # 它自己会进出编辑模式并删掉被分掉的骨，所以这里仍是 OBJECT 模式。
+        bpy.ops.object.mode_set(mode='OBJECT')
+        n_split, clamped, no_target = _resample_twist_slots(arm_obj, mapper)
+
         bpy.ops.object.mode_set(mode='EDIT')
         edit_bones = arm_obj.data.edit_bones
-        for std_key in STANDARD_BONE_NAMES:
+        # 这里恒取全部键：骨架上叫 upperarm_twist_01_L 的骨头只可能是上一步标准化
+        # 留下的，无论现在勾没勾"忽略辅助骨"，都得给它换回游戏名，否则会以标准名
+        # 留在导出的骨架里。
+        unmapped_aux = []
+        for std_key in standard_keys(True):
             if std_key in edit_bones:
                 target_data = mapper.mapping_data.get(std_key)
                 if target_data and target_data.get("main"):
                     edit_bones[std_key].name = target_data["main"][0]
+                elif is_aux_key(std_key):
+                    unmapped_aux.append(std_key)
 
         bpy.ops.object.mode_set(mode='OBJECT')
+
+        parts, level = [], 'INFO'
+        if n_split:
+            parts.append(T("core.standard_ops.twist_resampled").format(n=n_split))
+        if clamped:
+            # 钳位 = 目标链覆盖不到这个位置，滚转量真的丢了一截。必须报。
+            level = 'WARNING'
+            parts.append(T("core.standard_ops.twist_clamped").format(
+                n=len(clamped),
+                names=", ".join("%s(%+.2f)" % (c["bone"], c["roll_residual"])
+                                for c in clamped[:3])))
+        if no_target:
+            level = 'WARNING'
+            parts.append(T("core.standard_ops.twist_no_target").format(
+                n=len(no_target), names=", ".join(sorted(no_target)[:4])))
+        if unmapped_aux:
+            # 目标游戏没有这个辅助骨槽位。骨头留着、名字还是标准名——不静默，
+            # 因为导出前检查看到的是一根陌生名字的骨，追不回这里。
+            level = 'WARNING'
+            parts.append(T("core.standard_ops.aux_no_target").format(
+                n=len(unmapped_aux), names=", ".join(unmapped_aux[:4])))
+        if parts:
+            self.report({level}, " ".join(parts))
         return {'FINISHED'}
+
+def _plan_twist_splits(arm_obj, mapper_x, mapper_y):
+    """一键转换用的扭转链分配表，键是**源游戏骨名**（这条路不改骨名，只动顶点组）。
+
+    返回 (splits, reports, handled)；*handled* 是已经按位置分掉、因此不该再被
+    "退回父段"规则整根并进段骨的槽位键。
+    """
+    bones = arm_obj.data.bones
+    std_to_bone, positions = {}, {}
+    for key in standard_keys(True):
+        main, _aux = mapper_x.get_matches_for_standard(arm_obj, key)
+        if main and main in bones:
+            std_to_bone[key] = main
+            positions[main] = tuple(bones[main].head_local)
+
+    kept = {k for k in std_to_bone
+            if is_aux_key(k) and (mapper_y.mapping_data.get(k) or {}).get("main")}
+    splits, reports = twist_chain.plan_slot_resample(std_to_bone, positions, kept)
+    bone_to_std = {v: k for k, v in std_to_bone.items()}
+    handled = {bone_to_std[src] for src, _rows in splits if src in bone_to_std}
+    return splits, reports, handled
+
 
 class MODDER_OT_DirectConvert(bpy.types.Operator):
     bl_idname = "modder.direct_convert"
@@ -216,19 +450,36 @@ class MODDER_OT_DirectConvert(bpy.types.Operator):
         # 3. 预计算转换规则
         # 需要知道：标准键 -> (源主名, 源辅助列表, 目标主名)
         conversion_rules = []
-        
-        for std_key in STANDARD_BONE_NAMES:
+        use_aux = not getattr(settings, "ignore_aux_bones", True)
+        unmapped_aux = []
+
+        # 扭转链先算：目标装不下的那几节按位置分给同段留下来的，而不是整根并进段骨。
+        # 必须在 conversion_rules 之前算完，好把已处理的槽位从"退回父段"里摘掉。
+        twist_splits, twist_reports, twist_handled = [], {}, set()
+        if use_aux and arm_for_detect is not None:
+            twist_splits, twist_reports, twist_handled = _plan_twist_splits(
+                arm_for_detect, mapper_x, mapper_y)
+
+        for std_key in standard_keys(use_aux):
             # A. 从 X 表获取源信息
-            src_entry = mapper_x.mapping_data.get(std_key)
-            if not src_entry: continue
-            
-            src_mains = src_entry.get("main", [])
-            src_auxs = src_entry.get("aux", [])
-            
+            src_mains, src_auxs = mapper_x.entry_for(std_key, fold_aux=not use_aux)
+            if not src_mains and not src_auxs: continue
+
             # B. 从 Y 表获取目标信息
-            tgt_entry = mapper_y.mapping_data.get(std_key)
-            tgt_mains = tgt_entry.get("main", []) if tgt_entry else []
+            tgt_mains, _tgt_auxs = mapper_y.entry_for(std_key)
             
+            # 目标游戏没有这个辅助骨槽位：不能把源扭转骨改成标准名扔在那里，
+            # 退回"并进父段主骨"——也就是关掉槽位时的老行为，然后报出来。
+            if use_aux and is_aux_key(std_key) and not tgt_mains:
+                if std_key in twist_handled:
+                    continue          # 已按位置分掉，不能再整根并进段骨
+                parent = AUX_PARENT[std_key]
+                p_mains, _pa = mapper_y.entry_for(parent)
+                if p_mains:
+                    conversion_rules.append(([], src_mains + src_auxs, p_mains[0]))
+                    unmapped_aux.append(std_key)
+                continue
+
             # 降级拦截器 
             if std_key == "spine_03" and not tgt_mains:
                 # 目标游戏不支持 spine_03，寻找 Y 预设中的 spine_02 作为降级替代
@@ -250,7 +501,14 @@ class MODDER_OT_DirectConvert(bpy.types.Operator):
 
         # 4. 开始处理网格 (Object Mode)
         bpy.ops.object.mode_set(mode='OBJECT')
-        
+
+        # 扭转链的权重分配走在改名之前：分配表的键是**源游戏骨名**，一改名就对不上。
+        # remove_bones=False —— 一键转换只动顶点组，骨架留给标准化那两步。
+        if twist_splits:
+            weight_utils.distribute_and_remove(
+                arm_for_detect, twist_splits, meshes=selected_meshes,
+                remove_bones=False)
+
         processed_count = 0
         
         for mesh_obj in selected_meshes:
@@ -297,7 +555,22 @@ class MODDER_OT_DirectConvert(bpy.types.Operator):
             if mesh_updated:
                 processed_count += 1
 
-        self.report({'INFO'}, T("core.standard_ops.direct_convert_done").format(n=processed_count))
+        msg = T("core.standard_ops.direct_convert_done").format(n=processed_count)
+        clamped = [c for r in twist_reports.values() for c in r.get("clamped", ())]
+        if twist_splits:
+            msg += " " + T("core.standard_ops.twist_resampled").format(
+                n=len(twist_splits))
+        if clamped:
+            unmapped_aux = unmapped_aux or []
+            msg += " " + T("core.standard_ops.twist_clamped").format(
+                n=len(clamped),
+                names=", ".join("%s(%+.2f)" % (c["bone"], c["roll_residual"])
+                                for c in clamped[:3]))
+        if unmapped_aux:
+            # 目标游戏没有这些辅助骨槽位，源骨已退回并进父段主骨。
+            msg += " " + T("core.standard_ops.aux_folded_back").format(
+                n=len(unmapped_aux), names=", ".join(unmapped_aux[:4]))
+        self.report({'WARNING' if (unmapped_aux or clamped) else 'INFO'}, msg)
         return {'FINISHED'}
 
 class MODDER_OT_UniversalSnap(bpy.types.Operator):
@@ -353,6 +626,8 @@ class MODDER_OT_UniversalSnap(bpy.types.Operator):
         # 3. 预计算源骨骼的世界坐标 (在 Object 模式下进行)
         # 结构: { StandardName: (Head_World, Tail_World_or_None, Roll_or_None) }
         # FULL / POS_ROLL 模式还需要 tail 和 roll，这两项只存在于 EditBone 上，需临时切到源骨架的编辑模式读取
+        # 对齐是几何操作：辅助骨有自己的坐标，两边都认得出来时对齐它们只会更准。
+        align_aux = not getattr(settings, "ignore_aux_bones", True)
         need_full_data = align_mode in ('FULL', 'POS_ROLL')
         source_positions = {}
         source_mw = source_arm.matrix_world
@@ -360,14 +635,14 @@ class MODDER_OT_UniversalSnap(bpy.types.Operator):
         if need_full_data:
             context.view_layer.objects.active = source_arm
             bpy.ops.object.mode_set(mode='EDIT')
-            for std_key in STANDARD_BONE_NAMES:
+            for std_key in standard_keys(align_aux):
                 src_name, _aux = mapper_x.get_matches_for_standard(source_arm, std_key)
                 if src_name and src_name in source_arm.data.edit_bones:
                     eb = source_arm.data.edit_bones[src_name]
                     source_positions[std_key] = (source_mw @ eb.head, source_mw @ eb.tail, eb.roll)
             bpy.ops.object.mode_set(mode='OBJECT')
         else:
-            for std_key in STANDARD_BONE_NAMES:
+            for std_key in standard_keys(align_aux):
                 src_name, _aux = mapper_x.get_matches_for_standard(source_arm, std_key)
                 if src_name:
                     try:
@@ -387,7 +662,7 @@ class MODDER_OT_UniversalSnap(bpy.types.Operator):
 
         # 按 STANDARD_BONE_NAMES 的顺序遍历 (通常是 Hips -> Spine -> Head)
         # 这样父级移动后，子级会先跟随移动，然后子级再根据自己的目标进行微调
-        for std_key in STANDARD_BONE_NAMES:
+        for std_key in standard_keys(align_aux):
             if std_key not in source_positions:
                 continue
 
@@ -847,7 +1122,7 @@ class MODDER_OT_RenameBonesToTarget(bpy.types.Operator):
         # 通过标准键桥接: X 实际骨骼名 -> 标准键 -> Y 目标骨骼名
         rename_map = {}  # {当前骨骼名: 目标骨骼名}
         
-        for std_key in STANDARD_BONE_NAMES:
+        for std_key in standard_keys(True):
             # 在骨架上找到 X 预设匹配的实际骨骼
             src_name, _aux = mapper_x.get_matches_for_standard(arm_obj, std_key)
             if not src_name:
@@ -979,7 +1254,7 @@ class MODDER_OT_SetBoneVisibility(bpy.types.Operator):
                     return {'CANCELLED'}
                 preset_bones = _build_fuzzy_preset_bones(mapper, arm_obj)
             # 兜底：无论预设是否加载成功，标准名骨骼一定是基础骨（处理已标准化骨架 + AUTO 失败）
-            preset_bones.update(n for n in STANDARD_BONE_NAMES if n in existing)
+            preset_bones.update(n for n in standard_keys(True) if n in existing)
             if not preset_bones:
                 self.report({'WARNING'}, err or T("core.standard_ops.cannot_recognize_base_bones"))
                 return {'CANCELLED'}
@@ -1316,6 +1591,7 @@ class MODDER_OT_MergeIntoParent(bpy.types.Operator):
 
 
 classes = [
+    MODDER_OT_NormalizeDeformWeights,
     MODDER_OT_ApplyStandardX,
     MODDER_OT_ApplyStandardY,
     MODDER_OT_DirectConvert,

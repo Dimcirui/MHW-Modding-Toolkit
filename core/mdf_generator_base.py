@@ -201,6 +201,40 @@ def _find_single_tex_image_upstream(node):
     return path if (path and os.path.isfile(path)) else None
 
 
+def _direct_image_behind(link):
+    """(path, channel) for the image feeding *link*, or None.
+
+    Handles the two shapes a single channel can arrive in: straight off an Image
+    Texture (Color -> 'R', Alpha -> 'A'), or through a Separate Color.  Anything
+    else returns None so the caller can fall back to BAKE rather than guess.
+    """
+    node = link.from_node
+    if node.type == 'TEX_IMAGE':
+        if not node.image:
+            return None
+        path = bpy.path.abspath(node.image.filepath)
+        if not path or not os.path.isfile(path):
+            return None
+        return path, ('A' if link.from_socket.name == 'Alpha' else 'R')
+
+    if node.type in ('SEPARATE_COLOR', 'SEPCOLOR', 'SEPRGB'):
+        ch = {'Red': 'R', 'R': 'R', 'Green': 'G', 'G': 'G',
+              'Blue': 'B', 'B': 'B'}.get(link.from_socket.name)
+        if ch is None:
+            return None
+        sep_in = node.inputs.get('Color') or node.inputs.get('Image')
+        if sep_in is None or not sep_in.is_linked:
+            return None
+        inner = sep_in.links[0].from_node
+        if inner.type != 'TEX_IMAGE' or not inner.image:
+            return None
+        path = bpy.path.abspath(inner.image.filepath)
+        if not path or not os.path.isfile(path):
+            return None
+        return path, ch
+    return None
+
+
 def _analyze_principled_input(principled_node, input_name, mat_name=None, pbr_type=None):
     """
     Returns ('DIRECT', filepath, source_channel) | ('SOLID', value) | ('BAKE', None).
@@ -278,7 +312,11 @@ def _analyze_principled_input(principled_node, input_name, mat_name=None, pbr_ty
         # print(f"{_tag}: Normal Map({src.name}) → BAKE (多源或无效链路)", flush=True)
         return ('BAKE', None)
 
-    if src.type in ('SEPCOLOR', 'SEPRGB'):
+    # 'SEPARATE_COLOR' 是 Blender 3.3 以后 ShaderNodeSeparateColor 的 type；
+    # 原先只写了 'SEPCOLOR'，那个字符串**任何版本都不存在**，所以这一支从来没有
+    # 命中过 —— 接了分离颜色的 metallic/ao 一律掉进 BAKE。'SEPRGB' 是 3.3 之前的
+    # 旧节点，留着兼容老工程（5.1 里 ShaderNodeSeparateRGB 已经注册不出来了）。
+    if src.type in ('SEPARATE_COLOR', 'SEPCOLOR', 'SEPRGB'):
         sock_name = socket.links[0].from_socket.name
         ch = {'Red': 'R', 'R': 'R', 'Green': 'G', 'G': 'G', 'Blue': 'B', 'B': 'B'}.get(sock_name)
         if ch is not None:
@@ -291,6 +329,27 @@ def _analyze_principled_input(principled_node, input_name, mat_name=None, pbr_ty
                         # print(f"{_tag}: SEPCOLOR({src.name}) ch={ch} → TEX_IMAGE({tex_src.name}) → DIRECT", flush=True)
                         return ('DIRECT', path, ch)
         # print(f"{_tag}: SEPCOLOR({src.name}) → BAKE (Alpha输出或链路不满足)", flush=True)
+        return ('BAKE', None)
+
+    # 1 - x：光泽度贴图接成粗糙度时最常见的接法。管线本来就有"取反"这个概念
+    # (pbr_inv)，所以这不需要烘培，认出来记一个标志就行。
+    if src.type == 'MATH' and src.operation == 'SUBTRACT':
+        a, b = src.inputs[0], src.inputs[1]
+        if (not a.is_linked) and b.is_linked and abs(float(a.default_value) - 1.0) < 1e-6:
+            inner = _direct_image_behind(b.links[0])
+            if inner:
+                path, ch = inner
+                return ('DIRECT', path, ch, True)
+        return ('BAKE', None)
+
+    if src.type == 'INVERT':
+        fac = src.inputs.get('Fac')
+        col = src.inputs.get('Color')
+        if col is not None and col.is_linked and (fac is None or not fac.is_linked)                 and (fac is None or abs(float(fac.default_value) - 1.0) < 1e-6):
+            inner = _direct_image_behind(col.links[0])
+            if inner:
+                path, ch = inner
+                return ('DIRECT', path, ch, True)
         return ('BAKE', None)
 
     # Normal maps: catch-all aggressive penetration for chains that don't go
@@ -865,16 +924,39 @@ def guess_best_preset(material_name, preset_items):
 
 # ── Solid texture generation ───────────────────────────────────────────────────
 
+# ── Exact-byte image writing ───────────────────────────────────────────────────
+# ``Image.save()`` does NOT write the numbers you put in ``pixels``.  Measured in
+# Blender 5.1 with View Transform = Standard: assigning 0.5 and saving produces
+# the byte 55, not 128 -- an sRGB->linear pass over the buffer.  Blender reads its
+# own file back as 0.5 again, so the round trip *inside* Blender is self-consistent
+# and the error is invisible from Python; but texconv and the game read the disk
+# bytes, and those are wrong by a factor of ~2.3 in the mid-tones.
+#
+# Setting colorspace_settings to 'Non-Color' does not help (still 55 before the
+# pixel assignment, 0 after it).  The only thing that round-trips exactly is
+# writing the file ourselves -- core/tga_file.py quantises with Blender's own
+# float->byte rule and was verified byte-exact through texconv.
+#
+# So: never hand a generated buffer to Image.save().  Go through here.
+def _write_exact_rgba(arr, out_path_no_ext):
+    """Write an (h, w, 4) float array in 0..1 to a TGA, returning its path.
+
+    TGA rather than PNG because slot_resolver.write_slot_tex dispatches on the
+    extension and .tga takes the normal texconv route (unlike .dds, which would
+    take the passthrough branch and ship uncompressed).
+    """
+    from .tga_file import write_tga_rgba8
+    out_path = out_path_no_ext + '.tga'
+    write_tga_rgba8(out_path, arr)
+    return out_path
+
+
 def _generate_solid_texture_path(value, tmp_dir, name_hint, size=SOLID_SIZE):
     """
     Write a solid-colour PNG to tmp_dir and return its path.
     value: float scalar (greyscale) or colour sequence (r,g,b[,a]).
     """
-    img_name = f"__gen_solid_{name_hint}"
-    if img_name in bpy.data.images:
-        bpy.data.images.remove(bpy.data.images[img_name])
-
-    img = bpy.data.images.new(img_name, width=size, height=size, alpha=True)
+    import numpy as np
 
     if isinstance(value, (int, float)):
         v = float(max(0.0, min(1.0, value)))
@@ -885,13 +967,11 @@ def _generate_solid_texture_path(value, tmp_dir, name_hint, size=SOLID_SIZE):
             vals.append(1.0)
         pixel = vals
 
-    img.pixels[:] = pixel * (size * size)
-    out_path = os.path.join(tmp_dir, f"_solid_{name_hint}.png")
-    img.filepath_raw = out_path
-    img.file_format  = 'PNG'
-    img.save()
-    bpy.data.images.remove(img)
-    return out_path
+    # Built straight as an array: a solid colour never needed a bpy image, and
+    # routing it through one is exactly how the value used to get mangled.
+    arr = np.empty((size, size, 4), dtype=np.float32)
+    arr[:, :] = pixel
+    return _write_exact_rgba(arr, os.path.join(tmp_dir, f"_solid_{name_hint}"))
 
 
 # ── Composition cache helpers ───────────────────────────────────────────────────
@@ -908,7 +988,12 @@ def _make_source_id(strat_val):
     strategy = strat_val[0]
     value    = strat_val[1]
     if strategy == 'DIRECT':
-        return ('DIRECT', os.path.normpath(value))
+        # 通道和取反必须进键：同一个文件的 R/G/B/A 现在会被不同的 PBR 量各取一路
+        # (metallic=R, ao=B, roughness=1-A 都来自同一张图)，只按路径缓存会把先算出来
+        # 的那一路发给所有人。
+        ch  = strat_val[2] if len(strat_val) > 2 else 'R'
+        inv = bool(strat_val[3]) if len(strat_val) > 3 else False
+        return ('DIRECT', os.path.normpath(value), ch, inv)
     if strategy == 'SOLID':
         if isinstance(value, (int, float)):
             v = round(float(value), 6)
@@ -1142,10 +1227,10 @@ def _bake_pbr_channel(material, pbr_type, mesh_obj, size, tmp_dir, context,
         # print(f"[MDF Gen]   烘培 {material.name}/{pbr_type}: 开始 (type={bake_type}, size={size}, samples={cycles_scene.samples})", flush=True)
         bpy.ops.object.bake(type=bake_type, **bake_kwargs)
 
-        out_path = os.path.join(tmp_dir, f"_baked_{_slugify(material.name)}_{pbr_type}.png")
-        bake_img.filepath_raw = out_path
-        bake_img.file_format  = 'PNG'
-        bake_img.save()
+        from .mdf_tex_processor_base import image_to_array
+        out_path = _write_exact_rgba(
+            image_to_array(bake_img),
+            os.path.join(tmp_dir, f"_baked_{_slugify(material.name)}_{pbr_type}"))
 
         # Restore selection
         for o in prev_selected:
@@ -1275,11 +1360,12 @@ def _maybe_resize_direct(src_path, target_size, tmp_dir):
         ext = os.path.splitext(src_path)[1] or '.png'
         out_path = os.path.join(tmp_dir, f"resized_{tag}{ext}")
 
+        from .mdf_tex_processor_base import image_to_array
         img_copy = img.copy()
         try:
             img_copy.scale(target_size, target_size)
-            img_copy.filepath_raw = out_path
-            img_copy.save()
+            out_path = _write_exact_rgba(image_to_array(img_copy),
+                                         os.path.splitext(out_path)[0])
         finally:
             bpy.data.images.remove(img_copy)
         return out_path
@@ -1971,6 +2057,7 @@ class MdfGenProcessBase(bpy.types.Operator):
 
     def execute(self, context):
         _t_total = time.time()
+        self._unresolved_channels = []
         cls      = type(self)
         settings = getattr(context.scene, cls._settings_attr)
 
@@ -2041,6 +2128,12 @@ class MdfGenProcessBase(bpy.types.Operator):
             print(f"[{cls._log_tag}] Mesh separate/rename warning: {e}")
 
         print(f"[{cls._log_tag}] ★ 总耗时: {time.time() - _t_total:.2f}s ★", flush=True)
+        if self._unresolved_channels:
+            _n = sum(len(c) for _m, c in self._unresolved_channels)
+            _detail = "; ".join("%s: %s" % (m, ", ".join(c))
+                                for m, c in self._unresolved_channels[:3])
+            self.report({'WARNING'}, T("core.mdf_generator_base.unresolved_channels")
+                        .format(n=_n, names=_detail))
         if fail_count:
             self.report({'WARNING'}, T("core.mdf_generator_base.process_done_with_fail").format(
                 export=export_count, fail=fail_count))
@@ -2125,6 +2218,16 @@ class MdfGenProcessBase(bpy.types.Operator):
             mat, strategies, temp_dir, bake_size, context, mesh_obj,
             channel_sizes=channel_sizes or None,
             mesh_objects=mesh_objects)
+
+        # 解析不出源的通道要报出来。以前这里只有一句 print：策略是 BAKE 而烘培没跑成
+        # （没有网格、或者节点链看不懂），路径就是 None，合成拿不到东西，最后落成
+        # null_xxx —— 用户看到的是"接了贴图却生成了空图"，而界面上一个字都没有。
+        _no_source = sorted(pt for pt, sv in strategies.items()
+                            if sv and sv[0] == 'BAKE' and not pbr_paths.get(pt))
+        if _no_source:
+            self._unresolved_channels.append((mat_name, _no_source))
+            print(f"[{cls._log_tag}]   !! no source for {mat_name}: "
+                  f"{', '.join(_no_source)} -> these fall back to a null texture")
         # print(f"[{cls._log_tag}]   解析PBR路径 (含烘培): {time.time() - _t:.2f}s", flush=True)
 
         # A shader with AO plugged in is the user already saying "use this AO",
@@ -2163,8 +2266,14 @@ class MdfGenProcessBase(bpy.types.Operator):
         # ensures alpha data is read from the A channel instead of R.
         pbr_channels = {}
         for pbr_type, strat_val in strategies.items():
-            if strat_val[0] == 'DIRECT' and len(strat_val) > 2 and strat_val[2] != 'R':
+            if strat_val[0] != 'DIRECT':
+                continue
+            if len(strat_val) > 2 and strat_val[2] != 'R':
                 pbr_channels[pbr_type] = strat_val[2]
+            # 1-x 那种接法（光泽度当粗糙度用）在这里变成一个取反标志，
+            # 合成时由 pbr_inv 执行，不必烘培。
+            if len(strat_val) > 3 and strat_val[3]:
+                pbr_inv[pbr_type] = True
 
         # materialName keeps _UseSC (it is a marker on the material itself);
         # tex_name feeds every texture filename/binding path below and must
@@ -2212,6 +2321,9 @@ class MdfGenProcessBase(bpy.types.Operator):
                             or getattr(settings, 'global_use_toon', False))
         effective_mipmaps = (mat_entry.generate_mipmaps
                             and not getattr(settings, 'global_disable_mipmaps', False))
+        # 色调处理是全局档，没有逐材质开关 —— 它补的是整套素材的口径差，
+        # 一张一张设只会让同一个模型的各部件对不上。
+        grade_mode = getattr(settings, 'global_color_grade', 'NONE')
         emi_zero         = _emissive_strength_is_zero(mat)
         emissive_slots   = {st for st in slot_types if _is_emissive_slot(st)}
         albedo_slots     = {st for st in slot_types if _is_albedo_slot(st, cls._channel_maps)}
@@ -2280,6 +2392,7 @@ class MdfGenProcessBase(bpy.types.Operator):
                     generate_mipmaps=effective_mipmaps,
                     image_to_dds=ImageListToDDS,
                     dds_to_tex=lambda p, o: DDSToTex(p, cls._tex_version, o),
+                    grade_mode=grade_mode,
                 )
 
                 mdf_path = make_mdf_path(
@@ -2374,6 +2487,7 @@ class MdfGenProcessBase(bpy.types.Operator):
                             generate_mipmaps=effective_mipmaps,
                             image_to_dds=ImageListToDDS,
                             dds_to_tex=lambda p, o: DDSToTex(p, cls._tex_version, o),
+                            grade_mode=grade_mode,
                         )
 
                         mdf_path = make_mdf_path(
@@ -2408,6 +2522,7 @@ class MdfGenProcessBase(bpy.types.Operator):
                     generate_mipmaps=effective_mipmaps,
                     image_to_dds=ImageListToDDS,
                     dds_to_tex=lambda p, o: DDSToTex(p, cls._tex_version, o),
+                    grade_mode=grade_mode,
                 )
 
                 mdf_path = make_mdf_path(

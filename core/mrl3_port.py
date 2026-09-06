@@ -279,15 +279,13 @@ def nuki_dissolve(albedo_strength, emissive_flat, factor_alpha):
 
 # ── relay support ───────────────────────────────────────────────────────────────
 # Used when the port is asked for MHRS: the material half goes through the ordinary
-# MHWS -> MHRS port, which skips its whole texture-binding loop when it is told not
-# to convert textures -- and it is told not to, because ``mrl3_port_ops`` has
-# already written them in MHRS's own container.  So the bindings are carried over
-# by slot type instead.
-#
-# A plain name-keyed copy is enough because MHWilds and MHRS name all 15 slot types
-# identically and pack them identically (measured against the registered tex
-# configs); it is the same fact that lets ``mdf_port_tex.repack_slot`` rewrite the
-# container without touching pixels.
+# MHWS -> MHRS port with texture conversion genuinely switched on, since MHWilds
+# and MHRS do not name and pack all their slot types identically (measured --
+# MHWilds' NormalRoughnessOcclusionMap and MHRS's NRMR_NRRTMap pack different
+# quantities into different channels, and MHWilds' AlphaTranslucentOcclusionSSSMap
+# has no MHRS counterpart at all). See ``core/mrl3_port_ops.py``'s ``relay`` for
+# how the two hops fit together, and ``relay_texture_paths`` there for the
+# paths_only counterpart of the byte-level repack.
 #
 # Duck-typed rather than bpy-typed, so it lives here with the rest of the offline-
 # checkable half rather than in the ops module.
@@ -301,40 +299,3 @@ def _materials_by_name(col):
         if data is not None:
             out[data.materialName or obj.name] = data
     return out
-
-
-def carry_texture_bindings(src_col, dst_col, is_custom=None):
-    """Copy texture paths from *src_col*'s materials onto *dst_col*'s, by slot type.
-
-    Only onto slots the destination actually has, and only from source slots that
-    hold *the author's own* texture.  *is_custom* is a one-argument predicate --
-    in practice ``is_custom_tex_path`` bound to the source game's vanilla list.
-
-    Skipping the non-custom ones is not an optimisation, it is the point.  Every
-    prefab fills every slot, so "source path is non-empty" is true of all of them,
-    and a stock path is **per game**: MHWilds' basic prefab puts
-    ``MasterMaterial/Textures/NullBlack_Alpha_MSK4.tex`` in EmissiveMap and FxMap
-    where MHRS's PL_Default puts ``systems/rendering/NullBlack.tex``.  Carrying
-    those across replaces the destination's own correct placeholder with one that
-    does not exist in the destination game -- 46064 entries in MHWilds' vanilla
-    list against 26473 in MHRS's, and that path is in the first and not the
-    second, so the game cannot load it and the pre-export check flags every one.
-
-    Without a predicate every non-empty path is carried, which is the old
-    behaviour and is only right when both sides share a vanilla set.
-    """
-    src_mats = _materials_by_name(src_col)
-    carried = 0
-    for name, dst_data in _materials_by_name(dst_col).items():
-        src_data = src_mats.get(name)
-        if src_data is None:
-            continue
-        src_paths = {b.textureType: b.path for b in src_data.textureBindingList_items}
-        for binding in dst_data.textureBindingList_items:
-            path = src_paths.get(binding.textureType)
-            if not path or (is_custom is not None and not is_custom(path)):
-                continue
-            if binding.path != path:
-                binding.path = path
-                carried += 1
-    return carried

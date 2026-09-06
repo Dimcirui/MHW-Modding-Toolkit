@@ -292,6 +292,18 @@ class PortPlan:
                    only shows up in motion.
     collisions   : {dst: [src, ...]} -- the many-to-one groups behind *merges*,
                    kept for reporting.
+    splits_unbacked : [dst] -- a split sends weight to this bone and nothing in the
+                   plan produces it.  Weight would go to a vertex group no bone
+                   drives, which deforms nothing and is invisible until the model is
+                   in the game, so it is reported rather than written.
+    splits       : [(src, [(dst, factor), ...])] -- src's weights are *distributed*
+                   over several target bones instead of landing on one.  Only twist
+                   chains produce these, and only when the two rigs divide a limb
+                   segment differently (RE4's legs carry one twist bone, RE9's four).
+                   Factors sum to 1, so per-vertex total weight is unchanged and
+                   nothing needs renormalising.  A one-entry factor-1 transfer is
+                   emitted as a plain rename instead, so equal-length chains keep
+                   behaving exactly as before.  See ``core/twist_chain.py``.
     clashes      : [(src, into)] -- a pass-through bone whose name is also produced by
                    a rename, so it is merged into the bone taking that name.  These
                    are in *merges* too; the separate list exists to report them,
@@ -328,6 +340,8 @@ class PortPlan:
         self.uninsertable = []
         self.collisions = {}
         self.clashes = []
+        self.splits = []
+        self.splits_unbacked = []
 
     @property
     def ok(self):
@@ -339,6 +353,10 @@ class PortPlan:
                  f"{len(self.merges)} merged",
                  f"{len(self.inserts)} inserted",
                  f"{len(self.passthrough)} kept"]
+        if self.splits:
+            parts.append(f"{len(self.splits)} weight-split")
+        if self.splits_unbacked:
+            parts.append(f"{len(self.splits_unbacked)} SPLIT TARGET MISSING")
         if self.uninsertable:
             parts.append(f"{len(self.uninsertable)} UNPLACEABLE")
         if self.clashes:
@@ -369,7 +387,7 @@ def _pick_primary(dst_name, src_names, src_main_names):
 
 def build_port_plan(src_bones, cross_map, dst_game=None, src_main_names=(),
                     dst_bones=None, extra_rules=None, src_parents=None,
-                    src_native_bones=None):
+                    src_native_bones=None, twist_transfer=None):
     """Plan the rig half of a cross-game mesh port.
 
     *src_bones*      : the source rig's bone names.
@@ -386,6 +404,14 @@ def build_port_plan(src_bones, cross_map, dst_game=None, src_main_names=(),
                        in the module docstring.  Without them every unmapped bone is
                        kept, which leaves the target rig carrying helpers it has no
                        use for.
+    *twist_transfer* : ``{src: [(dst, factor), ...]}`` from
+                       ``core.twist_chain.plan_transfers``, computed by the caller
+                       because it needs both rigs' geometry and this function only
+                       sees names.  These bones are routed here *before* anything
+                       else: without it a twist bone the target spells differently
+                       falls through to the unmapped-native-bone path and is merged
+                       into the segment bone, which flattens the whole roll gradient
+                       onto one joint.
     """
     plan = PortPlan(getattr(cross_map, "src_game", None),
                     dst_game or getattr(cross_map, "dst_game", None))
@@ -401,6 +427,7 @@ def build_port_plan(src_bones, cross_map, dst_game=None, src_main_names=(),
                    and dst_root not in src_bones)
 
     # 1. group by destination, so many-to-one shows up before anything is decided
+    twist_transfer = dict(twist_transfer or {})
     by_dst = {}
     for name in src_bones:
         if root_rename and name == src_root:
@@ -408,6 +435,16 @@ def build_port_plan(src_bones, cross_map, dst_game=None, src_main_names=(),
             continue
         if name in PLUMBING_BONES:
             plan.passthrough.append(name)
+            continue
+        rows = twist_transfer.get(name)
+        if rows:
+            # A single factor-1 row is an ordinary rename; keeping it out of
+            # *splits* means equal-length chains produce a byte-identical plan to
+            # the one the old hand-written name table produced.
+            if len(rows) == 1 and abs(rows[0][1] - 1.0) < 1e-9:
+                by_dst.setdefault(rows[0][0], []).append(name)
+            else:
+                plan.splits.append((name, list(rows)))
             continue
         dst = cross_map.get(name)
         if dst is None:
@@ -470,6 +507,15 @@ def build_port_plan(src_bones, cross_map, dst_game=None, src_main_names=(),
         else:
             placeable.append((name, rule, anchor))
     plan.inserts = placeable
+
+    # 3b. every split target has to be backed by a bone the plan actually produces.
+    #     The target rig's twist bones normally arrive through the insert rules, so
+    #     this is a guard on the two tables agreeing, not an expected outcome.
+    backed = produced | set(plan.passthrough) | {n for n, _r, _a in plan.inserts}
+    for _src, rows in plan.splits:
+        for dst_name, _factor in rows:
+            if dst_name not in backed and dst_name not in plan.splits_unbacked:
+                plan.splits_unbacked.append(dst_name)
 
     # 4. a bone kept verbatim must not land on a name the port is also producing --
     #    Blender would silently suffix it and the game would hash a name no rig has.

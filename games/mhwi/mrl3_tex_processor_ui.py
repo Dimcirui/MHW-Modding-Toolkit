@@ -67,6 +67,9 @@ class MHWI_OT_Mrl3TexProcessorDialog(bpy.types.Operator):
 
         layout.prop(settings, "global_disable_mipmaps",
                     text=T("core.mdf_generator_base.global_disable_mipmaps"))
+        grade_row = layout.row(align=True)
+        grade_row.label(text=T("core.color_grade.label"))
+        grade_row.prop(settings, "global_color_grade", text="")
 
         if not settings.materials:
             layout.separator()

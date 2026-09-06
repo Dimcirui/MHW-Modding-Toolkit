@@ -94,6 +94,9 @@ class MHWI_OT_Mrl3GeneratorDialog(bpy.types.Operator):
                  text=T("core.mdf_generator_base.global_disable_mipmaps"))
         row.prop(settings, "global_use_toon",
                  text=T("core.mdf_generator_base.global_use_toon"))
+        grade_row = layout.row(align=True)
+        grade_row.label(text=T("core.color_grade.label"))
+        grade_row.prop(settings, "global_color_grade", text="")
 
         # ── Preset dir status ──────────────────────────────────────────────────
         preset_dir = get_mhwi_preset_dir()

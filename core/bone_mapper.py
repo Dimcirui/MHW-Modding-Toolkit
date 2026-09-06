@@ -37,6 +37,66 @@ STANDARD_BONE_NAMES = [
     "pinky_01_R",  "pinky_02_R", "pinky_03_R"
 ]
 
+# --- 1b. 辅助骨槽位 (Auxiliary slots) ---
+#
+# 这 42 个键**不在** STANDARD_BONE_NAMES 里，是有意为之：
+#   * 自动识别的打分只看 STANDARD_BONE_NAMES，辅助骨全是可选的，进了分母会把
+#     "预设写得细"错算成"骨架匹配得好"；
+#   * "忽略辅助骨"关掉时（默认），遍历的就是原来那 52 个键，行为与加槽位之前一致。
+#
+# 序号沿骨段由**近端到远端**，与 upperarm->forearm 的方向一致。五位是实测下来的
+# 上限：街霸 6 的 L_ForeArm_1..5 就是五节，RE9 四节 (L_Arm_Lower_Twist_0..3)，
+# 荒野三节 (_HJ_00..02)，明日方舟两节，VRChat/uma/世界 一节。装不下的仍旧走父段的
+# aux 合并——那本来就是它们今天的去处，不算退化。
+# RE9 的 _Ext_/_Offset 那层卫星骨不单独占位，而是挂在它所属节点的槽位 aux 里。
+AUX_BONE_NAMES = []
+for _side in ("L", "R"):
+    for _seg in ("upperarm", "forearm", "thigh", "shin"):
+        for _i in range(1, 6):
+            AUX_BONE_NAMES.append("%s_twist_%02d_%s" % (_seg, _i, _side))
+for _side in ("L", "R"):
+    # 关节辅助骨：掌骨 / 肘 / 膝 / 脚背 / 脚尖末节。实测依据分别是
+    # L_Palm(荒野) L_Hand_Palm(RE9) / L_Elbow(RE4) L_Elbow_HJ_00(荒野) /
+    # L_Knee(荒野) L_Help_Knee_s(RE4) L_Knee_SR(RE9) / L_Instep(荒野) / L_ToeEnd(RE4)
+    for _j in ("palm", "elbow", "knee", "instep", "toe_end"):
+        AUX_BONE_NAMES.append("%s_%s" % (_j, _side))
+del _side, _seg, _i, _j
+
+#: 辅助骨槽位 -> 它所属的主骨段标准键。
+#: 关掉辅助骨槽位时，靠这张表把子槽的候选名**折回**父段的 aux 列表，于是每个骨名在
+#: 预设 JSON 里只写一次，两条路径都能查到它，不会漂移。
+AUX_PARENT = {}
+for _k in AUX_BONE_NAMES:
+    _m = re.match(r'^(upperarm|forearm|thigh|shin)_twist_\d+_([LR])$', _k)
+    if _m:
+        AUX_PARENT[_k] = "%s_%s" % (_m.group(1), _m.group(2))
+        continue
+    _j, _s = _k.rsplit("_", 1)
+    AUX_PARENT[_k] = {
+        # 掌骨挂在手上，肘挂在前臂（它是前臂的近端卫星），膝挂在小腿，
+        # 脚背与脚尖末节挂在脚上。这与它们在真实骨架里的父子关系一致。
+        "palm": "hand", "elbow": "forearm", "knee": "shin",
+        "instep": "foot", "toe_end": "toe",
+    }[_j] + "_" + _s
+del _k, _m, _j, _s
+
+#: 父段标准键 -> 挂在它下面的辅助骨槽位列表（AUX_PARENT 的反向表）
+AUX_CHILDREN = {}
+for _k, _p in AUX_PARENT.items():
+    AUX_CHILDREN.setdefault(_p, []).append(_k)
+del _k, _p
+
+
+def standard_keys(include_aux=False):
+    """要遍历的标准键。include_aux 为假时就是原来那 52 个，行为不变。"""
+    if include_aux:
+        return STANDARD_BONE_NAMES + AUX_BONE_NAMES
+    return list(STANDARD_BONE_NAMES)
+
+
+def is_aux_key(std_key):
+    return std_key in AUX_PARENT
+
 class BoneMapManager:
     def __init__(self):
         # 统一后的数据存储
@@ -93,16 +153,29 @@ class BoneMapManager:
             print(f"[Error] Failed to parse JSON: {e}")
             return False
 
-    def get_matches_for_standard(self, armature_obj, standard_key):
+    def get_matches_for_standard(self, armature_obj, standard_key, fold_aux=False):
         """
         【抢占式执行核心】
         输入：标准名 (如 'upperarm_L')
         返回：(被选中的主骨名, 需要被合并的辅助骨列表)
         精确匹配优先，失败时归一化模糊匹配（忽略 _ . 空格及大小写）
+
+        ``fold_aux``：把挂在这个键下的辅助骨槽位（见 AUX_CHILDREN）的候选名**折回**
+        本键的 aux 列表。这是"忽略辅助骨"打开时走的路——效果等同于加槽位之前，
+        即扭转骨、掌骨这些一律并进主骨然后删掉。之所以折回而不是在 JSON 里写两遍，
+        是因为写两遍必然漂移：改了一处忘了另一处，症状是骨头静默消失。
         """
+        folded = []
+        if fold_aux:
+            for child in AUX_CHILDREN.get(standard_key, ()):
+                centry = self.mapping_data.get(child)
+                if centry:
+                    folded += list(centry.get("main", ())) + list(centry.get("aux", ()))
+
+        # 父段本身没在预设里时不折：折了就会把扭转骨并进一个不存在的目标组，
+        # 而今天这种情况是**什么都不做**，保持一致。
         if standard_key not in self.mapping_data:
             return None, []
-
         bone_entry = self.mapping_data[standard_key]
         existing_bones = armature_obj.data.bones.keys()
 
@@ -120,7 +193,7 @@ class BoneMapManager:
             return norm_lookup.get(_normalize_bone_name(name))
 
         main_candidates = bone_entry.get("main", [])
-        aux_candidates = bone_entry.get("aux", [])
+        aux_candidates = list(bone_entry.get("aux", [])) + folded
 
         final_main = None
         to_merge = []
@@ -141,6 +214,20 @@ class BoneMapManager:
                 to_merge.append(actual)
 
         return final_main, to_merge
+
+    def entry_for(self, standard_key, fold_aux=False):
+        """不看骨架、只读预设，返回 (main 候选, aux 候选)。一键转换那条路只有两份
+        预设、没有源骨架可查，所以折叠得在这一层做，不能借 get_matches_for_standard。"""
+        entry = self.mapping_data.get(standard_key)
+        if not entry:
+            return [], []
+        auxs = list(entry.get("aux", []))
+        if fold_aux:
+            for child in AUX_CHILDREN.get(standard_key, ()):
+                centry = self.mapping_data.get(child)
+                if centry:
+                    auxs += list(centry.get("main", ())) + list(centry.get("aux", ()))
+        return list(entry.get("main", [])), auxs
 
     # --- 辅助方法 ---
     def get_standard_from_game(self, game_bone_name):
@@ -170,31 +257,24 @@ class BoneMapManager:
 # 的骨，值为它应归入的标准键。只收录已验证条目，别凭猜测扩表。
 #: 源游戏骨名 -> 目标游戏骨名，专给**标准键覆盖不到的辅助骨**用，按游戏对索引。
 #:
-#: 扭转骨两边都有、都带权重，只是命名规则完全不同，标准键系统里又没有它们的位置。
-#: 原先它们落不进 cross map，于是按"未映射的原生骨"被并进了父骨——权重堆到上臂/前臂
-#: 主骨上，RE9 自己那套 Twist 一根都没建，上臂扭转的形变就没了（表现为肩膀不对）。
-#: 参考脚本 RE4_to_RE9_Convert 的 handle_twist_bones 做的正是这件事：改名 + 接进
-#: RE9 的串联链。缺的那几节（Twist_0/_3）由 core/mesh_port.py 的插骨规则补。
+#: 源游戏骨名 -> 目标游戏骨名，专给**标准键覆盖不到的辅助骨**用，按游戏对索引。
 #:
-#: 只列**两边都真实存在**的骨：RE4 没有 Twist_0，反向也就没什么可映射的，让它照旧
-#: 并进主骨。
-def _re4_re9_twists():
-    out = {}
-    for s_ in ("L", "R"):
-        out[f"{s_}_UpperArm_Twist_s1"] = f"{s_}_Arm_Upper_Twist_1"
-        out[f"{s_}_UpperArm_Twist_s2"] = f"{s_}_Arm_Upper_Twist_2"
-        out[f"{s_}_Forearm_Twist_s1"]  = f"{s_}_Arm_Lower_Twist_1"
-        out[f"{s_}_Forearm_Twist_s2"]  = f"{s_}_Arm_Lower_Twist_2"
-        out[f"{s_}_Wrist_Twist_s"]     = f"{s_}_Arm_Lower_Twist_3"
-        out[f"{s_}_Thigh_Twist_s"]     = f"{s_}_Leg_Upper_Twist_1"
-        out[f"{s_}_Shin_Twist_s"]      = f"{s_}_Leg_Lower_Twist_1"
-    return out
-
-
-_HELPER_NAME_MAP = {
-    ("RE4", "RE9"): _re4_re9_twists(),
-    ("RE9", "RE4"): {v: k for k, v in _re4_re9_twists().items()},
-}
+#: 现在是空的，留着是因为"某根辅助骨两边都有、名字规则完全不同、标准键系统里又没有
+#: 它的位置"这类情形还会出现。
+#:
+#: 曾经这里放着一张 RE4 <-> RE9 的扭转骨对照表（14 条）。**它被删掉了，别照原样加回来。**
+#: 实测插件自带的三具 RE4 参考骨架后发现，扭转骨的名字**逐角色不同**：同一根小腿扭转骨
+#: ada 叫 ``L_Toe_Twist_s``（名字里的 Toe 是误导，量出来在小腿中段）、ashley 叫
+#: ``L_Foot_Twist_s0``、leon 叫 ``L_Shin_Twist_s``；大腿那根 ada/ashley 是
+#: ``L_Thigh_Twist_s1`` 而 leon 是 ``L_Thigh_Twist_s``。那张表用的是 leon 的拼法，
+#: 对另外两具**静默失效**——键查不到，骨头落到"未映射的原生骨"那条路上被并进段骨，
+#: 整条滚转梯度塌到一个关节上。位置也逐角色不同（leon 的上臂扭转在 0.43/0.79，
+#: ada 与 ashley 在精确的 1/3、2/3），所以连位置都不能建表。
+#:
+#: 取代它的是 ``core/twist_chain.py``：按结构识别链、按归一化位置重采样，
+#: 名字一个不存。跨游戏调用方要把 ``twist_chain.plan_transfers`` 的结果传给
+#: ``mesh_port.build_port_plan(twist_transfer=...)``。
+_HELPER_NAME_MAP = {}
 
 
 _PRESET_GAP_FILL = {
@@ -251,13 +331,8 @@ def build_cross_game_map(src_preset, dst_preset):
     for std_key, entry in src.mapping_data.items():
         for name in entry.get("main", ()):
             src_to_std.setdefault(name, std_key)
-    #: 纯 aux 的源骨（没有在任何标准键里当过 main）。它们有资格落到目标的 aux 上，
-    #: 见下面的一对一规则。
-    src_only_aux = set()
     for std_key, entry in src.mapping_data.items():
         for name in entry.get("aux", ()):
-            if name not in src_to_std:
-                src_only_aux.add(name)
             src_to_std.setdefault(name, std_key)
     for name, std_key in src_extra.items():
         src_to_std.setdefault(name, std_key)
@@ -265,6 +340,13 @@ def build_cross_game_map(src_preset, dst_preset):
     for src_name, std_key in src_to_std.items():
         dst_entry = dst.mapping_data.get(std_key)
         dst_main = (dst_entry or {}).get("main", ())
+        if not dst_main and std_key in AUX_PARENT:
+            # 目标游戏没有这个辅助骨槽位：退回它所属的骨段，也就是加槽位之前的去处。
+            # 不退的话骨头会**整根丢掉**（RE4 的 L_ToeEnd 跨到 RE9 就是这样：RE9 没有
+            # toe_end 槽，而它本该收敛到 toe_*）。
+            std_key = AUX_PARENT[std_key]
+            dst_entry = dst.mapping_data.get(std_key)
+            dst_main = (dst_entry or {}).get("main", ())
         if not dst_main:
             if std_key not in result.dropped:
                 result.dropped.append(std_key)
@@ -278,22 +360,18 @@ def build_cross_game_map(src_preset, dst_preset):
             result.mapping[src_name] = src_name
             continue
 
-        # 两边这个标准键都**只有一根** aux 时，aux 对 aux —— 不塌到主骨上。
+        # 这里曾有一条"两边这个标准键都只有一根 aux 时就 aux 对 aux"的规则。
+        # **删掉了，别加回来。** 它是为掌骨写的（RE4 的 L_Palm 与 RE9 的 L_Hand_Palm
+        # 一一对应，却因为只认 main 而被并进手骨，再由插骨规则新造一根与手同位置的
+        # L_Hand_Palm，手指形变因此不对）；现在 palm_L 是真正的槽位，那件事由槽位办，
+        # 不必再靠"各恰好一根"这个巧合。
         #
-        # 掌骨就是这条规则的由来：RE4 的 L_Palm 是 hand_L 的 aux，RE9 的 L_Hand_Palm
-        # 也是，两边一一对应且毫无歧义；可原来只认 main，于是 L_Palm 的位置和权重都
-        # 被并进了 L_Arm_Hand，再由插骨规则新造一根与手骨同位置的 L_Hand_Palm。掌骨
-        # 正好夹在手和手指之间，手指的形变因此不对。第三方参考脚本
-        # RE4_to_RE9_Convert 是直接 L_Palm -> L_Hand_Palm 的。
-        #
-        # 严格限制在"两边各恰好一根"：aux 列表之间没有位置对应关系（荒野 foot_L 是
-        # L_Instep + L_Foot_HJ_00，RE9 是 L_Leg_Foot，按下标配对只会张冠李戴），
-        # 一对一是唯一不需要猜的情形。实测这条规则只改变掌骨的去向。
-        src_aux = tuple(src.mapping_data.get(std_key, {}).get("aux", ()))
-        if src_name in src_only_aux and len(src_aux) == 1 and len(dst_aux) == 1:
-            result.mapping[src_name] = dst_aux[0]
-            continue
-
+        # 而这条规则本来就危险，它自己的注释写着为什么：aux 列表之间没有位置对应关系
+        # （荒野 foot_L 是 L_Instep + L_Foot_HJ_00，RE9 是 L_Leg_Foot，配对就是张冠
+        # 李戴）。保护它的只是"荒野那边有两根"这个偶然——L_Instep 搬进 instep_L 槽位
+        # 之后就剩一根，规则立刻把 L_Foot_HJ_00 改名成了 L_Leg_Foot，而 L_Leg_Foot
+        # 实测在脚趾高度、比 HJ 助手低约 70mm，本该由 mesh_port 的 drop 规则按测量
+        # 位置新建。也就是说它静默地把一根量过位置的骨换成了猜的。
         result.mapping[src_name] = dst_main[0]
 
     # 标准键之外的辅助骨。setdefault：预设永远优先，这张表只补预设够不到的。
@@ -324,7 +402,16 @@ def auto_detect_preset(armature_obj, is_import_x, prefer_game=None):
     """遍历所有预设文件，对每个预设在骨架的 47 个标准骨骼上做匹配测试，
     返回覆盖率最高的文件名。覆盖率 >= 95% 才视为匹配成功，否则返回 None。
 
-    *prefer_game*：并列第一时优先返回该 game_code 的预设。
+    *prefer_game*：并列第一时优先返回该 game_code 的预设。调用方没给偏好时，
+    并列按 ``preset_info["priority"]`` 降序裁决（缺省 0，越大越优先）。
+
+    已知需要 priority 的一处：VRChat.json（Unity Humanoid / VRM 0.x）与 vrm.json
+    （VRM 1.0）只在拇指命名上不同 —— ``ThumbProximal`` 在 0.x 指贴腕的第一节、在
+    1.0 指第二节。判别信号是各自的独占名（0.x 的 ``ThumbIntermediate`` vs 1.0 的
+    ``ThumbMetacarpal``），完整骨架下 100% vs 96.1% 分得开；但**两节式拇指**
+    （只有 ``ThumbProximal`` + ``ThumbDistal``、缺中节）两边同为 96.1% 并列，而名字
+    本身真的判不出来。此时选 Unity 读法更可能对（没有 Metacarpal 在场），所以
+    VRChat.json 的 priority 为 1。
 
     ⚠ **并列是真的分不出来，不是判据不够好。** RE4R 与荒野同属一个骨骼约定族，
     标准键覆盖的主链骨骼**名字逐个相同**（见 core/pose_ops.py 的 _RE4R_LIMBS 注释），
@@ -357,19 +444,24 @@ def auto_detect_preset(armature_obj, is_import_x, prefer_game=None):
         if total == 0:
             continue
         scored.append((matched / total, filename,
-                       mapper.preset_info.get("game_code")))
+                       mapper.preset_info.get("game_code"),
+                       mapper.preset_info.get("priority", 0)))
 
     if not scored:
         return None
-    best_ratio = max(ratio for ratio, _f, _g in scored)
+    best_ratio = max(ratio for ratio, _f, _g, _p in scored)
     if best_ratio < 0.95:
         return None
     # 不能提前 break 在 1.0：那样就看不到并列，而并列正是要处理的情况。
-    tied = [(f, g) for ratio, f, g in scored if ratio >= best_ratio - 1e-9]
+    tied = [(f, g, p) for ratio, f, g, p in scored if ratio >= best_ratio - 1e-9]
     if prefer_game:
-        for filename, game_code in tied:
+        for filename, game_code, _p in tied:
             if game_code == prefer_game:
                 return filename
+    # 调用方没给偏好时，按 preset_info["priority"] 降序（缺省 0），同优先级再按
+    # 文件名。没有这一步的话决定权就落在 _list_preset_files 的 sorted() 字节序上
+    # ——VRChat.json 赢 vrm.json 只是因为大写 V 排在小写 v 前面，改个文件名就翻转。
+    tied.sort(key=lambda t: (-t[2], t[0]))
     return tied[0][0]
 
 

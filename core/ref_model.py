@@ -66,6 +66,7 @@ This module holds no ``bpy`` so the merge planning is unit-testable offline.
 
 import json
 import os
+import re
 
 #: ``(identifier, label_key, kind, payload)`` per game, in dropdown order.
 #:
@@ -202,6 +203,16 @@ def facial_doomed(game_code, parents, mhws_list=()):
     return descendants(parents, root)
 
 
+#: 辅助骨槽位键的形状。权威定义在 ``core.bone_mapper.AUX_BONE_NAMES``；这里重写一遍
+#: 是因为 bone_mapper 顶层 import bpy，而本模块要能脱离 Blender 加载。
+#: ``tests/test_ref_model.py`` 有一条断言盯着两者一致，改了哪边都会被拦下。
+#: 槽位键的 main 也算辅助骨——迁移之前 L_Palm、扭转骨这些就写在父段的 aux 里，
+#: 搬进槽位后如果只读 aux，"合并辅助骨"会静默漏掉它们。
+_AUX_SLOT_KEY = re.compile(
+    r'^(?:upperarm|forearm|thigh|shin)_twist_\d\d_[LR]$'
+    r'|^(?:palm|elbow|knee|instep|toe_end)_[LR]$')
+
+
 def preset_aux_bones(game_code):
     """The bone preset's ``aux`` names for *game_code*, or an empty set.
 
@@ -216,7 +227,9 @@ def preset_aux_bones(game_code):
             data = json.load(f).get("mappings", {})
     except Exception:
         return set()
-    return {n for entry in data.values() for n in entry.get("aux", ())}
+    return {n for k, entry in data.items()
+            for n in (list(entry.get("aux", ()))
+                      + (list(entry.get("main", ())) if _AUX_SLOT_KEY.match(k) else []))}
 
 
 def aux_doomed(game_code, parents, mhws_list=()):

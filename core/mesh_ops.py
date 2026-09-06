@@ -508,6 +508,33 @@ touching the split vertices, sharp edges or material borders the game needs
         finally:
             if back_to_edit:
                 bpy.ops.object.mode_set(mode='EDIT')
+def _mesh_object_items(self, context):
+    """Every mesh object, as enum items.
+
+    An EnumProperty rather than a ``prop_search`` string because the picker has
+    to offer meshes *only*, and ``prop_search`` cannot filter its collection.
+    A dynamic enum stores an index into a list rebuilt on every access, which is
+    a hazard when the object list can change mid-operator -- these two operators
+    never add or remove objects, so between the dialog and ``execute`` the list
+    is the same one.
+    """
+    items = [(o.name, o.name, "") for o in bpy.data.objects if o.type == 'MESH']
+    return items or [('NONE', T("ui.main_panel.pick_no_mesh"), "")]
+
+
+#: ``(id, label key, description key)``.  Enum item labels are static text
+#: Blender resolves at registration, before the language is known, so they have
+#: to come from a callable that runs ``T()`` at draw time.
+_BASE_SOURCE_ITEMS = (
+    ('SELF', "ui.main_panel.fsk_base_self", "ui.main_panel.fsk_base_self_desc"),
+    ('OBJECT', "ui.main_panel.fsk_base_object", "ui.main_panel.fsk_base_object_desc"),
+)
+
+
+def _base_source_items(self, context):
+    return [(i, T(label), T(desc)) for i, label, desc in _BASE_SOURCE_ITEMS]
+
+
 class MHW_OT_FixShapeKeyNormals(bpy.types.Operator):
     """Re-encode the custom split normals against the shape-keyed geometry, so
 the directions that were authored survive the deformation instead of drifting
@@ -522,6 +549,12 @@ with the encoding basis (see core/normal_utils.py)"""
         description="Take the mesh's current normals as the new target. "
                     "Only needed after re-baking the normals by other means",
     )
+    base_source: bpy.props.EnumProperty(
+        name="Base Shape",
+        items=_base_source_items,
+        default=0,
+    )
+    base_object: bpy.props.EnumProperty(name="Reference Mesh", items=_mesh_object_items)
 
     @classmethod
     def poll(cls, context):
@@ -534,9 +567,78 @@ with the encoding basis (see core/normal_utils.py)"""
     def description(cls, context, properties):
         return T("ui.main_panel.fsk_tip")
 
+    def invoke(self, context, event):
+        return context.window_manager.invoke_props_dialog(self, width=340)
+
     def draw(self, context):
-        self.layout.prop(self, "reset_intent",
-                         text=T("ui.main_panel.fsk_field_reset"))
+        layout = self.layout
+        layout.prop(self, "base_source", text=T("ui.main_panel.fsk_field_base_source"))
+        if self.base_source == 'OBJECT':
+            layout.prop(self, "base_object", text=T("ui.main_panel.fsk_field_base_object"))
+        layout.prop(self, "reset_intent",
+                    text=T("ui.main_panel.fsk_field_reset"))
+
+    def _reference_base(self, obj):
+        """The reference mesh's base geometry, or None after reporting why it
+        cannot be used.
+
+        Same topology is not optional: the positions are consumed corner for
+        corner, so a different vertex count means the numbers line up against
+        the wrong geometry rather than failing.
+
+        The coordinates are taken as they are, *not* brought through the two
+        objects' world transforms.  What the reference contributes is its
+        shape, and the usual reference is a pristine copy of the same mesh
+        parked off to one side to compare against -- honouring its transform
+        would fold that parking rotation into the geometry and answer for a
+        head that is turned.  Measured: a reference rotated 35 degrees about Z
+        came back with every direction 35 degrees out.  A differing transform
+        is still worth saying so, since then the two local frames do not
+        describe the same orientation; translation alone is ignored because it
+        cannot change a normal.
+        """
+        import numpy as np
+
+        ref = bpy.data.objects.get(self.base_object) if self.base_object != 'NONE' else None
+        if ref is None or ref.type != 'MESH':
+            self.report({'ERROR'}, T("ui.main_panel.fsk_err_no_reference"))
+            return None
+        if ref.data is obj.data:
+            self.report({'ERROR'}, T("ui.main_panel.fsk_err_reference_is_self"))
+            return None
+        rme = ref.data
+        if (len(rme.vertices) != len(obj.data.vertices)
+                or len(rme.polygons) != len(obj.data.polygons)
+                or len(rme.loops) != len(obj.data.loops)):
+            self.report({'ERROR'}, T("ui.main_panel.fsk_err_reference_topology").format(
+                obj=ref.name))
+            return None
+        # Matching counts are not a correspondence.  Two exports of the same head
+        # can carry the same counts in a different vertex and face order, and then
+        # reading the reference's positions in its own order feeds this mesh
+        # geometry that belongs to other corners -- which produces a plausible
+        # result rather than an error.  Use "Transfer Normals" for that case.
+        a = np.empty(len(obj.data.loops), np.int32)
+        obj.data.loops.foreach_get("vertex_index", a)
+        b = np.empty(len(rme.loops), np.int32)
+        rme.loops.foreach_get("vertex_index", b)
+        if not np.array_equal(a, b):
+            self.report({'ERROR'}, T("ui.main_panel.fsk_err_reference_order").format(
+                obj=ref.name, n=int((a != b).sum())))
+            return None
+
+        # The reference's *base*, not whatever its keys currently mix to
+        src = (rme.shape_keys.reference_key.data if rme.shape_keys is not None
+               else rme.vertices)
+        co = np.empty(len(rme.vertices) * 3, np.float32)
+        src.foreach_get("co", co)
+
+        a = np.array(obj.matrix_world.to_3x3(), np.float64)
+        b = np.array(ref.matrix_world.to_3x3(), np.float64)
+        if not np.allclose(a, b, atol=1e-6):
+            self.report({'WARNING'}, T("ui.main_panel.fsk_warn_reference_transform").format(
+                obj=ref.name))
+        return co.reshape(-1, 3).astype(np.float64)
 
     def execute(self, context):
         import numpy as np
@@ -567,8 +669,14 @@ with the encoding basis (see core/normal_utils.py)"""
                 self.report({'WARNING'}, T("ui.main_panel.fsk_warn_no_deform"))
                 return {'CANCELLED'}
 
+            base_co = None
+            if self.base_source == 'OBJECT':
+                base_co = self._reference_base(obj)
+                if base_co is None:
+                    return {'CANCELLED'}
+
             n, fresh, resid = normal_utils.reencode_for_shape(
-                me, co, reset_intent=self.reset_intent)
+                me, co, reset_intent=self.reset_intent, base_co=base_co)
         finally:
             if back_to_edit:
                 bpy.ops.object.mode_set(mode='EDIT')
@@ -578,6 +686,240 @@ with the encoding basis (see core/normal_utils.py)"""
         if fresh:
             self.report({'INFO'}, T("ui.main_panel.fsk_note_captured"))
         return {'FINISHED'}
+
+
+class MHW_OT_TransferNormals(bpy.types.Operator):
+    """Give the selected meshes the active mesh's normals, matched by position
+and re-encoded against each one's own shape-keyed geometry
+(see core/normal_utils.py)"""
+    bl_idname = "mhw.transfer_normals"
+    bl_label = "Transfer Normals"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    reference: bpy.props.EnumProperty(name="Reference Mesh", items=_mesh_object_items)
+    max_distance: bpy.props.FloatProperty(
+        name="Match Distance",
+        default=0.001, min=0.0, soft_max=0.05, precision=5, step=0.01,
+        description="A corner with no source corner this close keeps the normal it has",
+    )
+
+    @classmethod
+    def poll(cls, context):
+        return any(o.type == 'MESH' for o in context.selected_objects)
+
+    @classmethod
+    def description(cls, context, properties):
+        return T("ui.main_panel.tn_tip")
+
+    def invoke(self, context, event):
+        # The active object is the likely reference, so open on it rather than on
+        # whichever mesh happens to come first
+        obj = context.active_object
+        if obj is not None and obj.type == 'MESH':
+            self.reference = obj.name
+        return context.window_manager.invoke_props_dialog(self, width=340)
+
+    def draw(self, context):
+        layout = self.layout
+        layout.prop(self, "reference", text=T("ui.main_panel.tn_field_reference"))
+        layout.prop(self, "max_distance", text=T("ui.main_panel.tn_field_distance"))
+
+    @staticmethod
+    def _rest_co(obj):
+        """The mesh's rest positions -- the frame the two meshes have in common,
+        whatever their keys are currently mixed to."""
+        import numpy as np
+
+        me = obj.data
+        src = (me.shape_keys.reference_key.data if me.shape_keys is not None
+               else me.vertices)
+        co = np.empty(len(me.vertices) * 3, np.float32)
+        src.foreach_get("co", co)
+        return co.reshape(-1, 3).astype(np.float64)
+
+    @staticmethod
+    def _evaluated_world_normals(context, obj, normal_utils):
+        """What the object actually shades with, in world space.  Read off the
+        evaluated mesh rather than decoded by hand, so shape keys and the
+        modifier stack are both already in it."""
+        import numpy as np
+
+        dg = context.evaluated_depsgraph_get()
+        ev = obj.evaluated_get(dg)
+        me = ev.to_mesh()
+        try:
+            if len(me.loops) != len(obj.data.loops):
+                return None
+            n = np.empty(len(me.loops) * 3, np.float32)
+            me.corner_normals.foreach_get("vector", n)
+            n = n.reshape(-1, 3).astype(np.float64)
+        finally:
+            ev.to_mesh_clear()
+        m = np.array(obj.matrix_world.to_3x3(), np.float64)
+        return normal_utils.normalize(n @ np.linalg.inv(m))
+
+    def execute(self, context):
+        import numpy as np
+        from . import normal_utils, shapekey_utils
+
+        src = bpy.data.objects.get(self.reference) if self.reference != 'NONE' else None
+        if src is None or src.type != 'MESH':
+            self.report({'ERROR'}, T("ui.main_panel.tn_err_no_reference"))
+            return {'CANCELLED'}
+        targets = [o for o in context.selected_objects
+                   if o.type == 'MESH' and o is not src and o.data is not src.data]
+        if not targets:
+            self.report({'ERROR'}, T("ui.main_panel.tn_err_no_targets"))
+            return {'CANCELLED'}
+
+        back_to_edit = context.mode == 'EDIT_MESH'
+        if back_to_edit:
+            bpy.ops.object.mode_set(mode='OBJECT')
+        try:
+            field = self._evaluated_world_normals(context, src, normal_utils)
+            if field is None:
+                self.report({'ERROR'}, T("ui.main_panel.tn_err_source_topology_changed"))
+                return {'CANCELLED'}
+            src_anchors = normal_utils.corner_anchors(
+                src.data, src.matrix_world, self._rest_co(src))
+
+            done = 0
+            skipped_total = 0
+            worst_resid = 0.0
+            worst_dist = 0.0
+            for obj in targets:
+                me = obj.data
+                anchors = normal_utils.corner_anchors(
+                    me, obj.matrix_world, self._rest_co(obj))
+                idx, dist = normal_utils.match_corners(src_anchors, anchors)
+                worst_dist = max(worst_dist, float(dist.max()) if len(dist) else 0.0)
+
+                m3 = np.array(obj.matrix_world.to_3x3(), np.float64)
+                target = normal_utils.normalize(field[idx] @ m3)
+                # Too far to be the same corner: leave that corner alone rather
+                # than drag in a normal from somewhere else on the face
+                far = dist > self.max_distance
+                if far.any():
+                    target[far] = normal_utils.corner_normals(me)[far]
+                    skipped_total += int(far.sum())
+
+                if me.shape_keys is not None and len(me.shape_keys.key_blocks) > 1:
+                    deformed = shapekey_utils.shape_key_mix(obj)
+                else:
+                    deformed = None
+                if deformed is None:
+                    # Nothing to survive: the field can go in as-is
+                    me.normals_split_custom_set(target.tolist())
+                    normal_utils.clear_intent(me)
+                    me.update()
+                else:
+                    # Store it as the target field, then encode so the deformed
+                    # geometry is what decodes to it
+                    normal_utils._intent_field(me, target)
+                    _n, _fresh, resid = normal_utils.reencode_for_shape(me, deformed)
+                    worst_resid = max(worst_resid, float(resid.max()) if len(resid) else 0.0)
+                done += 1
+
+            bpy.ops.ed.undo_push(message=MHW_OT_TransferNormals.bl_label)
+            self.report({'INFO'}, T("ui.main_panel.tn_done").format(
+                objs=done, src=src.name, dist=f"{worst_dist:.6f}",
+                resid=f"{worst_resid:.3f}"))
+            if skipped_total:
+                self.report({'WARNING'}, T("ui.main_panel.tn_warn_unmatched").format(
+                    n=skipped_total))
+            return {'FINISHED'}
+        finally:
+            if back_to_edit:
+                bpy.ops.object.mode_set(mode='EDIT')
+
+
+class MHW_OT_SafeApplyTransform(bpy.types.Operator):
+    """Bake the object's rotation and scale into the mesh while keeping the
+custom split normals pointing where they were (see core/normal_utils.py)"""
+    bl_idname = "mhw.safe_apply_transform"
+    bl_label = "Safe Apply Base Transform"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    apply_rotation: bpy.props.BoolProperty(name="Rotation", default=True)
+    apply_scale: bpy.props.BoolProperty(name="Scale", default=True)
+    apply_location: bpy.props.BoolProperty(name="Location", default=False)
+
+    @classmethod
+    def poll(cls, context):
+        obj = context.active_object
+        return obj is not None and obj.type == 'MESH'
+
+    @classmethod
+    def description(cls, context, properties):
+        return T("ui.main_panel.sat_tip")
+
+    def invoke(self, context, event):
+        return context.window_manager.invoke_props_dialog(self, width=320)
+
+    def draw(self, context):
+        col = self.layout.column(align=True)
+        col.prop(self, "apply_rotation", text=T("ui.main_panel.sat_field_rotation"))
+        col.prop(self, "apply_scale", text=T("ui.main_panel.sat_field_scale"))
+        col.prop(self, "apply_location", text=T("ui.main_panel.sat_field_location"))
+
+    def execute(self, context):
+        import numpy as np
+        from . import normal_utils
+
+        if not (self.apply_rotation or self.apply_scale or self.apply_location):
+            self.report({'ERROR'}, T("ui.main_panel.sat_err_nothing"))
+            return {'CANCELLED'}
+
+        back_to_edit = context.mode == 'EDIT_MESH'
+        if back_to_edit:
+            bpy.ops.object.mode_set(mode='OBJECT')
+        try:
+            objects = [o for o in context.selected_objects if o.type == 'MESH']
+            active = context.active_object
+            if active is not None and active.type == 'MESH' and active not in objects:
+                objects.append(active)
+            # transform_apply refuses multi-user data, and it acts on the whole
+            # selection, so the ones it would refuse have to leave the selection
+            # rather than just be skipped in the loop below
+            shared = [o for o in objects if o.data.users > 1]
+            for o in shared:
+                o.select_set(False)
+            objects = [o for o in objects if o.data.users == 1]
+            if not objects:
+                self.report({'ERROR'}, T("ui.main_panel.sat_err_no_meshes"))
+                return {'CANCELLED'}
+
+            # The normals wait out the bake inside the mesh, so Blender's own
+            # corner bookkeeping carries them across the winding flip
+            stashed = [o for o in objects if normal_utils.stash_normals(o.data, o.matrix_world)]
+
+            bpy.ops.object.transform_apply(
+                location=self.apply_location, rotation=self.apply_rotation,
+                scale=self.apply_scale)
+
+            worst = 0.0
+            for obj in stashed:
+                resid = normal_utils.unstash_normals(obj.data, obj.matrix_world)
+                if resid is None:
+                    self.report({'ERROR'}, T("ui.main_panel.sat_err_lost_carry").format(
+                        obj=obj.name))
+                    return {'CANCELLED'}
+                worst = max(worst, float(np.max(resid)) if len(resid) else 0.0)
+
+            # normals_split_custom_set writes through bpy.data, which the undo
+            # stack does not see on its own; without this the operator's own
+            # 'UNDO' would roll back the transform and leave the normals rewritten
+            bpy.ops.ed.undo_push(message=MHW_OT_SafeApplyTransform.bl_label)
+
+            self.report({'INFO'}, T("ui.main_panel.sat_done").format(
+                objs=len(objects), kept=len(stashed), max=f"{worst:.3f}"))
+            if shared:
+                self.report({'WARNING'}, T("ui.main_panel.sat_warn_shared").format(
+                    n=len(shared)))
+            return {'FINISHED'}
+        finally:
+            if back_to_edit:
+                bpy.ops.object.mode_set(mode='EDIT')
 
 
 class MHW_OT_ApplyModifiersKeepShapeKeys(bpy.types.Operator):
@@ -799,6 +1141,8 @@ classes = [
     MHW_OT_CylindricalFaceNormals,
     MHW_OT_ResetFaceNormals,
     MHW_OT_FixShapeKeyNormals,
+    MHW_OT_SafeApplyTransform,
+    MHW_OT_TransferNormals,
     MHW_OT_ApplyModifiersKeepShapeKeys,
     MHW_OT_SeparateByMaterials,
     MHW_OT_CreateOutline,

@@ -6,6 +6,7 @@ import shutil
 import time
 
 from ...core.i18n import T
+from ...core.color_grade import color_grade_items, DEFAULT_MODE_INDEX
 from ...core.mdf_generator_base import (
     get_shader_source_items, shader_source_update,
     MdfGenRefreshBase,
@@ -103,6 +104,8 @@ def _mhwi_find_meshes_by_material(mod3_col, material_name):
 
 
 # ── PropertyGroups ─────────────────────────────────────────────────────────────
+
+
 
 class MhwiGenMaterialEntry(bpy.types.PropertyGroup):
     blender_material: bpy.props.StringProperty()
@@ -211,6 +214,16 @@ class MhwiGenSettings(bpy.types.PropertyGroup):
                     "removing the need to manually invert the G channel in the shader",
         default=False,
     )
+    # 色彩类贴图的整体色调处理。默认 NONE：把 sRGB 源图原样搬进 .tex 在色彩学上
+    # **是正确的**（实测原版 md_wood000_BML.tex 就是 BC1UNORMSRGB，和我们标的一致），
+    # 这个选项补的是源游戏与本作之间的美术口径差，属于调色不是修正，所以必须由人选。
+    # 三档的确切定义见 core/color_grade.py。
+    global_color_grade: bpy.props.EnumProperty(
+        name="Colour Grade (Global)",
+        description="Tone adjustment applied to every colour (sRGB) texture before encoding",
+        items=lambda self, ctx: color_grade_items(),
+        default=DEFAULT_MODE_INDEX,
+    )
     global_disable_mipmaps: bpy.props.BoolProperty(
         name="Disable MipMaps (Global)",
         description="Override every material's own Generate MipMaps checkbox and skip mipmap generation entirely",
@@ -255,6 +268,7 @@ class MHWI_OT_Mrl3GenProcess(bpy.types.Operator):
 
     def execute(self, context):
         _t_total = time.time()
+        self._unresolved_channels = []
         settings = context.scene.mhwi_mrl3_generator
 
         natives_root = context.scene.get("mhwi_natives_root", "")
@@ -326,6 +340,12 @@ class MHWI_OT_Mrl3GenProcess(bpy.types.Operator):
             print(f"[{self._log_tag}] Mesh separate/rename warning: {e}")
 
         print(f"[{self._log_tag}] ★ 总耗时: {time.time() - _t_total:.2f}s ★", flush=True)
+        if self._unresolved_channels:
+            _n = sum(len(c) for _m, c in self._unresolved_channels)
+            _detail = "; ".join("%s: %s" % (m, ", ".join(c))
+                                for m, c in self._unresolved_channels[:3])
+            self.report({'WARNING'}, T("core.mdf_generator_base.unresolved_channels")
+                        .format(n=_n, names=_detail))
         if fail_count:
             self.report({'WARNING'}, T("mhwi.mrl3_generator.process_done_with_fail").format(
                 success=export_count, fail=fail_count))
@@ -400,6 +420,14 @@ class MHWI_OT_Mrl3GenProcess(bpy.types.Operator):
         pbr_paths  = _get_pbr_paths(
             mat, strategies, temp_dir, bake_size, context, mesh_obj,
             mesh_objects=mesh_objects)
+
+        # 解析不出源的通道要报出来 —— 见 core/mdf_generator_base 里同样的一段。
+        _no_source = sorted(pt for pt, sv in strategies.items()
+                            if sv and sv[0] == 'BAKE' and not pbr_paths.get(pt))
+        if _no_source:
+            self._unresolved_channels.append((mat_name, _no_source))
+            print(f"[{self._log_tag}]   !! no source for {mat_name}: "
+                  f"{', '.join(_no_source)} -> these fall back to a null texture")
         # print(f"[{self._log_tag}]   解析PBR路径 (含烘培): {time.time() - _t:.2f}s", flush=True)
 
         # A shader with AO plugged in is the user already saying "use this AO",
@@ -433,8 +461,14 @@ class MHWI_OT_Mrl3GenProcess(bpy.types.Operator):
 
         pbr_channels = {}
         for pbr_type, strat_val in strategies.items():
-            if strat_val[0] == 'DIRECT' and len(strat_val) > 2 and strat_val[2] != 'R':
+            if strat_val[0] != 'DIRECT':
+                continue
+            if len(strat_val) > 2 and strat_val[2] != 'R':
                 pbr_channels[pbr_type] = strat_val[2]
+            # 1-x 那种接法（光泽度当粗糙度用）在这里变成一个取反标志，
+            # 合成时由 pbr_inv 执行，不必烘培。
+            if len(strat_val) > 3 and strat_val[3]:
+                pbr_inv[pbr_type] = True
 
         tex_name = _slugify(_strip_blender_suffix(mat_name))
 
@@ -471,6 +505,9 @@ class MHWI_OT_Mrl3GenProcess(bpy.types.Operator):
                          or getattr(settings, 'global_use_toon', False))
         effective_mipmaps = (mat_entry.generate_mipmaps
                             and not getattr(settings, 'global_disable_mipmaps', False))
+        # 色调处理是全局档，没有逐材质开关 —— 它补的是整套素材的口径差，
+        # 一张一张设只会让同一个模型的各部件对不上。
+        grade_mode = getattr(settings, 'global_color_grade', 'NONE')
         emi_zero       = _emissive_strength_is_zero(mat)
         emissive_slots = {st for st in slot_types if _is_emissive_slot(st)}
         albedo_slots   = {st for st in slot_types if _is_albedo_slot(st, MHWI_SLOT_CHANNEL_MAPS)}
@@ -534,6 +571,7 @@ class MHWI_OT_Mrl3GenProcess(bpy.types.Operator):
                     generate_mipmaps=effective_mipmaps,
                     image_to_dds=ImageListToDDS,
                     dds_to_tex=ConvertDDSToTex,
+                    grade_mode=grade_mode,
                 )
 
                 binding = _mhwi_tex_binding(base_path, tex_name, slot_type)
@@ -599,6 +637,7 @@ class MHWI_OT_Mrl3GenProcess(bpy.types.Operator):
                             generate_mipmaps=effective_mipmaps,
                             image_to_dds=ImageListToDDS,
                             dds_to_tex=ConvertDDSToTex,
+                            grade_mode=grade_mode,
                         )
 
                         binding = _mhwi_tex_binding(base_path, tex_name, slot_type)
@@ -629,6 +668,7 @@ class MHWI_OT_Mrl3GenProcess(bpy.types.Operator):
                     generate_mipmaps=effective_mipmaps,
                     image_to_dds=ImageListToDDS,
                     dds_to_tex=ConvertDDSToTex,
+                    grade_mode=grade_mode,
                 )
 
                 binding = _mhwi_tex_binding(base_path, tex_name, slot_type)
@@ -672,17 +712,15 @@ class MHWI_OT_Mrl3GenProcess(bpy.types.Operator):
                 # RGB white + alpha black (fully transparent); must use alpha=True
                 # so the PNG is saved as RGBA rather than RGB-only
                 _snow_img_name = '__gen_solid_snow_Col_CMM'
-                if _snow_img_name in bpy.data.images:
-                    bpy.data.images.remove(bpy.data.images[_snow_img_name])
-                _snow_img = bpy.data.images.new(
-                    _snow_img_name, width=256, height=256, alpha=True)
-                _snow_img.pixels[:] = [1.0, 1.0, 1.0, 0.0] * (256 * 256)
-                snow_png = os.path.join(temp_dir, '_solid_snow_Col_CMM.png')
-                _snow_img.filepath_raw = snow_png
-                _snow_img.file_format  = 'PNG'
-                _snow_img.save()
-                bpy.data.images.remove(_snow_img)
-                snow_dds = os.path.join(temp_dir, '_solid_snow_Col_CMM.dds')
+                # Not via Image.save(): it rewrites the buffer through an
+                # sRGB->linear pass, so the bytes on disk are not the numbers
+                # assigned here (see _write_exact_rgba in core/mdf_generator_base).
+                # White/0 happen to be the two values that survive it, but there
+                # is no reason to keep the one call that only works by accident.
+                snow_png = _generate_solid_texture_path(
+                    (1.0, 1.0, 1.0, 0.0), temp_dir, 'snow_Col_CMM', size=256)
+                snow_dds = os.path.join(
+                    temp_dir, os.path.splitext(os.path.basename(snow_png))[0] + '.dds')
                 ImageListToDDS([(snow_png, 'BC7_UNORM_SRGB')], temp_dir,
                                effective_mipmaps)
                 if os.path.isfile(snow_dds):

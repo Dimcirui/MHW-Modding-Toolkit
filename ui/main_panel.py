@@ -135,6 +135,24 @@ class MHW_PT_SuiteSettings(bpy.types.PropertyGroup):
         default=False,
     )
 
+    # 辅助骨槽位。默认**开着忽略**，因为它决定的是老用户按同一个按钮会得到什么：
+    # 关掉时扭转骨/掌骨这些各占一个标准键，会被改名保留；勾上时它们折回父段的 aux，
+    # 也就是并进主骨然后删掉 —— 与加槽位之前完全一致。改默认值等于替所有人改结果。
+    ignore_aux_bones: bpy.props.BoolProperty(
+        name="Ignore Auxiliary Bones",
+        description="Merge twist / palm / elbow / knee / instep bones into their parent bone instead of giving them their own standard slots",
+        default=True,
+    )
+
+    # 标准化前先把形变权重归一化。默认开，理由是它**不改变外观**（Blender 的骨架形变
+    # 与 RE/mod3 的导出器都先除以权重总和），只把隐患拆掉；而忘记做的代价很高——
+    # 在总和跑偏的顶点上刷过一笔之后，Auto Normalize 会把幽灵残留放大成可见的错误影响。
+    normalize_weights_first: bpy.props.BoolProperty(
+        name="Normalize Weights First",
+        description="Normalize bone-deform vertex weights to 1 before standardising",
+        default=True,
+    )
+
     # Preset selection (X/Y) - used by the standard converter
     import_preset_enum: bpy.props.EnumProperty(
         name="Source Preset (X)",
@@ -490,8 +508,13 @@ class MHW_PT_MainPanel(bpy.types.Panel):
             row = col.row(align=True)
             row.operator("mhw.cylindrical_face_normals", text=T("ui.main_panel.btn_cylindrical_face_normals"), icon='NORMALS_FACE')
             row.operator("mhw.reset_face_normals", text=T("ui.main_panel.btn_reset_face_normals"), icon='FILE_REFRESH')
-            col.operator("mhw.fix_shape_key_normals",
+            row = col.row(align=True)
+            row.operator("mhw.fix_shape_key_normals",
                          text=T("ui.main_panel.btn_fix_shape_key_normals"), icon='MOD_NORMALEDIT')
+            row.operator("mhw.transfer_normals",
+                         text=T("ui.main_panel.btn_transfer_normals"), icon='MOD_DATA_TRANSFER')
+            col.operator("mhw.safe_apply_transform",
+                         text=T("ui.main_panel.btn_safe_apply_transform"), icon='ORIENTATION_LOCAL')
             col.operator("mhw.apply_modifiers_keep_shape_keys",
                          text=T("ui.main_panel.btn_apply_mods_keep_sk"), icon='MODIFIER')
             col.operator("mhw.separate_by_materials",
@@ -519,6 +542,10 @@ class MHW_PT_MainPanel(bpy.types.Panel):
         if settings.show_std_converter:
             col = main_box.column(align=True)
             col.prop(settings, "same_kind_align", text=T("ui.main_panel.same_kind_align_label"))
+            if not settings.same_kind_align:
+                # 同种类对齐按骨名逐一匹配，辅助骨本来就跟着走，这个开关对它无意义。
+                col.prop(settings, "ignore_aux_bones",
+                         text=T("ui.main_panel.ignore_aux_bones"))
             col.separator()
 
             # Same-kind armatures match by bone name, so the preset pipeline and
@@ -542,6 +569,14 @@ class MHW_PT_MainPanel(bpy.types.Panel):
                 op = row.operator("modder.auto_detect_preset", text="", icon='VIEWZOOM')
                 op.attr_name = 'target_preset_enum'
                 op.is_import_x = False
+
+                col.separator()
+
+                row = col.row(align=True)
+                row.prop(settings, "normalize_weights_first",
+                         text=T("ui.main_panel.normalize_weights_first"))
+                row.operator("modder.normalize_deform_weights", text="",
+                             icon='MOD_VERTEX_WEIGHT')
 
                 col.separator()
 

@@ -51,6 +51,8 @@ from .tex_file import read_tex_size
 from .mdf_port_ops import mdf_material_collections, _draw_mod_root_row
 from .mesh_port_ops import mesh_collections
 
+from . import weight_utils
+
 _K = "core.pre_export_check_ops."
 
 #: Same geometry MHWME's error window uses -- wide enough that a full texture
@@ -304,6 +306,107 @@ def _check_tex_sizes(found, natives_root, tex_version):
     return entries
 
 
+def _check_transforms(meshes):
+    """``[entry]`` for object transforms the exporter cannot bake safely.
+
+    Only the sign of the determinant matters -- see ``classify_transform``.
+    Meshes with no authored split normals are still reported when mirrored,
+    because a negative determinant also leaves the winding facing inward; they
+    just lose less.
+    """
+    mirrored = []    # (obj, has custom normals)
+    degenerate = []
+    for obj in meshes:
+        verdict = pc.classify_transform(obj.matrix_world.determinant())
+        if verdict == pc.XFORM_MIRRORED:
+            mirrored.append((obj, obj.data.has_custom_normals))
+        elif verdict == pc.XFORM_DEGENERATE:
+            degenerate.append(obj)
+
+    entries = []
+    if mirrored:
+        entries.append({
+            'code': 'xform_mirrored',
+            'label': T(_K + "cat_xform_mirrored"),
+            'count': len(mirrored),
+            'detail': T(_K + "desc_xform_mirrored") + "\n\n" + "\n".join(
+                f"{o.name}  det={o.matrix_world.determinant():.4f}"
+                + ("" if cn else "  " + T(_K + "note_no_custom_normals"))
+                for o, cn in mirrored),
+            'objects': [o.name for o, _cn in mirrored],
+        })
+    if degenerate:
+        entries.append({
+            'code': 'xform_degenerate',
+            'label': T(_K + "cat_xform_degenerate"),
+            'count': len(degenerate),
+            'detail': T(_K + "desc_xform_degenerate") + "\n\n" + "\n".join(
+                o.name for o in degenerate),
+            'objects': [o.name for o in degenerate],
+        })
+    return entries
+
+
+def _check_weight_sums(meshes):
+    """``[entry]`` 权重总和不为 1 的顶点。
+
+    只报不改：这里是导出前的最后一道网，真正该动手的时机是导入之后、任何刷权重之前
+    （modder.normalize_deform_weights，或标准化流程里的"先归一化权重"勾选项）。
+
+    到了导出这一步其实已经不致命——RE Mesh Editor 与 mod3 的写出都是先
+    ``/ weightSums`` 再量化到 255 / 1023。真正致命的是**完全没有形变权重**的顶点：
+    两个导出器都把 ``weightSums == 0`` 的行写成全 0，那些顶点在游戏里会留在原点。
+    所以两者分成两条报，严重程度不同。
+    """
+    off, unweighted = [], []
+    for obj in meshes:
+        arm = obj.find_armature()
+        if arm is None:
+            continue
+        idx = weight_utils.deform_group_indices(obj, arm)
+        if not idx:
+            continue
+        n_off = n_zero = 0
+        worst = 1.0
+        for v in obj.data.vertices:
+            rows = [g.weight for g in v.groups if g.group in idx]
+            if not rows:
+                continue
+            total = sum(rows)
+            verdict = weight_utils.classify_weight_sum(total)
+            if verdict == "unweighted":
+                n_zero += 1
+            elif verdict != "ok":
+                n_off += 1
+                if abs(total - 1.0) > abs(worst - 1.0):
+                    worst = total
+        if n_off:
+            off.append((obj, n_off, worst))
+        if n_zero:
+            unweighted.append((obj, n_zero))
+
+    entries = []
+    if off:
+        entries.append({
+            'code': 'weight_not_normalized',
+            'label': T(_K + "cat_weight_not_normalized"),
+            'count': sum(n for _o, n, _w in off),
+            'detail': T(_K + "desc_weight_not_normalized") + "\n\n" + "\n".join(
+                f"{o.name}  {n} vert(s), worst sum {w:.4f}" for o, n, w in off),
+            'objects': [o.name for o, _n, _w in off],
+        })
+    if unweighted:
+        entries.append({
+            'code': 'weight_unweighted',
+            'label': T(_K + "cat_weight_unweighted"),
+            'count': sum(n for _o, n in unweighted),
+            'detail': T(_K + "desc_weight_unweighted") + "\n\n" + "\n".join(
+                f"{o.name}  {n} vert(s)" for o, n in unweighted),
+            'objects': [o.name for o, _n in unweighted],
+        })
+    return entries
+
+
 def _check_names_and_matching(materials, meshes):
     """``[entry]`` for everything that is about names: matching in both
     directions, legality on both sides, duplicates, and multi-material meshes."""
@@ -405,6 +508,8 @@ def run_checks(context, game_code, mdf_col, mesh_col, natives_root):
     if mesh_col is None:
         skipped.append(T(_K + "skip_match_no_mesh"))
     entries += _check_names_and_matching(materials, meshes)
+    entries += _check_transforms(meshes)
+    entries += _check_weight_sums(meshes)
     return entries, skipped
 
 

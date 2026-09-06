@@ -10,6 +10,17 @@ STRINGS = {
     # ── MHW_PT_SuiteSettings property draw-site label overrides ────────────────
     # (property name= stays a short English fallback; these T() keys are the
     # bilingual label shown at the actual layout.prop() call site)
+    "ui.main_panel.normalize_weights_first":      {"EN": "Normalize Weights First",
+                                                    "ZH": "先归一化权重"},
+    "ui.personal_tools.blurb": {
+        "EN": "Author's own tools. Hide again in Addon Preferences.",
+        "ZH": "作者自用工具，可在插件偏好设置里收起"},
+    "ui.personal_tools.endfield_header": {
+        "EN": "Endfield", "ZH": "终末地"},
+    "ui.personal_tools.to_mhws": {"EN": "to MHWilds", "ZH": "转荒野"},
+    "ui.personal_tools.to_mhwi": {"EN": "to MHWorld", "ZH": "转世界"},
+    "ui.main_panel.ignore_aux_bones":          {"EN": "Ignore Auxiliary Bones",
+                                                    "ZH": "忽略辅助骨"},
     "ui.main_panel.import_preset_label":       {"EN": "Source Preset (X)", "ZH": "来源预设 (X)"},
     "ui.main_panel.target_preset_label":       {"EN": "Target Game (Y)",   "ZH": "目标游戏 (Y)"},
     "ui.main_panel.show_mapping_details_label":{"EN": "Show Mapping Details", "ZH": "显示映射细节"},
@@ -339,7 +350,80 @@ STRINGS = {
     "ui.main_panel.fsk_tip": {
         "EN": "Re-encode the custom normals against the shape-keyed geometry. Blender stores a custom normal relative to a basis derived from the surrounding geometry, so dialling in shape keys leaves the stored bytes untouched but swings the direction they decode to — a few hundred corners on a face can end up tens of degrees out, which is the blotching around the eyes and mouth. This restores the authored directions without re-baking them, so a stylised field is kept exactly as it is",
         "ZH": "按形态键变形后的几何重新编码自定义法向。Blender 存的是法向在「由周围几何推出的基底」里的编码，所以调形态键时存的字节一个没变，解码出来的方向却歪了 —— 一张脸上会有几百个角点偏出几十度，那就是眼周和嘴部糊掉的斑块。此操作只恢复原本的方向，不重算，所以风格化的法向场分毫不动"},
+    # ── MHW_OT_TransferNormals ───────────────────────────────────────────────────
+    "ui.main_panel.btn_transfer_normals":         {"EN": "Transfer Normals", "ZH": "转移法向"},
+    "ui.main_panel.tn_tip": {
+        "EN": "Give the selected meshes a reference mesh's normals. Corners are matched by rest position, not by index: two exports of the same head can carry identical counts in a different vertex and face order, in which case anything index-based silently lines the wrong corners up. The field is read off the reference mesh as it is actually shaded, so its shape keys and modifiers are already in it, and each target then gets it re-encoded against its own shape-keyed geometry. Use this when several expression meshes share one head and should all shade the same way",
+        "ZH": "把参考网格的法向给选中的网格。角点是按静止位置匹配的，不是按索引：同一颗头的两次导出可以数量完全相同而顶点、面的顺序不同，这时任何按索引的做法都会静默地把错误的角点对到一起。法向场是按参考网格实际着色的样子读的，所以它的形态键和修改器都已经算在里面；每个目标再按自己的形态键几何重新编码。适用于多个表情网格共用一颗头、应当着色一致的情况"},
+    "ui.main_panel.tn_field_reference":           {"EN": "Reference Mesh", "ZH": "参考网格"},
+    "ui.main_panel.tn_field_distance":            {"EN": "Match Distance", "ZH": "匹配距离"},
+    "ui.main_panel.pick_no_mesh":                 {"EN": "No mesh in the file", "ZH": "文件里没有网格"},
+    "ui.main_panel.tn_err_no_reference": {
+        "EN": "Pick the mesh to take the normals from",
+        "ZH": "请选择要从哪个网格取法向"},
+    "ui.main_panel.tn_err_no_targets": {
+        "EN": "Select the meshes that should receive the normals. The reference itself does not count",
+        "ZH": "请选中要接收法向的网格。参考网格本身不算"},
+    "ui.main_panel.tn_err_source_topology_changed": {
+        "EN": "A modifier on the source changes its topology, so its shaded normals cannot be lined up with its own corners. Disable that modifier and retry",
+        "ZH": "来源网格上有改变拓扑的修改器，它着色出来的法向无法与自身角点一一对应。请先关掉该修改器再试"},
+    "ui.main_panel.tn_done": {
+        "EN": "Transferred from {src} to {objs} mesh(es); furthest match {dist} m, encode residual max {resid} deg",
+        "ZH": "已从 {src} 转移到 {objs} 个网格；最远匹配 {dist} 米，编码残差最大 {resid} 度"},
+    "ui.main_panel.tn_warn_unmatched": {
+        "EN": "{n} corner(s) had no source corner within the match distance and kept the normal they had",
+        "ZH": "有 {n} 个角点在匹配距离内找不到对应的来源角点，保留了原有法向"},
+
+    # ── MHW_OT_SafeApplyTransform ────────────────────────────────────────────────
+    "ui.main_panel.btn_safe_apply_transform":     {"EN": "Safe Apply Base Transform", "ZH": "安全应用基础变换"},
+    "ui.main_panel.sat_tip": {
+        "EN": "Bake the object's transform into the mesh without losing the custom split normals. Blender stores a custom normal relative to a basis derived from the surrounding geometry, so baking a mirror -- any negative scale axis -- flips that basis and the same stored bytes decode to a different direction: measured on one face mesh, 76% of corners ended up more than 90 degrees out. RE Mesh's exporter bakes the object transform the same way, which is why a mirrored mesh exports with dead normals no matter what the triangulate option is set to. This captures the normals in world space, bakes the transform, and writes them back matched by (polygon, vertex) rather than by corner index",
+        "ZH": "把物体变换烘进网格，且不丢自定义拆分法向。Blender 存的是法向在「由周围几何推出的基底」里的编码，所以烘入镜像（任何负缩放轴）会翻转这个基底，同一份字节解码出来就是别的方向：实测一张脸，76% 的角点偏出 90 度以上。RE Mesh 导出器用同样的方式烘物体变换，所以镜像过的网格导出后法向必然全废，跟三角化选项开不开无关。此操作先把法向抓到世界空间，烘完变换再按（面、顶点）而非角点索引写回去"},
+    "ui.main_panel.sat_field_rotation":           {"EN": "Rotation", "ZH": "旋转"},
+    "ui.main_panel.sat_field_scale":              {"EN": "Scale", "ZH": "缩放"},
+    "ui.main_panel.sat_field_location":           {"EN": "Location", "ZH": "位置"},
+    "ui.main_panel.sat_err_nothing": {
+        "EN": "Nothing selected to apply",
+        "ZH": "没勾选任何要应用的项"},
+    "ui.main_panel.sat_err_no_meshes": {
+        "EN": "No mesh with single-user data selected. Applying a transform rewrites the mesh, so shared mesh data cannot be baked",
+        "ZH": "没有选中网格数据为单用户的物体。应用变换会重写网格，所以共用的网格数据无法烘入"},
+    "ui.main_panel.sat_err_lost_carry": {
+        "EN": "{obj}: the bake dropped the parked normals, so they could not be written back",
+        "ZH": "{obj}：烘变换把暂存的法向丢掉了，无法写回"},
+    "ui.main_panel.sat_done": {
+        "EN": "Baked {objs} object(s); kept the authored normals on {kept}, residual max {max} deg",
+        "ZH": "烘了 {objs} 个物体，其中 {kept} 个保留了原有法向，残差最大 {max} 度"},
+    "ui.main_panel.sat_warn_shared": {
+        "EN": "{n} object(s) were left out because their mesh data is shared with another object",
+        "ZH": "有 {n} 个物体被跳过，因为它们的网格数据与其他物体共用"},
+
     "ui.main_panel.fsk_field_reset":              {"EN": "Reset Target To Current Normals", "ZH": "重设目标为当前法向"},
+    "ui.main_panel.fsk_base_self":                {"EN": "Own Basis", "ZH": "自身基型"},
+    "ui.main_panel.fsk_base_self_desc": {
+        "EN": "Read the authored directions off this mesh's own base shape, which is what its stored normals already decode against",
+        "ZH": "从本网格自己的基型读出原本的方向——这也是它存的法向当前就在对着解码的那份几何"},
+    "ui.main_panel.fsk_base_object":              {"EN": "Reference Mesh", "ZH": "参考网格"},
+    "ui.main_panel.fsk_base_object_desc": {
+        "EN": "Read them off another mesh's base shape instead. Use this when this mesh's own base has been edited since the normals were authored, so decoding against it no longer gives back what was authored",
+        "ZH": "改从另一个网格的基型读。适用于本网格的基型在法向写入之后被改过，导致按它解码已经拿不回原本的方向"},
+    "ui.main_panel.fsk_field_base_source":        {"EN": "Base Shape", "ZH": "基型来源"},
+    "ui.main_panel.fsk_field_base_object":        {"EN": "Reference Mesh", "ZH": "参考网格"},
+    "ui.main_panel.fsk_err_no_reference": {
+        "EN": "Pick a reference mesh to read the authored directions off",
+        "ZH": "请选一个参考网格，用它的基型读出原本的方向"},
+    "ui.main_panel.fsk_err_reference_is_self": {
+        "EN": "The reference shares this object's mesh data, so it is the same base shape",
+        "ZH": "参考网格与本物体共用同一份网格数据，基型是同一个"},
+    "ui.main_panel.fsk_err_reference_topology": {
+        "EN": "{obj} has a different topology. The base positions are read corner for corner, so the vertex, face and corner counts all have to match",
+        "ZH": "{obj} 的拓扑不同。基型坐标是逐角点对应读的，所以顶点、面、角点数必须全部一致"},
+    "ui.main_panel.fsk_err_reference_order": {
+        "EN": "{obj} has the same counts but a different vertex/face order ({n} corners disagree), so its positions describe other corners than this mesh's. Use Transfer Normals, which matches by position instead",
+        "ZH": "{obj} 数量相同但顶点/面的顺序不同（{n} 个角点对不上），它的坐标描述的是别的角点。请改用「转移法向」，那个是按位置匹配的"},
+    "ui.main_panel.fsk_warn_reference_transform": {
+        "EN": "{obj} has a different rotation or scale. Its base shape is read as-is, so the directions come back in its frame rather than this mesh's",
+        "ZH": "{obj} 的旋转或缩放与本物体不同。它的基型是按原样读取的，所以取回的方向处在它的坐标系里，而不是本网格的"},
     "ui.main_panel.fsk_err_absolute": {
         "EN": "This mesh uses absolute shape keys, whose mixed positions cannot be derived here. Switch to relative keys",
         "ZH": "这个网格用的是绝对形态键，无法在此推出混合后的坐标。请改用相对形态键"},

@@ -71,6 +71,50 @@ STRINGS = {
         "ZH": "将选中骨骼的顶点权重合并到其父骨骼，并删除选中骨骼。\n用于清理功能性根骨（如 hair_root 等无物理模拟的连接器骨骼）"},
 
     # ── Shared error / status fragments ─────────────────────────────────────
+    "core.standard_ops.correctives_merged": {
+        "EN": "{n} pose-driven corrective bone(s) merged into their parents. Rest pose "
+              "and rigid following are unchanged (exactly, not approximately), but the "
+              "corrective motion itself needs the source game's driver data and does "
+              "not transfer",
+        "ZH": "{n} 根姿态驱动修正骨已并入父骨。静止姿态与刚性跟随**完全不变**"
+              "（是恒等，不是近似），但修正运动本身需要源游戏的驱动数据，不会跟过来"},
+    "core.standard_ops.correctives_heavy": {
+        "EN": "{n} of them carry an unusually large share of the weight, so they may "
+              "not be correctives at all despite the name; merging them is still exact, "
+              "but worth a look: {names}",
+        "ZH": "其中 {n} 根的权重占比异常大，可能名字撞上了、实际担着主要形变；"
+              "并入父骨仍然是精确的，但值得看一眼：{names}"},
+    "core.standard_ops.correctives_suspect": {
+        "EN": "{n} bone(s) look like correctives by name but not by structure (they "
+              "have children, an unmapped parent, or too much weight), so they were "
+              "left alone: {names}",
+        "ZH": "{n} 根骨名字像修正骨但结构不像（有子骨、父骨未映射、或权重足迹过大），"
+              "已原样保留，未按修正骨处置：{names}"},
+    "core.standard_ops.normalize_weights_desc": {
+        "EN": "Normalize bone-deform vertex weights to 1 per vertex. Run this before "
+              "any weight painting: a vertex whose weights do not sum to 1 looks fine "
+              "(Blender and the exporters both divide by the sum), but painting on it "
+              "makes Auto Normalize scale the leftovers up, turning invisible residue "
+              "into visible influences",
+        "ZH": "把骨骼形变权重逐顶点归一化到 1。请在任何刷权重动作之前执行："
+              "总和不为 1 的顶点看不出异常（Blender 与导出器都会先除以总和），但一旦"
+              "在上面刷一笔，Auto Normalize 会把残留按比例放大，幽灵权重就从看不见"
+              "变成看得见的错误影响"},
+    "core.standard_ops.normalize_weights_done": {
+        "EN": "Normalized {fixed} of {verts} vertices across {meshes} mesh(es); "
+              "worst sum before was {worst} on {name}",
+        "ZH": "已归一化 {meshes} 个网格中 {verts} 个顶点里的 {fixed} 个；"
+              "归一化前偏差最大的是 {name} 上的 {worst}"},
+    "core.standard_ops.normalize_weights_clean": {
+        "EN": "All {verts} vertices across {meshes} mesh(es) already sum to 1",
+        "ZH": "{meshes} 个网格共 {verts} 个顶点，权重总和本来就是 1"},
+    "core.standard_ops.normalize_weights_unweighted": {
+        "EN": "{n} vertex(es) have no deform weight at all and cannot be normalized "
+              "-- they will stay at rest",
+        "ZH": "另有 {n} 个顶点完全没有形变权重，归一化救不了（0/0），它们会留在原地"},
+    "core.standard_ops.normalize_weights_no_mesh": {
+        "EN": "No mesh is attached to this armature",
+        "ZH": "该骨架下没有网格"},
     "core.standard_ops.preset_load_failed": {"EN": "Preset load failed", "ZH": "预设加载失败"},
     "core.standard_ops.cannot_load_y_preset": {"EN": "Cannot load Y preset", "ZH": "无法加载 Y 预设"},
     "core.standard_ops.cannot_load_x_preset": {"EN": "Cannot load X preset", "ZH": "无法加载 X 预设"},
@@ -132,6 +176,21 @@ STRINGS = {
         "ZH": "标准化完成: 重命名 {rename} 根, 清理 {clean} 根辅助骨"},
     "core.standard_ops.direct_convert_done": {
         "EN": "Done: updated vertex groups in {n} mesh(es)", "ZH": "处理完成: 已更新 {n} 个网格的顶点组"},
+    "core.standard_ops.twist_resampled": {
+        "EN": "{n} twist bone(s) the target cannot name were distributed over the surviving chain by position",
+        "ZH": "{n} 根目标叫不出名字的扭转骨已按位置分配给同段留下的骨骼"},
+    "core.standard_ops.twist_clamped": {
+        "EN": "{n} twist bone(s) fell outside the target chain and were clamped; residual roll: {names}",
+        "ZH": "{n} 根扭转骨落在目标链之外, 已钳到最近端, 残余滚转: {names}"},
+    "core.standard_ops.twist_no_target": {
+        "EN": "{n} segment(s) have no twist bone the target can name; those bones merge into the segment bone as before: {names}",
+        "ZH": "{n} 个骨段在目标里一根扭转骨都叫不出名字, 这些骨仍按旧行为并入段骨: {names}"},
+    "core.standard_ops.aux_no_target": {
+        "EN": "{n} auxiliary slot(s) have no bone in the target preset and keep their standard name: {names}",
+        "ZH": "{n} 个辅助骨槽位在目标预设里没有对应骨骼, 仍保持标准名: {names}"},
+    "core.standard_ops.aux_folded_back": {
+        "EN": "{n} auxiliary slot(s) missing in the target game were merged into their parent bone: {names}",
+        "ZH": "{n} 个辅助骨槽位目标游戏没有, 已并入其父骨段: {names}"},
     "core.standard_ops.snap_done": {
         "EN": "Armature snap complete: {n} bone(s)", "ZH": "骨架对齐完成: {n} 根骨骼"},
     "core.standard_ops.graft_done": {
@@ -367,6 +426,34 @@ STRINGS = {
         "EN": "Keep the existing path unchanged", "ZH": "保持现有路径不变"},
 
     "core.mdf_tex_processor_base.generate_mipmaps_label": {"EN": "Generate MipMaps", "ZH": "生成 MipMaps"},
+    "core.mdf_generator_base.unresolved_channels": {
+        "EN": "{n} PBR channel(s) had no usable source and fell back to a null texture. "
+              "Their node chain is too complex to read and the bake did not run: {names}",
+        "ZH": "{n} 个 PBR 通道找不到可用的源, 已退回空贴图。它们的节点链读不出来, 烘培也没跑: {names}"},
+    "core.color_grade.label": {"EN": "Colour Grade", "ZH": "色彩处理"},
+    "core.color_grade.none": {
+        "EN": "None (pick this if the textures come out too dark)",
+        "ZH": "无 (做出的贴图发黑再选这个)"},
+    "core.color_grade.none_desc": {
+        "EN": "Copy colour textures through unchanged. Colorimetrically the correct "
+              "option -- this game's own albedo textures are sRGB-tagged and sRGB-encoded, "
+              "exactly like a normal source PNG. Pick it when the sRGB option makes the "
+              "result too dark, which means the source was already in the game's range",
+        "ZH": "颜色贴图原样搬运。这是色彩学上正确的一档——本作原版反照率贴图就是 sRGB "
+              "标记 + sRGB 编码, 和普通源图一致。当 sRGB 那一档做出来偏黑时选它, "
+              "那说明源图本来就已经在游戏的口径里了"},
+    "core.color_grade.srgb": {"EN": "sRGB -> Linear", "ZH": "sRGB 处理"},
+    "core.color_grade.srgb_desc": {
+        "EN": "One sRGB-to-linear pass over every colour texture. A power curve: crushes "
+              "midtones and shadows, leaves white untouched (255 stays 255)",
+        "ZH": "对颜色贴图做一次 sRGB→线性。幂曲线: 压中间调和暗部, 白点不动 (255 仍是 255)"},
+    "core.color_grade.exposure": {"EN": "Exposure Down", "ZH": "降曝处理"},
+    "core.color_grade.exposure_desc": {
+        "EN": "Exposure -1.5EV, brightness -30, vibrance +30. A multiply plus an offset: "
+              "pulls the whole range down including white (255 becomes 130). Not the same "
+              "curve as the sRGB option -- max difference 125/255",
+        "ZH": "曝光 -1.5EV + 亮度 -30 + 自然饱和度 +30。乘法加平移: 整条线一起压, 白点也被"
+              "拉下来 (255 变 130)。和 sRGB 档不是同一条曲线, 最大差 125/255"},
     "core.mip_strategy.label": {"EN": "Mipmap Strategy", "ZH": "Mipmap 策略"},
     "core.mip_strategy.fast": {"EN": "Fast", "ZH": "快速"},
     "core.mip_strategy.fast_desc": {
@@ -1180,6 +1267,21 @@ STRINGS = {
         "ZH": "已移植到 {game}，产出 {name}：{renamed} 根重命名，{merged} 根合并，"
               "{inserted} 根新增，{corrected} 根改轴，{reparented} 根改挂父骨，"
               "{synced} 根同步父骨朝向"},
+    "core.mesh_port_ops.twist_split": {
+        "EN": "{n} twist bone(s) had their weights redistributed along the target's "
+              "own twist chain",
+        "ZH": "{n} 根扭转骨的权重已沿目标游戏自己的扭转链重新分配"},
+    "core.mesh_port_ops.twist_clamped": {
+        "EN": "{n} twist bone(s) had no counterpart position in the target chain and "
+              "were clamped to its nearest end; worst residual roll {residual} of the "
+              "driving joint's rotation: {names}",
+        "ZH": "{n} 根扭转骨在目标链上没有对应位置，已钳到最近端；"
+              "最大残余滚转为驱动关节转动量的 {residual}：{names}"},
+    "core.mesh_port_ops.split_unbacked": {
+        "EN": "{n} twist weight target(s) are not built by this port, so their weights "
+              "would drive nothing: {names}",
+        "ZH": "{n} 个扭转权重目标不会被本次移植创建，权重会落到没有骨骼驱动的顶点组上："
+              "{names}"},
     "core.mesh_port_ops.rejected": {
         "EN": "{n} bone(s) kept the source convention (no trustworthy correction): "
               "{names}",
@@ -1673,6 +1775,30 @@ STRINGS = {
         "EN": "Illegal Names", "ZH": "命名不合法"},
     "core.pre_export_check_ops.cat_mesh_multi": {
         "EN": "Multi-material Meshes", "ZH": "多材质网格"},
+    "core.pre_export_check_ops.cat_weight_not_normalized": {
+        "EN": "Weights not normalized", "ZH": "权重未归一化"},
+    "core.pre_export_check_ops.desc_weight_not_normalized": {
+        "EN": "These vertices' bone-deform weights do not sum to 1. Both exporters "
+              "divide by the sum before quantising, so this does not break the export "
+              "-- but it is a hazard while editing: painting on such a vertex makes "
+              "Auto Normalize scale the leftovers up, turning invisible residue into "
+              "visible influences. Fix it with Normalize Deform Weights.",
+        "ZH": "这些顶点的骨骼形变权重总和不为 1。两个导出器都会先除以总和再量化，"
+              "所以导出本身不会坏——但它在编辑期是隐患：在这种顶点上刷一笔，"
+              "Auto Normalize 会把残留按比例放大，幽灵权重就从看不见变成看得见的"
+              "错误影响。用「归一化形变权重」修。"},
+    "core.pre_export_check_ops.cat_weight_unweighted": {
+        "EN": "Vertices with no deform weight", "ZH": "没有形变权重的顶点"},
+    "core.pre_export_check_ops.desc_weight_unweighted": {
+        "EN": "These vertices carry no bone-deform weight at all. Normalizing cannot "
+              "help (0/0), and both exporters write an all-zero weight row for them, "
+              "so in game they stay at the rig origin. They need weights assigned.",
+        "ZH": "这些顶点完全没有骨骼形变权重。归一化救不了（0/0），而两个导出器都会"
+              "为它们写出全零的权重行，进游戏后会留在骨架原点。必须补权重。"},
+    "core.pre_export_check_ops.cat_xform_mirrored": {
+        "EN": "Mirrored Transform (Normals Will Die)", "ZH": "镜像变换（法向会全废）"},
+    "core.pre_export_check_ops.cat_xform_degenerate": {
+        "EN": "Collapsed Transform", "ZH": "变换已塌缩"},
 
     # ── Category detail (the right column) ────────────────────────────────
     "core.pre_export_check_ops.desc_tex_missing": {
@@ -1687,6 +1813,29 @@ STRINGS = {
         "ZH": "全部 {n} 条自定义贴图路径都无法在下面的目录中找到：\n{root}\n"
               "要么是 Mod 根目录选错了位置，要么是贴图还没做好——它们失败的原因完全相同。"
               "去重后的路径，方便自行判断是哪一种："},
+    "core.pre_export_check_ops.desc_xform_mirrored": {
+        "EN": "These objects have a mirrored world transform (a negative determinant -- "
+              "an applied mirror, or an odd number of negative scale axes). RE Mesh "
+              "bakes the object transform into the mesh it writes, and that bake does "
+              "not carry the custom split normals across a mirror: a normal is stored "
+              "relative to a basis derived from the surrounding geometry, and mirroring "
+              "flips the basis. Measured on one face mesh with only the matrix's sign "
+              "changing, 76% of corners came out more than 90 degrees off. The winding "
+              "is not reordered, so triangulating first does not help -- that guards a "
+              "different mechanism. Fix it with Safe Apply Base Transform before exporting.",
+        "ZH": "以下物体的世界变换是镜像的（行列式为负——应用过镜像，或负缩放轴个数为奇数）。"
+              "RE Mesh 会把物体变换烘进导出的网格，而这一步无法让自定义拆分法向跳过镜像："
+              "法向存的是在「由周围几何推出的基底」里的编码，镜像会翻转这个基底。"
+              "实测一张脸，只改矩阵行列式的正负，76% 的角点就偏出 90 度以上。"
+              "绕序并没有被重排，所以先三角化没用——那个选项防的是另一套机制。"
+              "导出前用「安全应用基础变换」修掉。"},
+    "core.pre_export_check_ops.desc_xform_degenerate": {
+        "EN": "These objects have a collapsed world transform -- at least one scale axis "
+              "is zero, so the mesh has no volume to export.",
+        "ZH": "以下物体的世界变换已塌缩——至少有一个缩放轴为零，网格没有体积可导。"},
+    "core.pre_export_check_ops.note_no_custom_normals": {
+        "EN": "(no authored normals -- only the winding is wrong)",
+        "ZH": "（无自定义法向——只有绕序是错的）"},
     "core.pre_export_check_ops.desc_tex_empty": {
         "EN": "These texture slots have no path filled in at all.",
         "ZH": "以下贴图槽位没有填写任何路径。"},

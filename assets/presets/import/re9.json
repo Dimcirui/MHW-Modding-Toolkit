@@ -1,616 +1,722 @@
 {
-  "preset_info": {
-    "name": "生化危机9",
-    "game_code": "RE9",
-    "type": "X_PRESET",
-    "version": "1.0",
-    "description": "This preset is designed for the character models used in Resident Evil Requiem (RE9)",
-    "category": "Capcom RE引擎"
-  },
-  "exclude": [
-   "L_Arm_HandIn_0Offset",
-   "L_Arm_HandOut_0Offset",
-   "L_Arm_Hand_PushBack",
-   "L_Arm_Hand_PushBackOffset",
-   "L_Arm_Hand_PushFront",
-   "L_Arm_Hand_PushFrontOffset",
-   "L_Arm_Hand_SR",
-   "L_Arm_Hand_SROffset",
-   "L_Biceps",
-   "L_BicepsOffset",
-   "L_Brachioradialis",
-   "L_BrachioradialisOffset",
-   "L_ElbowHalf",
-   "L_ElbowHalfOffset",
-   "L_Elbow_Down",
-   "L_Elbow_DownOffset",
-   "L_Elbow_Up",
-   "L_Elbow_UpOffset",
-   "L_Leg_Lower_Twist_0",
-   "L_Leg_Lower_Twist_1",
-   "L_Leg_Lower_Twist_2",
-   "L_Leg_Lower_Twist_3",
-   "L_Leg_Upper_Twist_0",
-   "L_Leg_Upper_Twist_1",
-   "L_Leg_Upper_Twist_2",
-   "L_Leg_Upper_Twist_3",
-   "L_LowerArm_S",
-   "L_LowerArm_SOffset",
-   "L_Muscles_Shoulder_Sec",
-   "L_Muscles_Shoulder_SecOffset",
-   "L_UpperArm_S",
-   "L_UpperArm_SOffset",
-   "L_triceps",
-   "L_tricepsOffset",
-   "R_Arm_Gloves_pushUp",
-   "R_Arm_Gloves_pushUpOffset",
-   "R_Arm_HandIn_0Offset",
-   "R_Arm_HandOut_0Offset",
-   "R_Arm_Hand_PushBack",
-   "R_Arm_Hand_PushBackOffset",
-   "R_Arm_Hand_PushFront",
-   "R_Arm_Hand_PushFrontOffset",
-   "R_Arm_Hand_SR",
-   "R_Arm_Hand_SROffset",
-   "R_Biceps",
-   "R_BicepsOffset",
-   "R_Brachioradialis",
-   "R_BrachioradialisOffset",
-   "R_ElbowHalf",
-   "R_ElbowHalfOffset",
-   "R_Elbow_Down",
-   "R_Elbow_DownOffset",
-   "R_Elbow_Up",
-   "R_Elbow_UpOffset",
-   "R_Leg_Lower_Twist_0",
-   "R_Leg_Lower_Twist_1",
-   "R_Leg_Lower_Twist_2",
-   "R_Leg_Lower_Twist_3",
-   "R_Leg_Upper_Twist_0",
-   "R_Leg_Upper_Twist_1",
-   "R_Leg_Upper_Twist_2",
-   "R_Leg_Upper_Twist_3",
-   "R_LowerArm_S",
-   "R_LowerArm_SOffset",
-   "R_Muscles_Shoulder_Sec",
-   "R_Muscles_Shoulder_SecOffset",
-   "R_UpperArm_S",
-   "R_UpperArm_SOffset",
-   "R_triceps",
-   "R_tricepsOffset"
-  ],
-  "mappings": {
-    "pelvis": {
-      "main": [
-        "Hip"
-      ],
-      "aux": [
-        "Spine_0"
-      ]
+    "preset_info": {
+        "name": "生化危机9",
+        "game_code": "RE9",
+        "type": "X_PRESET",
+        "version": "1.0",
+        "description": "This preset is designed for the character models used in Resident Evil Requiem (RE9)",
+        "category": "Capcom RE引擎"
     },
-    "spine_01": {
-      "main": [
-        "Spine_1"
-      ],
-      "aux": []
-    },
-    "spine_02": {
-      "main": [
-        "Spine_2"
-      ],
-      "aux": []
-    },
-    "neck": {
-      "main": [
-        "Neck_1"
-      ],
-      "aux": [
-        "Neck_0"
-      ]
-    },
-    "head": {
-      "main": [
-        "Head_0"
-      ],
-      "aux": []
-    },
-    "clavicle_L": {
-      "main": [
-        "L_Arm_Clavicle"
-      ],
-      "aux": []
-    },
-    "upperarm_L": {
-      "main": [
-        "L_Arm_Upper"
-      ],
-      "aux": [
-        "L_Arm_Upper_Twist_0",
-        "L_Arm_Upper_Twist_1",
-        "L_Arm_Upper_Twist_2",
-        "L_Arm_Upper_Twist_3"
-      ]
-    },
-    "forearm_L": {
-      "main": [
-        "L_Arm_Lower"
-      ],
-      "aux": [
-        "L_Arm_Lower_Twist_0",
-        "L_Arm_Lower_Twist_Ext_0Offset",
-        "L_Arm_Lower_Twist_Ext_0",
-        "L_Arm_Lower_Twist_1",
-        "L_Arm_Lower_Twist_Ext_1Offset",
-        "L_Arm_Lower_Twist_Ext_1",
-        "L_Arm_Lower_Twist_2",
-        "L_Arm_Lower_Twist_Ext_2Offset",
-        "L_Arm_Lower_Twist_Ext_2",
-        "L_Arm_Lower_Twist_3",
-        "L_Arm_Lower_Twist_Ext_3Offset",
-        "L_Arm_Lower_Twist_Ext_3"
-      ]
-    },
-    "hand_L": {
-      "main": [
-        "L_Arm_Hand"
-      ],
-      "aux": [
-        "L_Hand_Palm",
-        "L_Hand_Palm_SSOffset",
-        "L_Hand_Palm_SS"
-      ]
-    },
-    "clavicle_R": {
-      "main": [
-        "R_Arm_Clavicle"
-      ],
-      "aux": []
-    },
-    "upperarm_R": {
-      "main": [
-        "R_Arm_Upper"
-      ],
-      "aux": [
-        "R_Arm_Upper_Twist_0",
-        "R_Arm_Upper_Twist_1",
-        "R_Arm_Upper_Twist_2",
-        "R_Arm_Upper_Twist_3"
-      ]
-    },
-    "forearm_R": {
-      "main": [
-        "R_Arm_Lower"
-      ],
-      "aux": [
-        "R_Arm_Lower_Twist_0",
-        "R_Arm_Lower_Twist_Ext_0Offset",
-        "R_Arm_Lower_Twist_Ext_0",
-        "R_Arm_Lower_Twist_1",
-        "R_Arm_Lower_Twist_Ext_1Offset",
-        "R_Arm_Lower_Twist_Ext_1",
-        "R_Arm_Lower_Twist_2",
-        "R_Arm_Lower_Twist_Ext_2Offset",
-        "R_Arm_Lower_Twist_Ext_2",
-        "R_Arm_Lower_Twist_3",
-        "R_Arm_Lower_Twist_Ext_3Offset",
-        "R_Arm_Lower_Twist_Ext_3"
-      ]
-    },
-    "hand_R": {
-      "main": [
-        "R_Arm_Hand"
-      ],
-      "aux": [
-        "R_Hand_Palm",
-        "R_Hand_Palm_SSOffset",
-        "R_Hand_Palm_SS"
-      ]
-    },
-    "thigh_L": {
-      "main": [
-        "L_Leg_Upper"
-      ],
-      "aux": [
-        "L_Leg_Upper_SROffset",
-        "L_Leg_Upper_SR"
-      ]
-    },
-    "shin_L": {
-      "main": [
-        "L_Leg_Lower"
-      ],
-      "aux": [
-        "L_Leg_Lower_SROffset",
-        "L_Leg_Lower_SR",
-        "L_Knee_SROffset",
-        "L_Knee_SR",
-        "L_Knee_BackOffset",
-        "L_Knee_Back",
-        "L_Knee_FrontOffset",
-        "L_Knee_Front"
-      ]
-    },
-    "foot_L": {
-      "main": [
-        "L_Leg_Ankle"
-      ],
-      "aux": [
-        "L_Leg_Foot"
-      ]
-    },
-    "toe_L": {
-      "main": [
-        "L_Leg_Toes"
-      ],
-      "aux": []
-    },
-    "thigh_R": {
-      "main": [
-        "R_Leg_Upper"
-      ],
-      "aux": [
-        "R_Leg_Upper_SROffset",
-        "R_Leg_Upper_SR"
-      ]
-    },
-    "shin_R": {
-      "main": [
-        "R_Leg_Lower"
-      ],
-      "aux": [
-        "R_Leg_Lower_SROffset",
-        "R_Leg_Lower_SR",
-        "R_Knee_SROffset",
-        "R_Knee_SR",
-        "R_Knee_BackOffset",
-        "R_Knee_Back",
-        "R_Knee_FrontOffset",
-        "R_Knee_Front"
-      ]
-    },
-    "foot_R": {
-      "main": [
-        "R_Leg_Ankle"
-      ],
-      "aux": [
-        "R_Leg_Foot"
-      ]
-    },
-    "toe_R": {
-      "main": [
-        "R_Leg_Toes"
-      ],
-      "aux": []
-    },
-    "thumb_01_L": {
-      "main": [
-        "L_Hand_ThumbF_1"
-      ],
-      "aux": [
-        "L_Hand_ThumbF_1_SROffset",
-        "L_Hand_ThumbF_1_SR",
-        "L_Hand_ThumbF_1_SSOffset",
-        "L_Hand_ThumbF_1_SS",
-        "L_Hand_ThumbF_0_SROffset",
-        "L_Hand_ThumbF_0_SR"
-      ]
-    },
-    "thumb_02_L": {
-      "main": [
-        "L_Hand_ThumbF_2"
-      ],
-      "aux": [
-        "L_Hand_ThumbF_2_SROffset",
-        "L_Hand_ThumbF_2_SR",
-        "L_Hand_ThumbF_2_SSOffset",
-        "L_Hand_ThumbF_2_SS"
-      ]
-    },
-    "thumb_03_L": {
-      "main": [
-        "L_Hand_ThumbF_3"
-      ],
-      "aux": [
-        "L_Hand_ThumbF_3_SROffset",
-        "L_Hand_ThumbF_3_SR"
-      ]
-    },
-    "index_01_L": {
-      "main": [
-        "L_Hand_IndexF_1"
-      ],
-      "aux": [
-        "L_Hand_IndexF_1_SROffset",
-        "L_Hand_IndexF_1_SR",
-        "L_Hand_IndexF_1_SSOffset",
-        "L_Hand_IndexF_1_SS",
-        "L_Hand_IndexF_0_SROffset",
-        "L_Hand_IndexF_0_SR"
-      ]
-    },
-    "index_02_L": {
-      "main": [
-        "L_Hand_IndexF_2"
-      ],
-      "aux": [
-        "L_Hand_IndexF_2_SROffset",
-        "L_Hand_IndexF_2_SR",
-        "L_Hand_IndexF_2_SSOffset",
-        "L_Hand_IndexF_2_SS"
-      ]
-    },
-    "index_03_L": {
-      "main": [
-        "L_Hand_IndexF_3"
-      ],
-      "aux": [
-        "L_Hand_IndexF_3_SROffset",
-        "L_Hand_IndexF_3_SR"
-      ]
-    },
-    "middle_01_L": {
-      "main": [
-        "L_Hand_MiddleF_1"
-      ],
-      "aux": [
-        "L_Hand_MiddleF_1_SROffset",
-        "L_Hand_MiddleF_1_SR",
-        "L_Hand_MiddleF_1_SSOffset",
-        "L_Hand_MiddleF_1_SS",
-        "L_Hand_MiddleF_0_SROffset",
-        "L_Hand_MiddleF_0_SR"
-      ]
-    },
-    "middle_02_L": {
-      "main": [
-        "L_Hand_MiddleF_2"
-      ],
-      "aux": [
-        "L_Hand_MiddleF_2_SROffset",
-        "L_Hand_MiddleF_2_SR",
-        "L_Hand_MiddleF_2_SSOffset",
-        "L_Hand_MiddleF_2_SS"
-      ]
-    },
-    "middle_03_L": {
-      "main": [
-        "L_Hand_MiddleF_3"
-      ],
-      "aux": [
-        "L_Hand_MiddleF_3_SROffset",
-        "L_Hand_MiddleF_3_SR"
-      ]
-    },
-    "ring_01_L": {
-      "main": [
-        "L_Hand_RingF_1"
-      ],
-      "aux": [
-        "L_Hand_RingF_1_SROffset",
-        "L_Hand_RingF_1_SR",
-        "L_Hand_RingF_1_SSOffset",
-        "L_Hand_RingF_1_SS",
-        "L_Hand_RingF_0_SROffset",
-        "L_Hand_RingF_0_SR"
-      ]
-    },
-    "ring_02_L": {
-      "main": [
-        "L_Hand_RingF_2"
-      ],
-      "aux": [
-        "L_Hand_RingF_2_SROffset",
-        "L_Hand_RingF_2_SR",
-        "L_Hand_RingF_2_SSOffset",
-        "L_Hand_RingF_2_SS"
-      ]
-    },
-    "ring_03_L": {
-      "main": [
-        "L_Hand_RingF_3"
-      ],
-      "aux": [
-        "L_Hand_RingF_3_SROffset",
-        "L_Hand_RingF_3_SR"
-      ]
-    },
-    "pinky_01_L": {
-      "main": [
-        "L_Hand_PinkyF_1"
-      ],
-      "aux": [
-        "L_Hand_PinkyF_1_SROffset",
-        "L_Hand_PinkyF_1_SR",
-        "L_Hand_PinkyF_1_SSOffset",
-        "L_Hand_PinkyF_1_SS",
-        "L_Hand_PinkyF_0_SROffset",
-        "L_Hand_PinkyF_0_SR"
-      ]
-    },
-    "pinky_02_L": {
-      "main": [
-        "L_Hand_PinkyF_2"
-      ],
-      "aux": [
-        "L_Hand_PinkyF_2_SROffset",
-        "L_Hand_PinkyF_2_SR",
-        "L_Hand_PinkyF_2_SSOffset",
-        "L_Hand_PinkyF_2_SS"
-      ]
-    },
-    "pinky_03_L": {
-      "main": [
-        "L_Hand_PinkyF_3"
-      ],
-      "aux": [
-        "L_Hand_PinkyF_3_SROffset",
-        "L_Hand_PinkyF_3_SR"
-      ]
-    },
-    "thumb_01_R": {
-      "main": [
-        "R_Hand_ThumbF_1"
-      ],
-      "aux": [
-        "R_Hand_ThumbF_1_SROffset",
-        "R_Hand_ThumbF_1_SR",
-        "R_Hand_ThumbF_1_SSOffset",
-        "R_Hand_ThumbF_1_SS",
-        "R_Hand_ThumbF_0_SROffset",
-        "R_Hand_ThumbF_0_SR"
-      ]
-    },
-    "thumb_02_R": {
-      "main": [
-        "R_Hand_ThumbF_2"
-      ],
-      "aux": [
-        "R_Hand_ThumbF_2_SROffset",
-        "R_Hand_ThumbF_2_SR",
-        "R_Hand_ThumbF_2_SSOffset",
-        "R_Hand_ThumbF_2_SS"
-      ]
-    },
-    "thumb_03_R": {
-      "main": [
-        "R_Hand_ThumbF_3"
-      ],
-      "aux": [
-        "R_Hand_ThumbF_3_SROffset",
-        "R_Hand_ThumbF_3_SR"
-      ]
-    },
-    "index_01_R": {
-      "main": [
-        "R_Hand_IndexF_1"
-      ],
-      "aux": [
-        "R_Hand_IndexF_1_SROffset",
-        "R_Hand_IndexF_1_SR",
-        "R_Hand_IndexF_1_SSOffset",
-        "R_Hand_IndexF_1_SS",
-        "R_Hand_IndexF_0_SROffset",
-        "R_Hand_IndexF_0_SR"
-      ]
-    },
-    "index_02_R": {
-      "main": [
-        "R_Hand_IndexF_2"
-      ],
-      "aux": [
-        "R_Hand_IndexF_2_SROffset",
-        "R_Hand_IndexF_2_SR",
-        "R_Hand_IndexF_2_SSOffset",
-        "R_Hand_IndexF_2_SS"
-      ]
-    },
-    "index_03_R": {
-      "main": [
-        "R_Hand_IndexF_3"
-      ],
-      "aux": [
-        "R_Hand_IndexF_3_SROffset",
-        "R_Hand_IndexF_3_SR"
-      ]
-    },
-    "middle_01_R": {
-      "main": [
-        "R_Hand_MiddleF_1"
-      ],
-      "aux": [
-        "R_Hand_MiddleF_1_SROffset",
-        "R_Hand_MiddleF_1_SR",
-        "R_Hand_MiddleF_1_SSOffset",
-        "R_Hand_MiddleF_1_SS",
-        "R_Hand_MiddleF_0_SROffset",
-        "R_Hand_MiddleF_0_SR"
-      ]
-    },
-    "middle_02_R": {
-      "main": [
-        "R_Hand_MiddleF_2"
-      ],
-      "aux": [
-        "R_Hand_MiddleF_2_SROffset",
-        "R_Hand_MiddleF_2_SR",
-        "R_Hand_MiddleF_2_SSOffset",
-        "R_Hand_MiddleF_2_SS"
-      ]
-    },
-    "middle_03_R": {
-      "main": [
-        "R_Hand_MiddleF_3"
-      ],
-      "aux": [
-        "R_Hand_MiddleF_3_SROffset",
-        "R_Hand_MiddleF_3_SR"
-      ]
-    },
-    "ring_01_R": {
-      "main": [
-        "R_Hand_RingF_1"
-      ],
-      "aux": [
-        "R_Hand_RingF_1_SROffset",
-        "R_Hand_RingF_1_SR",
-        "R_Hand_RingF_1_SSOffset",
-        "R_Hand_RingF_1_SS",
-        "R_Hand_RingF_0_SROffset",
-        "R_Hand_RingF_0_SR"
-      ]
-    },
-    "ring_02_R": {
-      "main": [
-        "R_Hand_RingF_2"
-      ],
-      "aux": [
-        "R_Hand_RingF_2_SROffset",
-        "R_Hand_RingF_2_SR",
-        "R_Hand_RingF_2_SSOffset",
-        "R_Hand_RingF_2_SS"
-      ]
-    },
-    "ring_03_R": {
-      "main": [
-        "R_Hand_RingF_3"
-      ],
-      "aux": [
-        "R_Hand_RingF_3_SROffset",
-        "R_Hand_RingF_3_SR"
-      ]
-    },
-    "pinky_01_R": {
-      "main": [
-        "R_Hand_PinkyF_1"
-      ],
-      "aux": [
-        "R_Hand_PinkyF_1_SROffset",
-        "R_Hand_PinkyF_1_SR",
-        "R_Hand_PinkyF_1_SSOffset",
-        "R_Hand_PinkyF_1_SS",
-        "R_Hand_PinkyF_0_SROffset",
-        "R_Hand_PinkyF_0_SR"
-      ]
-    },
-    "pinky_02_R": {
-      "main": [
-        "R_Hand_PinkyF_2"
-      ],
-      "aux": [
-        "R_Hand_PinkyF_2_SROffset",
-        "R_Hand_PinkyF_2_SR",
-        "R_Hand_PinkyF_2_SSOffset",
-        "R_Hand_PinkyF_2_SS"
-      ]
-    },
-    "pinky_03_R": {
-      "main": [
-        "R_Hand_PinkyF_3"
-      ],
-      "aux": [
-        "R_Hand_PinkyF_3_SROffset",
-        "R_Hand_PinkyF_3_SR"
-      ]
+    "exclude": [
+        "L_Arm_HandIn_0Offset",
+        "L_Arm_HandOut_0Offset",
+        "L_Arm_Hand_PushBack",
+        "L_Arm_Hand_PushBackOffset",
+        "L_Arm_Hand_PushFront",
+        "L_Arm_Hand_PushFrontOffset",
+        "L_Arm_Hand_SR",
+        "L_Arm_Hand_SROffset",
+        "L_Biceps",
+        "L_BicepsOffset",
+        "L_Brachioradialis",
+        "L_BrachioradialisOffset",
+        "L_ElbowHalf",
+        "L_ElbowHalfOffset",
+        "L_Elbow_Down",
+        "L_Elbow_DownOffset",
+        "L_Elbow_Up",
+        "L_Elbow_UpOffset",
+        "L_Leg_Lower_Twist_0",
+        "L_Leg_Lower_Twist_1",
+        "L_Leg_Lower_Twist_2",
+        "L_Leg_Lower_Twist_3",
+        "L_Leg_Upper_Twist_0",
+        "L_Leg_Upper_Twist_1",
+        "L_Leg_Upper_Twist_2",
+        "L_Leg_Upper_Twist_3",
+        "L_LowerArm_S",
+        "L_LowerArm_SOffset",
+        "L_Muscles_Shoulder_Sec",
+        "L_Muscles_Shoulder_SecOffset",
+        "L_UpperArm_S",
+        "L_UpperArm_SOffset",
+        "L_triceps",
+        "L_tricepsOffset",
+        "R_Arm_Gloves_pushUp",
+        "R_Arm_Gloves_pushUpOffset",
+        "R_Arm_HandIn_0Offset",
+        "R_Arm_HandOut_0Offset",
+        "R_Arm_Hand_PushBack",
+        "R_Arm_Hand_PushBackOffset",
+        "R_Arm_Hand_PushFront",
+        "R_Arm_Hand_PushFrontOffset",
+        "R_Arm_Hand_SR",
+        "R_Arm_Hand_SROffset",
+        "R_Biceps",
+        "R_BicepsOffset",
+        "R_Brachioradialis",
+        "R_BrachioradialisOffset",
+        "R_ElbowHalf",
+        "R_ElbowHalfOffset",
+        "R_Elbow_Down",
+        "R_Elbow_DownOffset",
+        "R_Elbow_Up",
+        "R_Elbow_UpOffset",
+        "R_Leg_Lower_Twist_0",
+        "R_Leg_Lower_Twist_1",
+        "R_Leg_Lower_Twist_2",
+        "R_Leg_Lower_Twist_3",
+        "R_Leg_Upper_Twist_0",
+        "R_Leg_Upper_Twist_1",
+        "R_Leg_Upper_Twist_2",
+        "R_Leg_Upper_Twist_3",
+        "R_LowerArm_S",
+        "R_LowerArm_SOffset",
+        "R_Muscles_Shoulder_Sec",
+        "R_Muscles_Shoulder_SecOffset",
+        "R_UpperArm_S",
+        "R_UpperArm_SOffset",
+        "R_triceps",
+        "R_tricepsOffset"
+    ],
+    "mappings": {
+        "pelvis": {
+            "main": [
+                "Hip"
+            ],
+            "aux": [
+                "Spine_0"
+            ]
+        },
+        "spine_01": {
+            "main": [
+                "Spine_1"
+            ],
+            "aux": []
+        },
+        "spine_02": {
+            "main": [
+                "Spine_2"
+            ],
+            "aux": []
+        },
+        "neck": {
+            "main": [
+                "Neck_1"
+            ],
+            "aux": [
+                "Neck_0"
+            ]
+        },
+        "head": {
+            "main": [
+                "Head_0"
+            ],
+            "aux": []
+        },
+        "clavicle_L": {
+            "main": [
+                "L_Arm_Clavicle"
+            ],
+            "aux": []
+        },
+        "upperarm_L": {
+            "main": [
+                "L_Arm_Upper"
+            ],
+            "aux": []
+        },
+        "forearm_L": {
+            "main": [
+                "L_Arm_Lower"
+            ],
+            "aux": []
+        },
+        "hand_L": {
+            "main": [
+                "L_Arm_Hand"
+            ],
+            "aux": []
+        },
+        "clavicle_R": {
+            "main": [
+                "R_Arm_Clavicle"
+            ],
+            "aux": []
+        },
+        "upperarm_R": {
+            "main": [
+                "R_Arm_Upper"
+            ],
+            "aux": []
+        },
+        "forearm_R": {
+            "main": [
+                "R_Arm_Lower"
+            ],
+            "aux": []
+        },
+        "hand_R": {
+            "main": [
+                "R_Arm_Hand"
+            ],
+            "aux": []
+        },
+        "thigh_L": {
+            "main": [
+                "L_Leg_Upper"
+            ],
+            "aux": [
+                "L_Leg_Upper_SROffset",
+                "L_Leg_Upper_SR"
+            ]
+        },
+        "shin_L": {
+            "main": [
+                "L_Leg_Lower"
+            ],
+            "aux": [
+                "L_Leg_Lower_SROffset",
+                "L_Leg_Lower_SR"
+            ]
+        },
+        "foot_L": {
+            "main": [
+                "L_Leg_Ankle"
+            ],
+            "aux": [
+                "L_Leg_Foot"
+            ]
+        },
+        "toe_L": {
+            "main": [
+                "L_Leg_Toes"
+            ],
+            "aux": []
+        },
+        "thigh_R": {
+            "main": [
+                "R_Leg_Upper"
+            ],
+            "aux": [
+                "R_Leg_Upper_SROffset",
+                "R_Leg_Upper_SR"
+            ]
+        },
+        "shin_R": {
+            "main": [
+                "R_Leg_Lower"
+            ],
+            "aux": [
+                "R_Leg_Lower_SROffset",
+                "R_Leg_Lower_SR"
+            ]
+        },
+        "foot_R": {
+            "main": [
+                "R_Leg_Ankle"
+            ],
+            "aux": [
+                "R_Leg_Foot"
+            ]
+        },
+        "toe_R": {
+            "main": [
+                "R_Leg_Toes"
+            ],
+            "aux": []
+        },
+        "thumb_01_L": {
+            "main": [
+                "L_Hand_ThumbF_1"
+            ],
+            "aux": [
+                "L_Hand_ThumbF_1_SROffset",
+                "L_Hand_ThumbF_1_SR",
+                "L_Hand_ThumbF_1_SSOffset",
+                "L_Hand_ThumbF_1_SS",
+                "L_Hand_ThumbF_0_SROffset",
+                "L_Hand_ThumbF_0_SR"
+            ]
+        },
+        "thumb_02_L": {
+            "main": [
+                "L_Hand_ThumbF_2"
+            ],
+            "aux": [
+                "L_Hand_ThumbF_2_SROffset",
+                "L_Hand_ThumbF_2_SR",
+                "L_Hand_ThumbF_2_SSOffset",
+                "L_Hand_ThumbF_2_SS"
+            ]
+        },
+        "thumb_03_L": {
+            "main": [
+                "L_Hand_ThumbF_3"
+            ],
+            "aux": [
+                "L_Hand_ThumbF_3_SROffset",
+                "L_Hand_ThumbF_3_SR"
+            ]
+        },
+        "index_01_L": {
+            "main": [
+                "L_Hand_IndexF_1"
+            ],
+            "aux": [
+                "L_Hand_IndexF_1_SROffset",
+                "L_Hand_IndexF_1_SR",
+                "L_Hand_IndexF_1_SSOffset",
+                "L_Hand_IndexF_1_SS",
+                "L_Hand_IndexF_0_SROffset",
+                "L_Hand_IndexF_0_SR"
+            ]
+        },
+        "index_02_L": {
+            "main": [
+                "L_Hand_IndexF_2"
+            ],
+            "aux": [
+                "L_Hand_IndexF_2_SROffset",
+                "L_Hand_IndexF_2_SR",
+                "L_Hand_IndexF_2_SSOffset",
+                "L_Hand_IndexF_2_SS"
+            ]
+        },
+        "index_03_L": {
+            "main": [
+                "L_Hand_IndexF_3"
+            ],
+            "aux": [
+                "L_Hand_IndexF_3_SROffset",
+                "L_Hand_IndexF_3_SR"
+            ]
+        },
+        "middle_01_L": {
+            "main": [
+                "L_Hand_MiddleF_1"
+            ],
+            "aux": [
+                "L_Hand_MiddleF_1_SROffset",
+                "L_Hand_MiddleF_1_SR",
+                "L_Hand_MiddleF_1_SSOffset",
+                "L_Hand_MiddleF_1_SS",
+                "L_Hand_MiddleF_0_SROffset",
+                "L_Hand_MiddleF_0_SR"
+            ]
+        },
+        "middle_02_L": {
+            "main": [
+                "L_Hand_MiddleF_2"
+            ],
+            "aux": [
+                "L_Hand_MiddleF_2_SROffset",
+                "L_Hand_MiddleF_2_SR",
+                "L_Hand_MiddleF_2_SSOffset",
+                "L_Hand_MiddleF_2_SS"
+            ]
+        },
+        "middle_03_L": {
+            "main": [
+                "L_Hand_MiddleF_3"
+            ],
+            "aux": [
+                "L_Hand_MiddleF_3_SROffset",
+                "L_Hand_MiddleF_3_SR"
+            ]
+        },
+        "ring_01_L": {
+            "main": [
+                "L_Hand_RingF_1"
+            ],
+            "aux": [
+                "L_Hand_RingF_1_SROffset",
+                "L_Hand_RingF_1_SR",
+                "L_Hand_RingF_1_SSOffset",
+                "L_Hand_RingF_1_SS",
+                "L_Hand_RingF_0_SROffset",
+                "L_Hand_RingF_0_SR"
+            ]
+        },
+        "ring_02_L": {
+            "main": [
+                "L_Hand_RingF_2"
+            ],
+            "aux": [
+                "L_Hand_RingF_2_SROffset",
+                "L_Hand_RingF_2_SR",
+                "L_Hand_RingF_2_SSOffset",
+                "L_Hand_RingF_2_SS"
+            ]
+        },
+        "ring_03_L": {
+            "main": [
+                "L_Hand_RingF_3"
+            ],
+            "aux": [
+                "L_Hand_RingF_3_SROffset",
+                "L_Hand_RingF_3_SR"
+            ]
+        },
+        "pinky_01_L": {
+            "main": [
+                "L_Hand_PinkyF_1"
+            ],
+            "aux": [
+                "L_Hand_PinkyF_1_SROffset",
+                "L_Hand_PinkyF_1_SR",
+                "L_Hand_PinkyF_1_SSOffset",
+                "L_Hand_PinkyF_1_SS",
+                "L_Hand_PinkyF_0_SROffset",
+                "L_Hand_PinkyF_0_SR"
+            ]
+        },
+        "pinky_02_L": {
+            "main": [
+                "L_Hand_PinkyF_2"
+            ],
+            "aux": [
+                "L_Hand_PinkyF_2_SROffset",
+                "L_Hand_PinkyF_2_SR",
+                "L_Hand_PinkyF_2_SSOffset",
+                "L_Hand_PinkyF_2_SS"
+            ]
+        },
+        "pinky_03_L": {
+            "main": [
+                "L_Hand_PinkyF_3"
+            ],
+            "aux": [
+                "L_Hand_PinkyF_3_SROffset",
+                "L_Hand_PinkyF_3_SR"
+            ]
+        },
+        "thumb_01_R": {
+            "main": [
+                "R_Hand_ThumbF_1"
+            ],
+            "aux": [
+                "R_Hand_ThumbF_1_SROffset",
+                "R_Hand_ThumbF_1_SR",
+                "R_Hand_ThumbF_1_SSOffset",
+                "R_Hand_ThumbF_1_SS",
+                "R_Hand_ThumbF_0_SROffset",
+                "R_Hand_ThumbF_0_SR"
+            ]
+        },
+        "thumb_02_R": {
+            "main": [
+                "R_Hand_ThumbF_2"
+            ],
+            "aux": [
+                "R_Hand_ThumbF_2_SROffset",
+                "R_Hand_ThumbF_2_SR",
+                "R_Hand_ThumbF_2_SSOffset",
+                "R_Hand_ThumbF_2_SS"
+            ]
+        },
+        "thumb_03_R": {
+            "main": [
+                "R_Hand_ThumbF_3"
+            ],
+            "aux": [
+                "R_Hand_ThumbF_3_SROffset",
+                "R_Hand_ThumbF_3_SR"
+            ]
+        },
+        "index_01_R": {
+            "main": [
+                "R_Hand_IndexF_1"
+            ],
+            "aux": [
+                "R_Hand_IndexF_1_SROffset",
+                "R_Hand_IndexF_1_SR",
+                "R_Hand_IndexF_1_SSOffset",
+                "R_Hand_IndexF_1_SS",
+                "R_Hand_IndexF_0_SROffset",
+                "R_Hand_IndexF_0_SR"
+            ]
+        },
+        "index_02_R": {
+            "main": [
+                "R_Hand_IndexF_2"
+            ],
+            "aux": [
+                "R_Hand_IndexF_2_SROffset",
+                "R_Hand_IndexF_2_SR",
+                "R_Hand_IndexF_2_SSOffset",
+                "R_Hand_IndexF_2_SS"
+            ]
+        },
+        "index_03_R": {
+            "main": [
+                "R_Hand_IndexF_3"
+            ],
+            "aux": [
+                "R_Hand_IndexF_3_SROffset",
+                "R_Hand_IndexF_3_SR"
+            ]
+        },
+        "middle_01_R": {
+            "main": [
+                "R_Hand_MiddleF_1"
+            ],
+            "aux": [
+                "R_Hand_MiddleF_1_SROffset",
+                "R_Hand_MiddleF_1_SR",
+                "R_Hand_MiddleF_1_SSOffset",
+                "R_Hand_MiddleF_1_SS",
+                "R_Hand_MiddleF_0_SROffset",
+                "R_Hand_MiddleF_0_SR"
+            ]
+        },
+        "middle_02_R": {
+            "main": [
+                "R_Hand_MiddleF_2"
+            ],
+            "aux": [
+                "R_Hand_MiddleF_2_SROffset",
+                "R_Hand_MiddleF_2_SR",
+                "R_Hand_MiddleF_2_SSOffset",
+                "R_Hand_MiddleF_2_SS"
+            ]
+        },
+        "middle_03_R": {
+            "main": [
+                "R_Hand_MiddleF_3"
+            ],
+            "aux": [
+                "R_Hand_MiddleF_3_SROffset",
+                "R_Hand_MiddleF_3_SR"
+            ]
+        },
+        "ring_01_R": {
+            "main": [
+                "R_Hand_RingF_1"
+            ],
+            "aux": [
+                "R_Hand_RingF_1_SROffset",
+                "R_Hand_RingF_1_SR",
+                "R_Hand_RingF_1_SSOffset",
+                "R_Hand_RingF_1_SS",
+                "R_Hand_RingF_0_SROffset",
+                "R_Hand_RingF_0_SR"
+            ]
+        },
+        "ring_02_R": {
+            "main": [
+                "R_Hand_RingF_2"
+            ],
+            "aux": [
+                "R_Hand_RingF_2_SROffset",
+                "R_Hand_RingF_2_SR",
+                "R_Hand_RingF_2_SSOffset",
+                "R_Hand_RingF_2_SS"
+            ]
+        },
+        "ring_03_R": {
+            "main": [
+                "R_Hand_RingF_3"
+            ],
+            "aux": [
+                "R_Hand_RingF_3_SROffset",
+                "R_Hand_RingF_3_SR"
+            ]
+        },
+        "pinky_01_R": {
+            "main": [
+                "R_Hand_PinkyF_1"
+            ],
+            "aux": [
+                "R_Hand_PinkyF_1_SROffset",
+                "R_Hand_PinkyF_1_SR",
+                "R_Hand_PinkyF_1_SSOffset",
+                "R_Hand_PinkyF_1_SS",
+                "R_Hand_PinkyF_0_SROffset",
+                "R_Hand_PinkyF_0_SR"
+            ]
+        },
+        "pinky_02_R": {
+            "main": [
+                "R_Hand_PinkyF_2"
+            ],
+            "aux": [
+                "R_Hand_PinkyF_2_SROffset",
+                "R_Hand_PinkyF_2_SR",
+                "R_Hand_PinkyF_2_SSOffset",
+                "R_Hand_PinkyF_2_SS"
+            ]
+        },
+        "pinky_03_R": {
+            "main": [
+                "R_Hand_PinkyF_3"
+            ],
+            "aux": [
+                "R_Hand_PinkyF_3_SROffset",
+                "R_Hand_PinkyF_3_SR"
+            ]
+        },
+        "upperarm_twist_01_L": {
+            "main": [
+                "L_Arm_Upper_Twist_0"
+            ],
+            "aux": []
+        },
+        "upperarm_twist_02_L": {
+            "main": [
+                "L_Arm_Upper_Twist_1"
+            ],
+            "aux": []
+        },
+        "upperarm_twist_03_L": {
+            "main": [
+                "L_Arm_Upper_Twist_2"
+            ],
+            "aux": []
+        },
+        "upperarm_twist_04_L": {
+            "main": [
+                "L_Arm_Upper_Twist_3"
+            ],
+            "aux": []
+        },
+        "forearm_twist_01_L": {
+            "main": [
+                "L_Arm_Lower_Twist_0"
+            ],
+            "aux": [
+                "L_Arm_Lower_Twist_Ext_0",
+                "L_Arm_Lower_Twist_Ext_0Offset"
+            ]
+        },
+        "forearm_twist_02_L": {
+            "main": [
+                "L_Arm_Lower_Twist_1"
+            ],
+            "aux": [
+                "L_Arm_Lower_Twist_Ext_1",
+                "L_Arm_Lower_Twist_Ext_1Offset"
+            ]
+        },
+        "forearm_twist_03_L": {
+            "main": [
+                "L_Arm_Lower_Twist_2"
+            ],
+            "aux": [
+                "L_Arm_Lower_Twist_Ext_2",
+                "L_Arm_Lower_Twist_Ext_2Offset"
+            ]
+        },
+        "forearm_twist_04_L": {
+            "main": [
+                "L_Arm_Lower_Twist_3"
+            ],
+            "aux": [
+                "L_Arm_Lower_Twist_Ext_3",
+                "L_Arm_Lower_Twist_Ext_3Offset"
+            ]
+        },
+        "palm_L": {
+            "main": [
+                "L_Hand_Palm"
+            ],
+            "aux": [
+                "L_Hand_Palm_SS",
+                "L_Hand_Palm_SSOffset"
+            ]
+        },
+        "knee_L": {
+            "main": [
+                "L_Knee_SR"
+            ],
+            "aux": [
+                "L_Knee_SROffset",
+                "L_Knee_Back",
+                "L_Knee_BackOffset",
+                "L_Knee_Front",
+                "L_Knee_FrontOffset"
+            ]
+        },
+        "upperarm_twist_01_R": {
+            "main": [
+                "R_Arm_Upper_Twist_0"
+            ],
+            "aux": []
+        },
+        "upperarm_twist_02_R": {
+            "main": [
+                "R_Arm_Upper_Twist_1"
+            ],
+            "aux": []
+        },
+        "upperarm_twist_03_R": {
+            "main": [
+                "R_Arm_Upper_Twist_2"
+            ],
+            "aux": []
+        },
+        "upperarm_twist_04_R": {
+            "main": [
+                "R_Arm_Upper_Twist_3"
+            ],
+            "aux": []
+        },
+        "forearm_twist_01_R": {
+            "main": [
+                "R_Arm_Lower_Twist_0"
+            ],
+            "aux": [
+                "R_Arm_Lower_Twist_Ext_0",
+                "R_Arm_Lower_Twist_Ext_0Offset"
+            ]
+        },
+        "forearm_twist_02_R": {
+            "main": [
+                "R_Arm_Lower_Twist_1"
+            ],
+            "aux": [
+                "R_Arm_Lower_Twist_Ext_1",
+                "R_Arm_Lower_Twist_Ext_1Offset"
+            ]
+        },
+        "forearm_twist_03_R": {
+            "main": [
+                "R_Arm_Lower_Twist_2"
+            ],
+            "aux": [
+                "R_Arm_Lower_Twist_Ext_2",
+                "R_Arm_Lower_Twist_Ext_2Offset"
+            ]
+        },
+        "forearm_twist_04_R": {
+            "main": [
+                "R_Arm_Lower_Twist_3"
+            ],
+            "aux": [
+                "R_Arm_Lower_Twist_Ext_3",
+                "R_Arm_Lower_Twist_Ext_3Offset"
+            ]
+        },
+        "palm_R": {
+            "main": [
+                "R_Hand_Palm"
+            ],
+            "aux": [
+                "R_Hand_Palm_SS",
+                "R_Hand_Palm_SSOffset"
+            ]
+        },
+        "knee_R": {
+            "main": [
+                "R_Knee_SR"
+            ],
+            "aux": [
+                "R_Knee_SROffset",
+                "R_Knee_Back",
+                "R_Knee_BackOffset",
+                "R_Knee_Front",
+                "R_Knee_FrontOffset"
+            ]
+        }
     }
-  }
 }

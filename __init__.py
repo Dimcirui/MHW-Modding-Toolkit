@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Modding Toolkit",
     "author": "Dimcirui",
-    "version": (2, 7, 4),
+    "version": (2, 7, 5),
     "blender": (3, 0, 0),
     "location": "View3D > Sidebar > MOD Toolkit",
     "description": "Modding Toolkit for Capcom's games",
@@ -78,9 +78,27 @@ class MT_Preferences(AddonPreferences):
         default=False,
     )
 
+    # 作者自用工具的侧栏入口。默认关：这些操作符是给特定资产管线写的，对绝大多数
+    # 使用者没有意义。以前的做法是把入口删掉、只留操作符注册着，结果是自己要用的
+    # 时候得按 F3 敲 idname —— 这个开关就是那件事的替代品。见
+    # ui/personal_tools_panel.py。
+    show_personal_tools: BoolProperty(
+        name="Show Personal Tools Panel",
+        description=(
+            "Adds a 'Personal Tools' panel to the MOD Toolkit sidebar, holding "
+            "operators written for one specific asset pipeline (Endfield facial "
+            "vertex-group renaming, and anything else added later).\n"
+            "Off by default because these are of no use to most people. Addon "
+            "preferences are keyed by module name, so this has to be ticked "
+            "separately in each Blender install"
+        ),
+        default=False,
+    )
+
     def draw(self, context):
         layout = self.layout
         layout.prop(self, "show_console_on_batch_export")
+        layout.prop(self, "show_personal_tools")
         addon_updater_ops.update_settings_ui(self, context)
         # Under the updater UI, because it is the updater's merge-never-delete
         # behaviour that creates the leftovers -- see core/stale_cleanup.py.

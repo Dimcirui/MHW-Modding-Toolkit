@@ -5,6 +5,7 @@ OPTIONAL_BONES = {
     "spine_03": "可选 | 上胸",
 }
 
+
 # 骨骼显示名：中文名 (英文标准名)
 # 未在此表中的骨骼会直接显示英文标准名
 BONE_DISPLAY_NAMES = {
@@ -48,6 +49,25 @@ BONE_DISPLAY_NAMES = {
     "ring_01_R":   "右无名指1", "ring_02_R":   "右无名指2", "ring_03_R":   "右无名指3",
     "pinky_01_R":  "右小指1", "pinky_02_R":  "右小指2", "pinky_03_R":  "右小指3",
 }
+
+# 辅助骨槽位的显示名与"可选"标记。这些键**全部**可选：任何一个没填，行为就退回
+# "并进父段主骨"，也就是加槽位之前的样子，所以缺项不是错误，也不该进自动识别的分母
+# ——auto_detect_preset 正是靠 OPTIONAL_BONES 把它们排除在打分之外的。
+_SEG_CN = {"upperarm": "上臂", "forearm": "前臂", "thigh": "大腿", "shin": "小腿"}
+_JOINT_CN = {"palm": "掌骨", "elbow": "肘", "knee": "膝", "instep": "脚背",
+             "toe_end": "脚尖末节"}
+for _s, _cn in (("L", "左"), ("R", "右")):
+    for _seg, _segcn in _SEG_CN.items():
+        for _i in range(1, 6):
+            _k = "%s_twist_%02d_%s" % (_seg, _i, _s)
+            BONE_DISPLAY_NAMES[_k] = "%s%s扭转%d (%s)" % (_cn, _segcn, _i, _k)
+            OPTIONAL_BONES[_k] = "可选"
+    for _j, _jcn in _JOINT_CN.items():
+        _k = "%s_%s" % (_j, _s)
+        BONE_DISPLAY_NAMES[_k] = "%s%s (%s)" % (_cn, _jcn, _k)
+        OPTIONAL_BONES[_k] = "可选"
+del _s, _cn, _seg, _segcn, _i, _k, _j, _jcn
+
 
 def get_display_name(std_key):
     """获取骨骼的显示名，带可选标记"""
@@ -98,5 +118,24 @@ UI_HIERARCHY = {
             "无名指": ["ring_01_R", "ring_02_R", "ring_03_R"],
             "小指": ["pinky_01_R", "pinky_02_R", "pinky_03_R"],
         }
-    }
+    },
+    # 辅助骨：整节全部可选。分左右两个子节，因为编辑预设时人是按一侧填完再镜像的。
+    "辅助骨 (左)": {
+        "icon": 'CON_SPLINEIK',
+        "subsections": {
+            "扭转骨": ["%s_twist_%02d_L" % (seg, i)
+                       for seg in ("upperarm", "forearm", "thigh", "shin")
+                       for i in range(1, 6)],
+            "关节": ["palm_L", "elbow_L", "knee_L", "instep_L", "toe_end_L"],
+        }
+    },
+    "辅助骨 (右)": {
+        "icon": 'CON_SPLINEIK',
+        "subsections": {
+            "扭转骨": ["%s_twist_%02d_R" % (seg, i)
+                       for seg in ("upperarm", "forearm", "thigh", "shin")
+                       for i in range(1, 6)],
+            "关节": ["palm_R", "elbow_R", "knee_R", "instep_R", "toe_end_R"],
+        }
+    },
 }

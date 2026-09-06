@@ -51,10 +51,17 @@ SRC_NATIVES_KEY = "mhwi_natives_root"
 #: could not carry them either.  A whole parallel pipeline would buy 8 of 23
 #: instead of 6.
 #:
-#: Texture quality does not pay for the extra hop either: every one of the 15
-#: MHWS slot types maps to an MHRS slot with an identical channel layout, so
-#: ``mdf_port_tex.repack_slot`` takes its "container rewrite, pixels untouched"
-#: path for all of them.  The one real decode/encode happens in this port, once.
+#: Texture quality does *not* make the extra hop free, though -- an earlier
+#: version of this comment claimed all 15 MHWS slot types map onto an MHRS slot
+#: with an identical channel layout, which measuring the actual shipped
+#: presets disproves: MHWS's ``NormalRoughnessOcclusionMap`` (R=roughness,
+#: G/A=octahedral normal, B=AO) and MHRS's ``NRMR_NRRTMap`` (R/G=plain normal,
+#: B=const, A=roughness) are not the same layout, and MHWS's
+#: ``AlphaTranslucentOcclusionSSSMap`` has no counterpart in MHRS's own
+#: ``standard`` prefab at all.  So the second hop goes through the ordinary
+#: cross-game material port with texture conversion genuinely switched on --
+#: same family-based slot matching and channel repack any other cross-game
+#: port uses (see ``relay``) -- rather than a raw path copy.
 TARGET_GAMES = ("MHWS", "MHRS")
 
 #: Spelled out rather than built from TARGET_GAMES with an f-string: a key the
@@ -600,9 +607,14 @@ def run_port(context, src_col, target_game, *, dest_base_path="",
     Split out of the operator for the batch path.  Two of the parameters exist only
     for it:
 
-    * *src_root* / *dst_root* default to the scene's own natives roots when left
-      ``None``, which is what the operator wants -- but the batch writes into a
-      folder the user picked for that run, which is not a scene setting at all.
+    * *src_root* defaults to the scene's own MHWI natives root when left ``None``,
+      which is what the operator wants -- but the batch writes into a folder the
+      user picked for that run, which is not a scene setting at all. *dst_root*
+      only matters for a direct MHWI -> MHWilds port (same default rule); for
+      MHRS it is ignored -- the intermediate always writes to a scratch directory
+      under *temp_dir* (see ``is_relay`` below), and MHRS's own real natives root
+      is read from the scene by ``relay``'s own cross-game port, same as it
+      always was.
     * *temp_dir*, when given, is neither created nor removed here.  Decoding is the
       expensive half of this port and an armour set's parts share source textures,
       so the batch keeps one directory across every part and cleans it up itself.
@@ -629,15 +641,18 @@ def run_port(context, src_col, target_game, *, dest_base_path="",
         if not materials:
             return {"error": "core.mrl3_port_ops.all_culled"}
 
-    # Textures go straight to the *final* target, even when the material is
-    # built against MHWilds' prefab on the way to MHRS.  Writing them as
-    # MHWilds and fixing them up afterwards would mean either a second
-    # decode/encode or a pile of orphaned .tex in the wrong container; writing
-    # them once here costs nothing extra, because the two games' channel_maps
-    # and abbrev_map are identical and only tex_version (241106027 vs 28),
-    # use_art_prefix and the natives root differ.
-    dst_cfg = mdf_port_tex.get_game_tex_config(target_game)
-    if dst_cfg is None:
+    # Every material this port builds is shaped like a MHWilds material (see
+    # module docstring) -- so the texture pass always writes it out under
+    # MHWilds' own container/tex_version/abbrev conventions, never the final
+    # target's. For a direct MHWI -> MHWilds port that IS the final target and
+    # nothing more is needed. For MHRS it is not: MHWilds' and MHRS's slot
+    # vocabularies genuinely differ (see TARGET_GAMES), so writing MHWilds-
+    # shaped bindings straight under MHRS's own natives root produced files
+    # named after MHWilds slot types (``_NRRO``, ``_ATOS``) that MHRS's own
+    # prefab has no matching binding for at all -- orphaned on disk, and never
+    # actually reachable from the material ``relay`` goes on to build.
+    build_cfg = mdf_port_tex.get_game_tex_config(DST_GAME)
+    if build_cfg is None:
         return {"error": "core.mdf_port_ops.missing_tex_config"}
 
     read_preset = import_read_preset_json()
@@ -650,16 +665,28 @@ def run_port(context, src_col, target_game, *, dest_base_path="",
 
     if src_root is None:
         src_root = context.scene.get(SRC_NATIVES_KEY, "")
-    if dst_root is None:
-        dst_root = context.scene.get(dst_cfg["natives_root_key"], "")
-    dst_base = mdf_port_tex.full_base_path(dst_cfg, (dest_base_path or "").strip())
-    convert = convert_textures and bool(src_root) and not paths_only
-    # MHRS only: MHWilds' basic prefab has no Nuki_Dissolve to write.
-    want_nuki = target_game == _RELAY_TARGET
 
     owns_temp = temp_dir is None
     if owns_temp:
         temp_dir = tempfile.mkdtemp(prefix="mrl3_port_")
+
+    is_relay = target_game == _RELAY_TARGET
+    if is_relay:
+        # Never the user's real MHWilds mod root (which may not even be set --
+        # MHWilds is not what they asked to port to) and never MHRS's either
+        # (these bindings are still MHWilds-shaped). A scratch directory
+        # ``relay``'s own cross-game port reads the bytes back out of, deleted
+        # with the rest of *temp_dir* once ``relay`` has run.
+        dst_root = os.path.join(temp_dir, "_relay_src")
+        os.makedirs(dst_root, exist_ok=True)
+    elif dst_root is None:
+        dst_root = context.scene.get(build_cfg["natives_root_key"], "")
+
+    dst_base = mdf_port_tex.full_base_path(build_cfg, (dest_base_path or "").strip())
+    convert = convert_textures and bool(src_root) and not paths_only
+    # MHRS only: MHWilds' basic prefab has no Nuki_Dissolve to write.
+    want_nuki = is_relay
+
     new_col = _new_mdf_collection(src_col)
     built = failed = tex_written = tex_paths = 0
     params_ok = params_skip = 0
@@ -689,7 +716,7 @@ def run_port(context, src_col, target_game, *, dest_base_path="",
                 unportable.update(mrl3_port_tex.unportable(arrays))
                 written, size_notes = port_textures(
                     src_data, dst_data, name.removesuffix('_UseSC'),
-                    arrays, pngs, dst_cfg, dst_root, dst_base, temp_dir,
+                    arrays, pngs, build_cfg, dst_root, dst_base, temp_dir,
                     tex_cache, sources)
                 tex_written += written
                 notes.extend(f"{name}/{n}" for n in size_notes)
@@ -700,39 +727,90 @@ def run_port(context, src_col, target_game, *, dest_base_path="",
                         slots=mrl3_port.NUKI_SLOTS)
                     missing.extend(f"{name}/{m}" for m in gone)
                 if paths_only:
+                    # MHWilds-shaped path strings the intermediate would carry
+                    # under a full run -- for a direct MHWI -> MHWilds port
+                    # this already is the final answer; for MHRS, ``relay``
+                    # re-derives the real destination slot from these by the
+                    # same family match a full run's repack would use.
                     tex_paths += port_texture_paths(
                         src_data, dst_data, name.removesuffix('_UseSC'),
-                        dst_cfg, dst_base, src_root)
+                        build_cfg, dst_base, src_root)
             if want_nuki:
                 value = read_nuki_dissolve(src_data, arrays)
                 if value is not None:
                     nuki_values[name] = value
             built += 1
+
+        result = {
+            "error": None, "collection": new_col, "built": built, "failed": failed,
+            "textures": tex_written, "tex_paths": tex_paths,
+            "params_ok": params_ok, "params_skip": params_skip,
+            "culled": culled, "missing": missing, "notes": notes,
+            "unportable": unportable,
+            "source_root_missing": convert_textures and not paths_only and not src_root,
+            "relay": None, "nuki": 0,
+        }
+        if is_relay and built:
+            # Runs inside this try/finally, not after it: it reads the bytes
+            # this loop just wrote under dst_root, which lives inside temp_dir
+            # and must still exist when it does.
+            result["relay"] = relay(context, new_col, dest_base_path=dest_base_path,
+                                    params_mode=params_mode, src_scratch_root=dst_root,
+                                    paths_only=paths_only)
+            if result["relay"][0]:
+                result["collection"] = bpy.data.collections.get(result["relay"][2])
+                if result["collection"] is not None:
+                    result["nuki"] = apply_nuki_dissolve(result["collection"], nuki_values)
+        return result
     finally:
         if owns_temp:
             import shutil
             shutil.rmtree(temp_dir, ignore_errors=True)
 
-    result = {
-        "error": None, "collection": new_col, "built": built, "failed": failed,
-        "textures": tex_written, "tex_paths": tex_paths,
-        "params_ok": params_ok, "params_skip": params_skip,
-        "culled": culled, "missing": missing, "notes": notes,
-        "unportable": unportable,
-        "source_root_missing": convert_textures and not paths_only and not src_root,
-        "relay": None, "nuki": 0,
-    }
-    if target_game == _RELAY_TARGET and built:
-        result["relay"] = relay(context, new_col, dest_base_path=dest_base_path,
-                                params_mode=params_mode)
-        if result["relay"][0]:
-            result["collection"] = bpy.data.collections.get(result["relay"][2])
-            if result["collection"] is not None:
-                result["nuki"] = apply_nuki_dissolve(result["collection"], nuki_values)
-    return result
+
+def relay_texture_paths(mhws_col, made_col, dst_cfg, dst_base, is_custom):
+    """``paths_only``'s counterpart of the real relay repack: fill *made_col*'s
+    bindings with the path a full run would have produced, by the same
+    family-based slot correspondence ``mdf_port_tex.find_dst_slot_type`` uses --
+    no bytes touched, since ``paths_only`` means none exist yet at
+    *src_scratch_root* to read.
+
+    *mhws_col* is the MHWilds-shaped intermediate; *is_custom* tells its own
+    custom bindings apart from the ``basic`` prefab's stock ones, same
+    predicate the byte-writing path filters on. Destination-driven (one slot
+    in *made_col* can take a path from at most one source slot), mirroring how
+    the real repack picks a source per destination binding rather than the
+    other way around.
+
+    Returns the number of bindings filled.
+    """
+    from .mdf_tex_processor_base import make_mdf_path
+
+    filled = 0
+    src_by_name = mrl3_port._materials_by_name(mhws_col)
+    for name, dst_data in mrl3_port._materials_by_name(made_col).items():
+        src_data = src_by_name.get(name)
+        if src_data is None:
+            continue
+        dst_types = {b.textureType for b in dst_data.textureBindingList_items}
+        tex_name = name.removesuffix('_UseSC')
+        for binding in dst_data.textureBindingList_items:
+            slot = binding.textureType
+            source = next(
+                (b for b in src_data.textureBindingList_items
+                 if b.path and is_custom(b.path)
+                 and mdf_port_tex.find_dst_slot_type(b.textureType, dst_types) == slot),
+                None)
+            if source is None:
+                continue
+            binding.path = make_mdf_path(dst_base, tex_name, slot,
+                                        dst_cfg['abbrev_map'], dst_cfg['use_art_prefix'])
+            filled += 1
+    return filled
 
 
-def relay(context, mhws_col, *, dest_base_path="", params_mode='BASIC'):
+def relay(context, mhws_col, *, dest_base_path="", params_mode='BASIC',
+         src_scratch_root=None, paths_only=False):
     """Hand the MHWilds result to the ordinary MHWS -> MHRS material port.
 
     The intermediate is removed on success, so the user is left with the one
@@ -740,14 +818,32 @@ def relay(context, mhws_col, *, dest_base_path="", params_mode='BASIC'):
     second hop fails, the MHWilds materials are a real result and throwing
     them away would turn a partial port into no port at all.
 
-    Textures are not converted again -- ``run_port`` has already written them in
-    MHRS's own container and path convention, so there is nothing left to
-    convert.  But the material port skips its whole binding loop when
-    ``convert_textures`` is off, which would leave the new materials on
-    PL_Default's stock paths, so the bindings are carried over here by slot
-    type.  A plain name-keyed copy is enough: MHWilds and MHRS name all 15 slot
-    types identically and pack them identically, which is the same measurement
-    that makes the relay free in the first place.
+    Texture conversion is genuinely switched on here (unless *paths_only*),
+    not skipped: MHWilds' and MHRS's slot vocabularies are not the same (see
+    ``TARGET_GAMES``) -- MHWilds' ``NormalRoughnessOcclusionMap`` and MHRS's
+    ``NRMR_NRRTMap`` pack different quantities into different channels, and
+    MHWilds' ``AlphaTranslucentOcclusionSSSMap`` has no MHRS counterpart at
+    all. A plain name-keyed path copy would silently drop the normal map's AO
+    channel and the whole alpha/translucency/AO pack. The ordinary cross-game
+    port already resolves this correctly -- exact name match first, then a
+    unique same-family slot (``mdf_port_tex.find_dst_slot_type``), with a real
+    channel repack wherever the layouts differ (``mdf_port_tex.repack_slot``)
+    -- so this hop uses it rather than reimplementing a second, worse version.
+
+    It reads the source bytes from *src_scratch_root* -- ``run_port``'s own
+    scratch directory, not the user's real MHWilds mod root, which this relay
+    has no reason to touch or even require to be set.
+
+    ``octahedral_normals=True`` is not offered to the user for this hop: it is
+    not a choice, it is a fact about what ``run_port`` just wrote.
+    ``port_textures`` always composes MHWilds' octahedral normal slots (NRRO
+    and kin) with ``octahedral=True``, so decoding them back out here has to
+    agree.
+
+    *paths_only* skips the byte read/write -- there is nothing at
+    *src_scratch_root* to read -- and instead fills the final material's
+    binding paths with what a full run would have produced, by the same
+    family match (``relay_texture_paths``).
 
     Returns ``(ok, note, result collection name or None)``.
     """
@@ -759,7 +855,9 @@ def relay(context, mhws_col, *, dest_base_path="", params_mode='BASIC'):
     try:
         r = bpy.ops.modder.port_mdf_material_cross_game(
             'EXEC_DEFAULT', source_game=DST_GAME, target_game=_RELAY_TARGET,
-            source_collection=mhws_col.name, convert_textures=False,
+            source_collection=mhws_col.name, convert_textures=not paths_only,
+            source_natives_root_override=src_scratch_root or "",
+            octahedral_normals=True,
             dest_base_path=(dest_base_path or "").strip(),
             migrate_params=params_mode,
             # Only what this port actually wrote.  The rest of the intermediate is
@@ -779,21 +877,35 @@ def relay(context, mhws_col, *, dest_base_path="", params_mode='BASIC'):
     if made is None:
         return False, T("core.mrl3_port_ops.relay_no_result"), None
     made.name = f"{stem}_{_RELAY_TARGET}.mdf2"
-    # Only the author's own textures move. The stock paths differ per game and
-    # the destination prefab already carries the right ones -- see
-    # carry_texture_bindings' docstring for what carrying them costs.
+
     from .mdf_material_convert_base import (_load_vanilla_art_paths,
                                             is_custom_tex_path)
-    src_cfg = mdf_port_tex.get_game_tex_config(DST_GAME) or {}
-    vanilla = _load_vanilla_art_paths(src_cfg.get("vanilla_asset_rel", ""))
-    carried = mrl3_port.carry_texture_bindings(
-        mhws_col, made, lambda p: is_custom_tex_path(p, vanilla))
+    if paths_only:
+        mhws_cfg = mdf_port_tex.get_game_tex_config(DST_GAME) or {}
+        mhws_vanilla = _load_vanilla_art_paths(mhws_cfg.get("vanilla_asset_rel", ""))
+        dst_cfg = mdf_port_tex.get_game_tex_config(_RELAY_TARGET) or {}
+        dst_base = mdf_port_tex.full_base_path(dst_cfg, (dest_base_path or "").strip())
+        tex_count = relay_texture_paths(
+            mhws_col, made, dst_cfg, dst_base,
+            lambda p: is_custom_tex_path(p, mhws_vanilla))
+    else:
+        # The op above already wrote (or, with no MHRS mod root set, filled the
+        # path for) every custom texture it could place -- this just counts how
+        # many of the final material's own bindings are not the MHRS prefab's
+        # stock value, for the report.
+        mhrs_cfg = mdf_port_tex.get_game_tex_config(_RELAY_TARGET) or {}
+        mhrs_vanilla = _load_vanilla_art_paths(mhrs_cfg.get("vanilla_asset_rel", ""))
+        tex_count = sum(
+            1 for data in mrl3_port._materials_by_name(made).values()
+            for b in data.textureBindingList_items
+            if b.path and is_custom_tex_path(b.path, mhrs_vanilla))
+
     n = len([o for o in made.objects if o.get("~TYPE") == "RE_MDF_MATERIAL"])
     for obj in list(mhws_col.objects):
         bpy.data.objects.remove(obj, do_unlink=True)
     bpy.data.collections.remove(mhws_col)
     return True, T("core.mrl3_port_ops.relayed").format(
-        name=made.name, n=n, tex=carried), made.name
+        name=made.name, n=n, tex=tex_count), made.name
 
 
 @gate

@@ -14,6 +14,7 @@ import tempfile
 import shutil
 
 from .i18n import T
+from .color_grade import color_grade_items, DEFAULT_MODE_INDEX
 # Same two helpers the MDF processor uses, for the same reason: img.pixels[:]
 # materialises one Python float per channel (67 million objects for a 4K
 # texture) and `pixels[:] = arr.flatten().tolist()` builds the same list going
@@ -482,6 +483,33 @@ def _luminance(rgb):
     return np.sum(rgb * weights, axis=-1, keepdims=True)
 
 
+
+
+def _apply_color_grade_file(path, mode, out_dir, name_hint):
+    """Run core.color_grade over *path* and stage the result as a TGA.
+
+    Separate from _apply_color_adjustments on purpose: that one is a manual
+    per-image tweak in Photoshop's units, this is the fixed three-way mode the
+    generator and the texture processor also expose, so the same pick produces
+    the same pixels wherever it is set.  Note the two 'exposure' notions differ --
+    the slider multiplies the stored values, color_grade multiplies in linear
+    light -- which is exactly why this does not just preset the sliders.
+    """
+    from . import color_grade
+    if mode == 'NONE':
+        return path
+    tmp_name = "__tex_convert_grade"
+    if tmp_name in bpy.data.images:
+        bpy.data.images.remove(bpy.data.images[tmp_name])
+    img = bpy.data.images.load(path, check_existing=False)
+    img.name = tmp_name
+    img.colorspace_settings.name = 'Non-Color'
+    arr = image_to_array(img)          # Blender 行序，和 write_tga_rgba8 一致，不用翻
+    bpy.data.images.remove(img)
+    out = color_grade.grade(arr, mode)
+    return write_tga_rgba8(os.path.join(out_dir, f"{name_hint}.tga"), out)
+
+
 def _apply_color_adjust(rgb, exposure, saturation, vibrance):
     """rgb: (h, w, 3) float32 array of the image's raw stored channel values.
     Order is exposure -> vibrance -> saturation, matching how the three stack
@@ -595,6 +623,16 @@ class TexConvertSettings(bpy.types.PropertyGroup):
     ch_g_channel: bpy.props.EnumProperty(name="", items=_CH_ITEMS, default='G')
     ch_b_channel: bpy.props.EnumProperty(name="", items=_CH_ITEMS, default='B')
     ch_a_channel: bpy.props.EnumProperty(name="", items=_CH_ITEMS, default='A')
+
+    # 与生成器/贴图处理器同一套三档（core/color_grade.py）。和下面那组手动滑块是
+    # 两回事：这一档是整套素材的**口径**转换（源游戏 vs 本作），滑块是单张微调。
+    # 顺序也因此固定为「先档位、后滑块」。
+    color_grade: bpy.props.EnumProperty(
+        name="Colour Grade",
+        description="Tone adjustment applied to the colour data before encoding",
+        items=lambda self, ctx: color_grade_items(),
+        default=DEFAULT_MODE_INDEX,
+    )
 
     # COLOR preset only. Ranges/defaults match Photoshop's own sliders (see
     # _apply_color_adjust) so values carry over directly from a PS workflow.
@@ -770,6 +808,9 @@ class MT_OT_TexConvertDialog(bpy.types.Operator):
             # CUSTOM stays fully open for the same reason as detail overlay above.
             if s.preset in ('COLOR', 'CUSTOM'):
                 adj_box.separator()
+                grade_row = adj_box.row(align=True)
+                grade_row.label(text=T("core.color_grade.label"))
+                grade_row.prop(s, "color_grade", text="")
                 adj_box.prop(s, "color_adjust_enabled", text=T("core.tex_convert_base.color_adjust_enabled_name"))
                 if s.color_adjust_enabled:
                     col = adj_box.column(align=True)
@@ -897,6 +938,10 @@ class MT_OT_TexConvertDialog(bpy.types.Operator):
             if not png_path:
                 self.report({'ERROR'}, T("core.tex_convert_base.channel_compose_failed"))
                 return {'CANCELLED'}
+
+            if s.preset in ('COLOR', 'CUSTOM') and s.color_grade != 'NONE':
+                png_path = _apply_color_grade_file(
+                    png_path, s.color_grade, temp_dir, "tex_convert_grade")
 
             if (s.preset in ('COLOR', 'CUSTOM') and s.color_adjust_enabled
                     and (s.adjust_exposure or s.adjust_saturation or s.adjust_vibrance)):

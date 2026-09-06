@@ -3,7 +3,7 @@ import time
 import bpy
 import re
 from ...core.i18n import T
-from ...core import bone_utils
+from ...core import bone_utils, facial_maps, weight_utils
 from ...core.bone_mapper import BoneMapManager, resolve_preset
 from ...core.standard_ops import _build_fuzzy_preset_bones, _run_bone_color_refresh
 from ...core.re_chain_utils import _patch_chain_cleanup, _straighten_chain_orientations, _build_physics_bones_set
@@ -1019,6 +1019,41 @@ class MHWI_OT_SetMeshDisplayCondition(bpy.types.Operator):
         return {'FINISHED'}
 
 
+# ==========================================
+# 终末地面部顶点组改名 (Endfield -> MHWorld)
+# ==========================================
+# 对应表在 assets/facial_maps/endfield_to_mhwi.json，是作者手工标注的，与荒野那份
+# (endfield_to_mhws.json) 各自独立 —— 两家的面部骨集合不同，实测也没有 1:1 的自动
+# 对应，所以不能由一份推出另一份。见 core/facial_maps.py。
+class MHWI_OT_EndfieldFaceRename(bpy.types.Operator):
+    bl_idname = "mhwi.endfield_face_rename"
+    bl_label = "Endfield Face Rename"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    @classmethod
+    def description(cls, context, properties):
+        return T("mhwi.operators.endfield_face_rename_desc")
+
+    @classmethod
+    def poll(cls, context):
+        return any(o.type == 'MESH' for o in context.selected_objects)
+
+    def execute(self, context):
+        pairs = facial_maps.load("endfield_to_mhwi")
+        if not pairs:
+            self.report({'ERROR'}, T("mhwi.operators.endfield_map_missing"))
+            return {'CANCELLED'}
+        total = 0
+        for obj in context.selected_objects:
+            if obj.type != 'MESH':
+                continue
+            for old_name, new_name in pairs:
+                if weight_utils.rename_or_merge_vgroup(obj, old_name, new_name):
+                    total += 1
+        self.report({'INFO'}, T("mhwi.operators.endfield_processed").format(n=total))
+        return {'FINISHED'}
+
+
 # 注册所有类
 classes = [
     MHWI_OT_AlignNonPhysics,
@@ -1027,6 +1062,7 @@ classes = [
     MHWI_OT_SplitPhysicsBones,
     MHWI_OT_BatchRenamePhysicsBones,
     MHWI_OT_SetMeshDisplayCondition,
+    MHWI_OT_EndfieldFaceRename,
 ]
 
 def register():

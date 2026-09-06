@@ -5,6 +5,8 @@ import shutil
 import time
 
 from ...core.i18n import T
+from ...core.color_grade import color_grade_items, DEFAULT_MODE_INDEX
+from ...core.slot_resolver import grade_source_file
 from ...core.mdf_tex_processor_base import (
     PBR_TYPES, PBR_CHANNEL_SELECTABLE,
     MdfTexMaterialItem,
@@ -236,6 +238,8 @@ def _on_mrl3_collection_update(self, context):
         print(f"[MHWI Tex] Auto-refresh error: {e}")
 
 
+
+
 class Mrl3TexProcessorSettings(bpy.types.PropertyGroup):
     mrl3_collection: bpy.props.PointerProperty(
         name="MRL3 Collection",
@@ -252,6 +256,13 @@ class Mrl3TexProcessorSettings(bpy.types.PropertyGroup):
     materials_index:        bpy.props.IntProperty()
     clipboard_json:         bpy.props.StringProperty(default="")
     mrl3_loaded_collection: bpy.props.StringProperty(default="")
+    # 与生成器同名同义的全局档，见 core/color_grade.py。默认 NONE。
+    global_color_grade: bpy.props.EnumProperty(
+        name="Colour Grade (Global)",
+        description="Tone adjustment applied to every colour (sRGB) texture before encoding",
+        items=lambda self, ctx: color_grade_items(),
+        default=DEFAULT_MODE_INDEX,
+    )
     global_disable_mipmaps: bpy.props.BoolProperty(
         name="Disable MipMaps (Global)",
         description="Override every material's own Generate MipMaps checkbox and skip mipmap generation entirely",
@@ -366,6 +377,7 @@ class MHWI_OT_Mrl3TexProcess(bpy.types.Operator):
                 # same as core.mdf_tex_processor_base's execute().
                 effective_mipmaps = (mat_item.generate_mipmaps
                                     and not getattr(settings, 'global_disable_mipmaps', False))
+                grade_mode = getattr(settings, 'global_color_grade', 'NONE')
                 pbr_paths     = {pt: getattr(mat_item.pbr, pt) for pt in PBR_TYPES}
                 pbr_channels  = {pt: getattr(mat_item.pbr, f"{pt}_ch")
                                  for pt in PBR_CHANNEL_SELECTABLE}
@@ -470,6 +482,11 @@ class MHWI_OT_Mrl3TexProcess(bpy.types.Operator):
                                 'BC7_UNORM_SRGB' if slot.texture_type in MHWI_SRGB_SLOT_TYPES
                                 else 'BC7_UNORM'
                             )
+                            # 这条路没走 slot_resolver.write_slot_tex（它自己内联了
+                            # 一份），所以色调处理得在这里显式接一下，用的是同一个函数。
+                            _g = grade_source_file(src_img, temp_dir, dds_fmt, grade_mode)
+                            if _g is not None:
+                                src_img, src_name = _g, os.path.basename(_g)
                             dds_stem = os.path.splitext(src_name)[0]
                             dds_path = os.path.join(temp_dir, dds_stem + '.dds')
                             _t_dds = time.time()

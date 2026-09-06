@@ -1,94 +1,12 @@
-# MHWI (MhBone) -> RE4 (标准名)
-MHWI_TO_RE4_MAP = {
-    "MhBone_001": "Spine_0", "MhBone_002": "Spine_2", "MhBone_003": "Neck_1",
-    "MhBone_004": "Head", "MhBone_005": "L_Shoulder", "MhBone_006": "L_UpperArm_Twist_s1",
-    "MhBone_007": "L_Forearm", "MhBone_008": "L_Hand", "MhBone_009": "R_Shoulder",
-    "MhBone_010": "R_UpperArm_Twist_s1", "MhBone_011": "R_Forearm", "MhBone_012": "R_Hand",
-    "MhBone_013": "Hip", "MhBone_014": "L_Thigh", "MhBone_015": "L_Shin",
-    "MhBone_016": "L_Foot", "MhBone_017": "L_Toe", "MhBone_018": "R_Thigh",
-    "MhBone_019": "R_Shin", "MhBone_020": "R_Foot", "MhBone_021": "R_Toe",
-    "MhBone_031": "L_Thumb1", "MhBone_032": "L_Thumb2", "MhBone_033": "L_Thumb3",
-    "MhBone_034": "L_IndexF1", "MhBone_035": "L_IndexF2", "MhBone_036": "L_IndexF3",
-    "MhBone_037": "L_MiddleF1", "MhBone_038": "L_MiddleF2", "MhBone_039": "L_MiddleF3",
-    "MhBone_041": "L_RingF1", "MhBone_042": "L_RingF2", "MhBone_043": "L_RingF3",
-    "MhBone_044": "L_PinkyF1", "MhBone_045": "L_PinkyF2", "MhBone_046": "L_PinkyF3",
-    "MhBone_048": "R_Thumb1", "MhBone_049": "R_Thumb2", "MhBone_050": "R_Thumb3",
-    "MhBone_051": "R_IndexF1", "MhBone_052": "R_IndexF2", "MhBone_053": "R_IndexF3",
-    "MhBone_054": "R_MiddleF1", "MhBone_055": "R_MiddleF2", "MhBone_056": "R_MiddleF3",
-    "MhBone_058": "R_RingF1", "MhBone_059": "R_RingF2", "MhBone_060": "R_RingF3",
-    "MhBone_061": "R_PinkyF1", "MhBone_062": "R_PinkyF2", "MhBone_063": "R_PinkyF3",
-    "MhBone_070": "L_UpperArm_Help", "MhBone_071": "L_Elbow",
-    "MhBone_072": "R_UpperArm_Help", "MhBone_073": "R_Elbow",
-    "MhBone_074": "Butt_L", "MhBone_075": "LShinHelp",
-    "MhBone_076": "Butt_R", "MhBone_077": "RShinHelp",
-    "MhBone_080": "L_UpperArm", "MhBone_081": "L_Forearm_Twist_s12",
-    "MhBone_082": "R_UpperArm", "MhBone_083": "R_Forearm_Twist_s12",
-    "MhBone_308": "Brow1_L", "MhBone_307": "Brow2_L", "MhBone_306": "Brow3_L",
-    "MhBone_310": "Brow1_R", "MhBone_311": "Brow2_R", "MhBone_312": "Brow3_R",
-    "MhBone_315": "Eye_L", "MhBone_328": "Eye_R",
-    "MhBone_320": "L_U_Eyelid2", "MhBone_321": "L_U_Eyelid3", "MhBone_322": "L_U_Eyelid4",
-    "MhBone_333": "R_U_Eyelid2", "MhBone_334": "R_U_Eyelid3", "MhBone_335": "R_U_Eyelid4",
-    "MhBone_372": "Tongue02", "MhBone_379": "R_UpperLip02", "MhBone_380": "R_UpperLip01",
-    "MhBone_382": "L_UpperLip01", "MhBone_383": "L_UpperLip02", "MhBone_384": "L_MouthCorner",
-    "MhBone_385": "R_MouthCorner", "MhBone_386": "L_LowerLip02", "MhBone_387": "L_LowerLip01",
-    "MhBone_389": "R_LowerLip01", "MhBone_390": "R_LowerLip02", "MhBone_404": "C_Chin",
-}
-
-# Endfield -> RE4
-ENDFIELD_TO_RE4_MAP = {
-    "Bip001_Head": "Head", "Bip001_Neck": "Neck_0",
-    "TongueMd02Joint": "Tongue04", "TongueMd01Joint": "Tongue05", "NoseMd01Joint": "Head.005",
-    "lipRup4Joint": "R_UpperLip01", "lipRup3Joint": "R_UpperLip02", "lipRup2Joint": "R_UpperLip03",
-    "lipRup1Joint": "R_MouthCorner", "lipRdn4Joint": "R_LowerLip01", "lipRdn3Joint": "R_LowerLip02",
-    "lipRdn2Joint": "R_LowerLip03", "lipRdn1Joint": "R_MouthCorner.001", "lipMupJoint": "C_UpperLip",
-    "lipMdnJoint": "C_LowerLip", "lipLup4Joint": "L_UpperLip01", "lipLup3Joint": "L_UpperLip02",
-    "lipLup2Joint": "L_UpperLip03", "lipLup1Joint": "L_MouthCorner", "lipLdn4Joint": "L_LowerLip01",
-    "lipLdn3Joint": "L_LowerLip02", "lipLdn2Joint": "L_LowerLip03", "lipLdn1Joint": "L_MouthCorner.001",
-    "line_jnt": "Head.004", "jawJoint": "C_D_Jaw", "head_up_jnt": "Head.001", "head_mid_jnt": "Head.002",
-    "head_dn_jnt": "Head.003", "faceRtCheekOtJoint": "R_Risorius", "faceRtCheekOtDnJoint": "R_DepressorAnguliOris",
-    "faceMdJawDnJoint": "C_Chin", "faceLfCheekOtJoint": "L_Risorius", "faceLfCheekOtDnJoint": "L_DepressorAnguliOris",
-    "eyeRt08Joint": "R_D_Eyelid1", "eyeRt07Joint": "R_D_Eyelid3", "eyeRt06Joint": "R_D_Eyelid4",
-    "eyeRt05Joint": "R_O_EyeCorner", "eyeRt04Joint": "R_U_Eyelid4", "eyeRt03Joint": "R_U_Eyelid3",
-    "eyeRt02Joint": "R_U_Eyelid1", "eyeRt01Joint": "R_I_EyeCorner", "eyeLf08Joint": "L_D_Eyelid1",
-    "eyeLf07Joint": "L_D_Eyelid3", "eyeLf06Joint": "L_D_Eyelid4", "eyeLf05Joint": "L_O_EyeCorner",
-    "eyeLf04Joint": "L_U_Eyelid4", "eyeLf03Joint": "L_U_Eyelid3", "eyeLf02Joint": "L_U_Eyelid1",
-    "eyeLf01Joint": "L_I_EyeCorner", "faceLfIrisJoint": "Head.006", "faceRtIrisJoint": "Head.007",
-}
-
-VRC_TO_RE4_MAP = {
-    # 躯干
-    "Hips": "Hip", "Spine": "Spine_0", "Chest": "Spine_2", 
-    "Neck": "Neck_1", "Head": "Head",
-    
-    # 左臂
-    "Shoulder_L": "L_Shoulder", "UpperArm_L": "L_UpperArm", 
-    "LowerArm_L": "L_Forearm", "Hand_L": "L_Hand",
-    
-    # 右臂
-    "Shoulder_R": "R_Shoulder", "UpperArm_R": "R_UpperArm", 
-    "LowerArm_R": "R_Forearm", "Hand_R": "R_Hand",
-    
-    # 腿部
-    "UpperLeg_L": "L_Thigh", "LowerLeg_L": "L_Shin", 
-    "Foot_L": "L_Foot", "Toe_L": "L_Toe",
-    "UpperLeg_R": "R_Thigh", "LowerLeg_R": "R_Shin", 
-    "Foot_R": "R_Foot", "Toe_R": "R_Toe",
-    
-    # 手指 (左)
-    "ThumbProximal_L": "L_Thumb1", "ThumbIntermediate_L": "L_Thumb2", "ThumbDistal_L": "L_Thumb3",
-    "IndexProximal_L": "L_IndexF1", "IndexIntermediate_L": "L_IndexF2", "IndexDistal_L": "L_IndexF3",
-    "MiddleProximal_L": "L_MiddleF1", "MiddleIntermediate_L": "L_MiddleF2", "MiddleDistal_L": "L_MiddleF3",
-    "RingProximal_L": "L_RingF1", "RingIntermediate_L": "L_RingF2", "RingDistal_L": "L_RingF3",
-    "LittleProximal_L": "L_PinkyF1", "LittleIntermediate_L": "L_PinkyF2", "LittleDistal_L": "L_PinkyF3",
-    
-    # 手指 (右)
-    "ThumbProximal_R": "R_Thumb1", "ThumbIntermediate_R": "R_Thumb2", "ThumbDistal_R": "R_Thumb3",
-    "IndexProximal_R": "R_IndexF1", "IndexIntermediate_R": "R_IndexF2", "IndexDistal_R": "R_IndexF3",
-    "MiddleProximal_R": "R_MiddleF1", "MiddleIntermediate_R": "R_MiddleF2", "MiddleDistal_R": "R_MiddleF3",
-    "RingProximal_R": "R_RingF1", "RingIntermediate_R": "R_RingF2", "RingDistal_R": "R_RingF3",
-    "LittleProximal_R": "R_PinkyF1", "LittleIntermediate_R": "R_PinkyF2", "LittleDistal_R": "R_PinkyF3",
-}
-
+# RE4R 的骨名数据表。
+#
+# 这里曾经还有 MHWI_TO_RE4_MAP / ENDFIELD_TO_RE4_MAP / VRC_TO_RE4_MAP 三张
+# "某某 -> RE4" 的骨名对照表，全部**删掉了**，因为它们全仓库无人引用，而躯干部分
+# 已经被 core/bone_mapper.py 的标准键系统取代（逐条比对过：VRC 那张 51 条里 50 条
+# 与预设一致，MHWI 那张的扭转骨条目还把段骨和扭转骨对调了）。
+#
+# 唯一换不来的是**面部**——标准键系统不覆盖面部，那些对应是人标的。已存档到
+# assets/facial_maps/，见那里的 README。
 # ==========================================
 # 假骨工具 (FakeBone) 数据
 # ==========================================

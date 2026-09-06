@@ -287,3 +287,77 @@ def classify_heads(heads, physics_bones):
                 rec[0] = default
 
     return {name: rec[0] for name, rec in info.items()}
+
+
+# ---------------------------------------------------------------------------
+# 姿态驱动修正骨 (pose-driven correctives)
+# ---------------------------------------------------------------------------
+#
+# 终末地这一族的命名把驱动写在名字里：轴向 + 方向，例如
+# ``Bip001_L_Thigh_ty_plus`` / ``Bip001_L_Calf_ty_minus`` / ``corrective_Knee_L_ty_minus``。
+# 它们在父骨朝某个轴的某个方向转动时被激活，用来补形变。
+#
+# **不给它们标准槽位**：轴向与方向的枚举完全按游戏走，跨游戏没有对应物（荒野是
+# ``*RX/RY/RZ_HJ``、RE9 是 ``*_SR/_SS/_*Offset``，机制各不相同）。处置是并进父骨。
+#
+# 并进父骨**没有误差**，尽管实测它们离父骨有 25~90mm：
+#
+#     顶点变形  v = M_B · M_B_rest⁻¹ · v_rest
+#     B 是 A 的刚性子骨、自身无驱动 ⇒ M_B = M_A · Δ，M_B_rest = M_A_rest · Δ
+#     M_B · M_B_rest⁻¹ = M_A · Δ · Δ⁻¹ · M_A_rest⁻¹ = M_A · M_A_rest⁻¹   恒等
+#
+# 目标游戏根本不认识这根骨，所以它必然没有独立运动，上式的前提成立。真正丢掉的只有
+# 姿态驱动的修正**运动**，而那需要驱动数据——终末地没有 jcns，FBX 里也一条约束都没有
+# （实测 13 具骨架全为 0）。所以不是不搬，是没东西可搬。
+#
+# 反过来，移植进荒野/RE9 时目标**自己的**修正骨由插骨规则建出来、由目标的 jcns 驱动，
+# 所以丢掉源的、换来目标的，净结果是对的。
+
+CORRECTIVE_NAME_RE = re.compile(r'_[tr][xyz]_(plus|minus)$|^corrective', re.I)
+
+#: 每个带权重顶点上的平均权重上限。修正骨是**混合层**：铺得广、压得轻——实测终末地
+#: 28 根修正骨总权重 937（main 是 21855，占 2.5%），权重最大的
+#: ``Bip001_L_Calf_ty_plus`` 覆盖 403 个顶点却只有 93.7 总权重，均值 0.23。
+#: 超过这个上限说明它其实是主要形变骨，不该按修正骨静默并掉。
+CORRECTIVE_WEIGHT_CEILING = 0.5
+
+
+def is_corrective_name(name):
+    """名字是否落在姿态修正骨这一族。**只是名字**，判定见 :func:`classify_corrective`。"""
+    return bool(CORRECTIVE_NAME_RE.search(name))
+
+
+def classify_corrective(name, is_leaf, parent_is_mapped, mean_vertex_weight):
+    """``"corrective"`` / ``"heavy"`` / ``"suspect"`` / ``None``。
+
+    ``None``         名字不属于这一族。
+    ``"corrective"`` 可以按修正骨处置。
+    ``"heavy"``      同样按修正骨处置，但权重足迹异常，**要报出来**。
+    ``"suspect"``    结构不对，**不要**按修正骨处置。
+
+    两类判据的性质不同，所以后果也不同：
+
+    **结构判据 —— 影响正确性，不成立就换处置：**
+
+    - **叶子**：有子骨意味着它承载着一条链，并掉会把整条链的挂点弄丢。实测终末地
+      28/28 与 16/16 都是叶子。
+    - **父骨已映射**：并进去得有个确定的去处；父骨自己没映射，并过去还是无家可归。
+
+    **权重判据 —— 只影响可信度，不改变处置：**
+
+    并进父骨在静止与刚性跟随上是**恒等**的（见本节顶部推导），而那个恒等式**与权重
+    大小无关**。所以权重超标不是"并不了"，而是"这根骨可能不是修正骨"——名字撞上了
+    而实际担着主要形变。实测两具终末地骨架里已确认的修正骨均值在 0.036~0.261，
+    而 ``Bip001_L/R_Foot_ty_minus`` 是 0.506，高出两倍：确实离群，值得看一眼，
+    但并进父骨仍然是对的。
+
+    资产之间差异是常态（Root.002 一根修正骨都没有，而 arknights.json 列了 58 条），
+    所以这些判据不是形式主义。
+    """
+    if not is_corrective_name(name):
+        return None
+    if not is_leaf or not parent_is_mapped:
+        return "suspect"
+    if mean_vertex_weight is not None and mean_vertex_weight > CORRECTIVE_WEIGHT_CEILING:
+        return "heavy"
+    return "corrective"

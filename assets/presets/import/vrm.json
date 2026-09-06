@@ -1,0 +1,384 @@
+{
+  "preset_info": {
+    "name": "VRM 1.0",
+    "type": "X_PRESET",
+    "version": "1.1",
+    "description": "VRM 1.0 humanBones slot names + VRoid Studio (J_Bip_*). Separator/case variants are handled by fuzzy matching. Thumbs follow VRM 1.0 semantics (Metacarpal/Proximal/Distal); Unity Humanoid / VRM 0.x thumbs (Proximal/Intermediate/Distal) live in the VRChat preset instead -- the string 'ThumbProximal' means a different joint in each spec, so the two families must not share one file. For an arbitrary .vrm asset the authoritative mapping is the file's own humanBones table, not these names.",
+    "category": "通用平台"
+  },
+  "exclude": [
+    "Root",
+    "Secondary",
+    "LeftEye",
+    "RightEye",
+    "Jaw",
+    "J_Adj_L_FaceEye",
+    "J_Adj_R_FaceEye"
+  ],
+  "mappings": {
+    "pelvis": {
+      "main": [
+        "Hips",
+        "J_Bip_C_Hips"
+      ],
+      "aux": []
+    },
+    "spine_01": {
+      "main": [
+        "Spine",
+        "J_Bip_C_Spine"
+      ],
+      "aux": []
+    },
+    "spine_02": {
+      "main": [
+        "Chest",
+        "J_Bip_C_Chest"
+      ],
+      "aux": []
+    },
+    "spine_03": {
+      "main": [
+        "UpperChest",
+        "J_Bip_C_UpperChest"
+      ],
+      "aux": []
+    },
+    "neck": {
+      "main": [
+        "Neck",
+        "J_Bip_C_Neck"
+      ],
+      "aux": []
+    },
+    "head": {
+      "main": [
+        "Head",
+        "J_Bip_C_Head"
+      ],
+      "aux": []
+    },
+    "clavicle_L": {
+      "main": [
+        "LeftShoulder",
+        "J_Bip_L_Shoulder"
+      ],
+      "aux": []
+    },
+    "upperarm_L": {
+      "main": [
+        "LeftUpperArm",
+        "J_Bip_L_UpperArm"
+      ],
+      "aux": []
+    },
+    "forearm_L": {
+      "main": [
+        "LeftLowerArm",
+        "J_Bip_L_LowerArm"
+      ],
+      "aux": []
+    },
+    "hand_L": {
+      "main": [
+        "LeftHand",
+        "J_Bip_L_Hand"
+      ],
+      "aux": []
+    },
+    "clavicle_R": {
+      "main": [
+        "RightShoulder",
+        "J_Bip_R_Shoulder"
+      ],
+      "aux": []
+    },
+    "upperarm_R": {
+      "main": [
+        "RightUpperArm",
+        "J_Bip_R_UpperArm"
+      ],
+      "aux": []
+    },
+    "forearm_R": {
+      "main": [
+        "RightLowerArm",
+        "J_Bip_R_LowerArm"
+      ],
+      "aux": []
+    },
+    "hand_R": {
+      "main": [
+        "RightHand",
+        "J_Bip_R_Hand"
+      ],
+      "aux": []
+    },
+    "thigh_L": {
+      "main": [
+        "LeftUpperLeg",
+        "J_Bip_L_UpperLeg"
+      ],
+      "aux": []
+    },
+    "shin_L": {
+      "main": [
+        "LeftLowerLeg",
+        "J_Bip_L_LowerLeg"
+      ],
+      "aux": []
+    },
+    "foot_L": {
+      "main": [
+        "LeftFoot",
+        "J_Bip_L_Foot"
+      ],
+      "aux": []
+    },
+    "toe_L": {
+      "main": [
+        "LeftToes",
+        "J_Bip_L_ToeBase"
+      ],
+      "aux": []
+    },
+    "thigh_R": {
+      "main": [
+        "RightUpperLeg",
+        "J_Bip_R_UpperLeg"
+      ],
+      "aux": []
+    },
+    "shin_R": {
+      "main": [
+        "RightLowerLeg",
+        "J_Bip_R_LowerLeg"
+      ],
+      "aux": []
+    },
+    "foot_R": {
+      "main": [
+        "RightFoot",
+        "J_Bip_R_Foot"
+      ],
+      "aux": []
+    },
+    "toe_R": {
+      "main": [
+        "RightToes",
+        "J_Bip_R_ToeBase"
+      ],
+      "aux": []
+    },
+    "thumb_01_L": {
+      "main": [
+        "LeftThumbMetacarpal",
+        "J_Bip_L_Thumb1"
+      ],
+      "aux": []
+    },
+    "thumb_02_L": {
+      "main": [
+        "LeftThumbProximal",
+        "J_Bip_L_Thumb2"
+      ],
+      "aux": []
+    },
+    "thumb_03_L": {
+      "main": [
+        "LeftThumbDistal",
+        "J_Bip_L_Thumb3"
+      ],
+      "aux": []
+    },
+    "index_01_L": {
+      "main": [
+        "LeftIndexProximal",
+        "J_Bip_L_Index1"
+      ],
+      "aux": []
+    },
+    "index_02_L": {
+      "main": [
+        "LeftIndexIntermediate",
+        "J_Bip_L_Index2"
+      ],
+      "aux": []
+    },
+    "index_03_L": {
+      "main": [
+        "LeftIndexDistal",
+        "J_Bip_L_Index3"
+      ],
+      "aux": []
+    },
+    "middle_01_L": {
+      "main": [
+        "LeftMiddleProximal",
+        "J_Bip_L_Middle1"
+      ],
+      "aux": []
+    },
+    "middle_02_L": {
+      "main": [
+        "LeftMiddleIntermediate",
+        "J_Bip_L_Middle2"
+      ],
+      "aux": []
+    },
+    "middle_03_L": {
+      "main": [
+        "LeftMiddleDistal",
+        "J_Bip_L_Middle3"
+      ],
+      "aux": []
+    },
+    "ring_01_L": {
+      "main": [
+        "LeftRingProximal",
+        "J_Bip_L_Ring1"
+      ],
+      "aux": []
+    },
+    "ring_02_L": {
+      "main": [
+        "LeftRingIntermediate",
+        "J_Bip_L_Ring2"
+      ],
+      "aux": []
+    },
+    "ring_03_L": {
+      "main": [
+        "LeftRingDistal",
+        "J_Bip_L_Ring3"
+      ],
+      "aux": []
+    },
+    "pinky_01_L": {
+      "main": [
+        "LeftLittleProximal",
+        "J_Bip_L_Little1"
+      ],
+      "aux": []
+    },
+    "pinky_02_L": {
+      "main": [
+        "LeftLittleIntermediate",
+        "J_Bip_L_Little2"
+      ],
+      "aux": []
+    },
+    "pinky_03_L": {
+      "main": [
+        "LeftLittleDistal",
+        "J_Bip_L_Little3"
+      ],
+      "aux": []
+    },
+    "thumb_01_R": {
+      "main": [
+        "RightThumbMetacarpal",
+        "J_Bip_R_Thumb1"
+      ],
+      "aux": []
+    },
+    "thumb_02_R": {
+      "main": [
+        "RightThumbProximal",
+        "J_Bip_R_Thumb2"
+      ],
+      "aux": []
+    },
+    "thumb_03_R": {
+      "main": [
+        "RightThumbDistal",
+        "J_Bip_R_Thumb3"
+      ],
+      "aux": []
+    },
+    "index_01_R": {
+      "main": [
+        "RightIndexProximal",
+        "J_Bip_R_Index1"
+      ],
+      "aux": []
+    },
+    "index_02_R": {
+      "main": [
+        "RightIndexIntermediate",
+        "J_Bip_R_Index2"
+      ],
+      "aux": []
+    },
+    "index_03_R": {
+      "main": [
+        "RightIndexDistal",
+        "J_Bip_R_Index3"
+      ],
+      "aux": []
+    },
+    "middle_01_R": {
+      "main": [
+        "RightMiddleProximal",
+        "J_Bip_R_Middle1"
+      ],
+      "aux": []
+    },
+    "middle_02_R": {
+      "main": [
+        "RightMiddleIntermediate",
+        "J_Bip_R_Middle2"
+      ],
+      "aux": []
+    },
+    "middle_03_R": {
+      "main": [
+        "RightMiddleDistal",
+        "J_Bip_R_Middle3"
+      ],
+      "aux": []
+    },
+    "ring_01_R": {
+      "main": [
+        "RightRingProximal",
+        "J_Bip_R_Ring1"
+      ],
+      "aux": []
+    },
+    "ring_02_R": {
+      "main": [
+        "RightRingIntermediate",
+        "J_Bip_R_Ring2"
+      ],
+      "aux": []
+    },
+    "ring_03_R": {
+      "main": [
+        "RightRingDistal",
+        "J_Bip_R_Ring3"
+      ],
+      "aux": []
+    },
+    "pinky_01_R": {
+      "main": [
+        "RightLittleProximal",
+        "J_Bip_R_Little1"
+      ],
+      "aux": []
+    },
+    "pinky_02_R": {
+      "main": [
+        "RightLittleIntermediate",
+        "J_Bip_R_Little2"
+      ],
+      "aux": []
+    },
+    "pinky_03_R": {
+      "main": [
+        "RightLittleDistal",
+        "J_Bip_R_Little3"
+      ],
+      "aux": []
+    }
+  }
+}

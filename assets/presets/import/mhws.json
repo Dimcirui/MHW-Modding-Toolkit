@@ -1,536 +1,668 @@
 {
-  "preset_info": {
-    "name": "怪猎荒野",
-    "type": "X_PRESET",
-    "version": "1.0",
-    "description": "Merges HJ helpers, split spines, and muscle bones.",
-    "category": "怪猎系"
-  },
-  "exclude": [
-    "COG",
-    "root",
-    "Cage",
-    "Cage_L"
-  ],
-  "mappings": {
-    "pelvis": {
-      "main": [
-        "Hip"
-      ],
-      "aux": [
-        "Spine_0",
-        "Hip_HJ_00",
-        "Spine_0_HJ_00",
-        "Hip_WpConst"
-      ]
+    "preset_info": {
+        "name": "怪猎荒野",
+        "type": "X_PRESET",
+        "version": "1.0",
+        "description": "Merges HJ helpers, split spines, and muscle bones.",
+        "category": "怪猎系"
     },
-    "spine_01": {
-      "main": [
-        "Spine_1"
-      ],
-      "aux": [
-        "Spine_1_HJ_00",
-        "Spine_1_WpConst"
-      ]
-    },
-    "spine_02": {
-      "main": [
-        "Spine_2"
-      ],
-      "aux": [
-        "Spine_2_HJ_00",
-        "L_Bust_HJ_00",
-        "L_Bust_HJ_01",
-        "R_Bust_HJ_00",
-        "R_Bust_HJ_01",
-        "Spine_2_WpConst"
-      ]
-    },
-    "neck": {
-      "main": [
-        "Neck_0"
-      ],
-      "aux": [
-        "Neck_0_HJ_00",
-        "Neck_1",
-        "Neck_1_HJ_00",
-        "HeadRX_HJ_01"
-      ]
-    },
-    "head": {
-      "main": [
-        "Head"
-      ],
-      "aux": []
-    },
-    "clavicle_L": {
-      "main": [
-        "L_Shoulder"
-      ],
-      "aux": [
-        "L_Shoulder_HJ_00",
-        "L_Traps_HJ_00",
-        "L_Traps_HJ_01",
-        "L_Pec_HJ_00",
-        "L_Pec_HJ_01",
-        "L_Lats_HJ_00",
-        "L_Lats_HJ_01"
-      ]
-    },
-    "upperarm_L": {
-      "main": [
-        "L_UpperArm"
-      ],
-      "aux": [
-        "L_UpperArm_HJ_00",
-        "L_UpperArmDouble_HJ_00",
-        "L_Deltoid_HJ_00",
-        "L_Deltoid_HJ_01",
-        "L_Deltoid_HJ_02",
-        "L_Biceps_HJ_00",
-        "L_Biceps_HJ_01",
-        "L_Triceps_HJ_00",
-        "L_UpperArmTwist_HJ_00",
-        "L_UpperArmTwist_HJ_01",
-        "L_UpperArmTwist_HJ_02"
-      ]
-    },
-    "forearm_L": {
-      "main": [
-        "L_Forearm"
-      ],
-      "aux": [
-        "L_Forearm_HJ_00",
-        "L_ForearmDouble_HJ_00",
-        "L_Elbow_HJ_00",
-        "L_ForearmRY_HJ_00",
-        "L_ForearmRY_HJ_01",
-        "L_ForearmTwist_HJ_00",
-        "L_ForearmTwist_HJ_01",
-        "L_ForearmTwist_HJ_02"
-      ]
-    },
-    "hand_L": {
-      "main": [
-        "L_Hand"
-      ],
-      "aux": [
-        "L_Hand_HJ_00",
-        "L_Hand_HJ_01",
-        "L_HandRZ_HJ_00",
-        "L_Wep",
-        "L_Wep_Sub",
-        "L_Palm"
-      ]
-    },
-    "clavicle_R": {
-      "main": [
-        "R_Shoulder"
-      ],
-      "aux": [
-        "R_Shoulder_HJ_00",
-        "R_Traps_HJ_00",
-        "R_Traps_HJ_01",
-        "R_Pec_HJ_00",
-        "R_Pec_HJ_01",
-        "R_Lats_HJ_00",
-        "R_Lats_HJ_01"
-      ]
-    },
-    "upperarm_R": {
-      "main": [
-        "R_UpperArm"
-      ],
-      "aux": [
-        "R_UpperArm_HJ_00",
-        "R_UpperArmDouble_HJ_00",
-        "R_Deltoid_HJ_00",
-        "R_Deltoid_HJ_01",
-        "R_Deltoid_HJ_02",
-        "R_Biceps_HJ_00",
-        "R_Biceps_HJ_01",
-        "R_Triceps_HJ_00",
-        "R_UpperArmTwist_HJ_00",
-        "R_UpperArmTwist_HJ_01",
-        "R_UpperArmTwist_HJ_02"
-      ]
-    },
-    "forearm_R": {
-      "main": [
-        "R_Forearm"
-      ],
-      "aux": [
-        "R_Forearm_HJ_00",
-        "R_ForearmDouble_HJ_00",
-        "R_Elbow_HJ_00",
-        "R_ForearmRY_HJ_00",
-        "R_ForearmRY_HJ_01",
-        "R_ForearmTwist_HJ_00",
-        "R_ForearmTwist_HJ_01",
-        "R_ForearmTwist_HJ_02",
-        "R_Shield"
-      ]
-    },
-    "hand_R": {
-      "main": [
-        "R_Hand"
-      ],
-      "aux": [
-        "R_Hand_HJ_00",
-        "R_Hand_HJ_01",
-        "R_HandRZ_HJ_00",
-        "R_Wep",
-        "R_Wep_Sub",
-        "R_Palm"
-      ]
-    },
-    "thigh_L": {
-      "main": [
-        "L_Thigh"
-      ],
-      "aux": [
-        "L_Hip_HJ_00",
-        "L_Hip_HJ_01",
-        "L_ThighTwist_HJ_00",
-        "L_ThighTwist_HJ_01",
-        "L_ThighTwist_HJ_02",
-        "L_ThighRZ_HJ_00",
-        "L_ThighRZ_HJ_01",
-        "L_ThighRX_HJ_00",
-        "L_ThighRX_HJ_01"
-      ]
-    },
-    "shin_L": {
-      "main": [
-        "L_Shin"
-      ],
-      "aux": [
-        "L_Knee",
-        "L_Knee_HJ_00",
-        "L_KneeDouble_HJ_00",
-        "L_KneeRX_HJ_00",
-        "L_Shin_HJ_00",
-        "L_Shin_HJ_01",
-        "L_Calf_HJ_00"
-      ]
-    },
-    "foot_L": {
-      "main": [
-        "L_Foot"
-      ],
-      "aux": [
-        "L_Foot_HJ_00",
-        "L_Instep"
-      ]
-    },
-    "toe_L": {
-      "main": [
-        "L_Toe"
-      ],
-      "aux": []
-    },
-    "thigh_R": {
-      "main": [
-        "R_Thigh"
-      ],
-      "aux": [
-        "R_Hip_HJ_00",
-        "R_Hip_HJ_01",
-        "R_ThighTwist_HJ_00",
-        "R_ThighTwist_HJ_01",
-        "R_ThighTwist_HJ_02",
-        "R_ThighRZ_HJ_00",
-        "R_ThighRZ_HJ_01",
-        "R_ThighRX_HJ_00",
-        "R_ThighRX_HJ_01"
-      ]
-    },
-    "shin_R": {
-      "main": [
-        "R_Shin"
-      ],
-      "aux": [
-        "R_Knee",
-        "R_Knee_HJ_00",
-        "R_KneeDouble_HJ_00",
-        "R_KneeRX_HJ_00",
-        "R_Shin_HJ_00",
-        "R_Shin_HJ_01",
-        "R_Calf_HJ_00"
-      ]
-    },
-    "foot_R": {
-      "main": [
-        "R_Foot"
-      ],
-      "aux": [
-        "R_Foot_HJ_00",
-        "R_Instep"
-      ]
-    },
-    "toe_R": {
-      "main": [
-        "R_Toe"
-      ],
-      "aux": []
-    },
-    "thumb_01_L": {
-      "main": [
-        "L_Thumb1"
-      ],
-      "aux": [
-        "L_Thumb_HJ_00"
-      ]
-    },
-    "thumb_02_L": {
-      "main": [
-        "L_Thumb2"
-      ],
-      "aux": [
-        "L_Thumb_HJ_01"
-      ]
-    },
-    "thumb_03_L": {
-      "main": [
-        "L_Thumb3"
-      ],
-      "aux": [
-        "L_Thumb_HJ_02",
-        "L_Thumb_HJ_03"
-      ]
-    },
-    "index_01_L": {
-      "main": [
-        "L_IndexF1"
-      ],
-      "aux": [
-        "L_IndexF_HJ_00",
-        "L_IndexF_HJ_01"
-      ]
-    },
-    "index_02_L": {
-      "main": [
-        "L_IndexF2"
-      ],
-      "aux": [
-        "L_IndexF_HJ_02"
-      ]
-    },
-    "index_03_L": {
-      "main": [
-        "L_IndexF3"
-      ],
-      "aux": [
-        "L_IndexF_HJ_03",
-        "L_IndexF_HJ_04"
-      ]
-    },
-    "middle_01_L": {
-      "main": [
-        "L_MiddleF1"
-      ],
-      "aux": [
-        "L_MiddleF_HJ_00",
-        "L_MiddleF_HJ_01"
-      ]
-    },
-    "middle_02_L": {
-      "main": [
-        "L_MiddleF2"
-      ],
-      "aux": [
-        "L_MiddleF_HJ_02"
-      ]
-    },
-    "middle_03_L": {
-      "main": [
-        "L_MiddleF3"
-      ],
-      "aux": [
-        "L_MiddleF_HJ_03",
-        "L_MiddleF_HJ_04"
-      ]
-    },
-    "ring_01_L": {
-      "main": [
-        "L_RingF1"
-      ],
-      "aux": [
-        "L_RingF_HJ_00",
-        "L_RingF_HJ_01"
-      ]
-    },
-    "ring_02_L": {
-      "main": [
-        "L_RingF2"
-      ],
-      "aux": [
-        "L_RingF_HJ_02"
-      ]
-    },
-    "ring_03_L": {
-      "main": [
-        "L_RingF3"
-      ],
-      "aux": [
-        "L_RingF_HJ_03",
-        "L_RingF_HJ_04"
-      ]
-    },
-    "pinky_01_L": {
-      "main": [
-        "L_PinkyF1"
-      ],
-      "aux": [
-        "L_PinkyF_HJ_00",
-        "L_PinkyF_HJ_01"
-      ]
-    },
-    "pinky_02_L": {
-      "main": [
-        "L_PinkyF2"
-      ],
-      "aux": [
-        "L_PinkyF_HJ_02"
-      ]
-    },
-    "pinky_03_L": {
-      "main": [
-        "L_PinkyF3"
-      ],
-      "aux": [
-        "L_PinkyF_HJ_03",
-        "L_PinkyF_HJ_04"
-      ]
-    },
-    "thumb_01_R": {
-      "main": [
-        "R_Thumb1"
-      ],
-      "aux": [
-        "R_Thumb_HJ_00"
-      ]
-    },
-    "thumb_02_R": {
-      "main": [
-        "R_Thumb2"
-      ],
-      "aux": [
-        "R_Thumb_HJ_01"
-      ]
-    },
-    "thumb_03_R": {
-      "main": [
-        "R_Thumb3"
-      ],
-      "aux": [
-        "R_Thumb_HJ_02",
-        "R_Thumb_HJ_03"
-      ]
-    },
-    "index_01_R": {
-      "main": [
-        "R_IndexF1"
-      ],
-      "aux": [
-        "R_IndexF_HJ_00",
-        "R_IndexF_HJ_01"
-      ]
-    },
-    "index_02_R": {
-      "main": [
-        "R_IndexF2"
-      ],
-      "aux": [
-        "R_IndexF_HJ_02"
-      ]
-    },
-    "index_03_R": {
-      "main": [
-        "R_IndexF3"
-      ],
-      "aux": [
-        "R_IndexF_HJ_03",
-        "R_IndexF_HJ_04"
-      ]
-    },
-    "middle_01_R": {
-      "main": [
-        "R_MiddleF1"
-      ],
-      "aux": [
-        "R_MiddleF_HJ_00",
-        "R_MiddleF_HJ_01"
-      ]
-    },
-    "middle_02_R": {
-      "main": [
-        "R_MiddleF2"
-      ],
-      "aux": [
-        "R_MiddleF_HJ_02"
-      ]
-    },
-    "middle_03_R": {
-      "main": [
-        "R_MiddleF3"
-      ],
-      "aux": [
-        "R_MiddleF_HJ_03",
-        "R_MiddleF_HJ_04"
-      ]
-    },
-    "ring_01_R": {
-      "main": [
-        "R_RingF1"
-      ],
-      "aux": [
-        "R_RingF_HJ_00",
-        "R_RingF_HJ_01"
-      ]
-    },
-    "ring_02_R": {
-      "main": [
-        "R_RingF2"
-      ],
-      "aux": [
-        "R_RingF_HJ_02"
-      ]
-    },
-    "ring_03_R": {
-      "main": [
-        "R_RingF3"
-      ],
-      "aux": [
-        "R_RingF_HJ_03",
-        "R_RingF_HJ_04"
-      ]
-    },
-    "pinky_01_R": {
-      "main": [
-        "R_PinkyF1"
-      ],
-      "aux": [
-        "R_PinkyF_HJ_00",
-        "R_PinkyF_HJ_01"
-      ]
-    },
-    "pinky_02_R": {
-      "main": [
-        "R_PinkyF2"
-      ],
-      "aux": [
-        "R_PinkyF_HJ_02"
-      ]
-    },
-    "pinky_03_R": {
-      "main": [
-        "R_PinkyF3"
-      ],
-      "aux": [
-        "R_PinkyF_HJ_03",
-        "R_PinkyF_HJ_04"
-      ]
+    "exclude": [
+        "COG",
+        "root",
+        "Cage",
+        "Cage_L"
+    ],
+    "mappings": {
+        "pelvis": {
+            "main": [
+                "Hip"
+            ],
+            "aux": [
+                "Spine_0",
+                "Hip_HJ_00",
+                "Spine_0_HJ_00",
+                "Hip_WpConst"
+            ]
+        },
+        "spine_01": {
+            "main": [
+                "Spine_1"
+            ],
+            "aux": [
+                "Spine_1_HJ_00",
+                "Spine_1_WpConst"
+            ]
+        },
+        "spine_02": {
+            "main": [
+                "Spine_2"
+            ],
+            "aux": [
+                "Spine_2_HJ_00",
+                "L_Bust_HJ_00",
+                "L_Bust_HJ_01",
+                "R_Bust_HJ_00",
+                "R_Bust_HJ_01",
+                "Spine_2_WpConst"
+            ]
+        },
+        "neck": {
+            "main": [
+                "Neck_0"
+            ],
+            "aux": [
+                "Neck_0_HJ_00",
+                "Neck_1",
+                "Neck_1_HJ_00",
+                "HeadRX_HJ_01"
+            ]
+        },
+        "head": {
+            "main": [
+                "Head"
+            ],
+            "aux": []
+        },
+        "clavicle_L": {
+            "main": [
+                "L_Shoulder"
+            ],
+            "aux": [
+                "L_Shoulder_HJ_00",
+                "L_Traps_HJ_00",
+                "L_Traps_HJ_01",
+                "L_Pec_HJ_00",
+                "L_Pec_HJ_01",
+                "L_Lats_HJ_00",
+                "L_Lats_HJ_01"
+            ]
+        },
+        "upperarm_L": {
+            "main": [
+                "L_UpperArm"
+            ],
+            "aux": [
+                "L_UpperArm_HJ_00",
+                "L_UpperArmDouble_HJ_00",
+                "L_Deltoid_HJ_00",
+                "L_Deltoid_HJ_01",
+                "L_Deltoid_HJ_02",
+                "L_Biceps_HJ_00",
+                "L_Biceps_HJ_01",
+                "L_Triceps_HJ_00"
+            ]
+        },
+        "forearm_L": {
+            "main": [
+                "L_Forearm"
+            ],
+            "aux": [
+                "L_Forearm_HJ_00",
+                "L_ForearmDouble_HJ_00",
+                "L_ForearmRY_HJ_00",
+                "L_ForearmRY_HJ_01"
+            ]
+        },
+        "hand_L": {
+            "main": [
+                "L_Hand"
+            ],
+            "aux": [
+                "L_Hand_HJ_00",
+                "L_Hand_HJ_01",
+                "L_HandRZ_HJ_00",
+                "L_Wep",
+                "L_Wep_Sub"
+            ]
+        },
+        "clavicle_R": {
+            "main": [
+                "R_Shoulder"
+            ],
+            "aux": [
+                "R_Shoulder_HJ_00",
+                "R_Traps_HJ_00",
+                "R_Traps_HJ_01",
+                "R_Pec_HJ_00",
+                "R_Pec_HJ_01",
+                "R_Lats_HJ_00",
+                "R_Lats_HJ_01"
+            ]
+        },
+        "upperarm_R": {
+            "main": [
+                "R_UpperArm"
+            ],
+            "aux": [
+                "R_UpperArm_HJ_00",
+                "R_UpperArmDouble_HJ_00",
+                "R_Deltoid_HJ_00",
+                "R_Deltoid_HJ_01",
+                "R_Deltoid_HJ_02",
+                "R_Biceps_HJ_00",
+                "R_Biceps_HJ_01",
+                "R_Triceps_HJ_00"
+            ]
+        },
+        "forearm_R": {
+            "main": [
+                "R_Forearm"
+            ],
+            "aux": [
+                "R_Forearm_HJ_00",
+                "R_ForearmDouble_HJ_00",
+                "R_ForearmRY_HJ_00",
+                "R_ForearmRY_HJ_01",
+                "R_Shield"
+            ]
+        },
+        "hand_R": {
+            "main": [
+                "R_Hand"
+            ],
+            "aux": [
+                "R_Hand_HJ_00",
+                "R_Hand_HJ_01",
+                "R_HandRZ_HJ_00",
+                "R_Wep",
+                "R_Wep_Sub"
+            ]
+        },
+        "thigh_L": {
+            "main": [
+                "L_Thigh"
+            ],
+            "aux": [
+                "L_Hip_HJ_00",
+                "L_Hip_HJ_01",
+                "L_ThighRZ_HJ_00",
+                "L_ThighRZ_HJ_01",
+                "L_ThighRX_HJ_00",
+                "L_ThighRX_HJ_01"
+            ]
+        },
+        "shin_L": {
+            "main": [
+                "L_Shin"
+            ],
+            "aux": [
+                "L_Shin_HJ_00",
+                "L_Shin_HJ_01",
+                "L_Calf_HJ_00"
+            ]
+        },
+        "foot_L": {
+            "main": [
+                "L_Foot"
+            ],
+            "aux": [
+                "L_Foot_HJ_00"
+            ]
+        },
+        "toe_L": {
+            "main": [
+                "L_Toe"
+            ],
+            "aux": []
+        },
+        "thigh_R": {
+            "main": [
+                "R_Thigh"
+            ],
+            "aux": [
+                "R_Hip_HJ_00",
+                "R_Hip_HJ_01",
+                "R_ThighRZ_HJ_00",
+                "R_ThighRZ_HJ_01",
+                "R_ThighRX_HJ_00",
+                "R_ThighRX_HJ_01"
+            ]
+        },
+        "shin_R": {
+            "main": [
+                "R_Shin"
+            ],
+            "aux": [
+                "R_Shin_HJ_00",
+                "R_Shin_HJ_01",
+                "R_Calf_HJ_00"
+            ]
+        },
+        "foot_R": {
+            "main": [
+                "R_Foot"
+            ],
+            "aux": [
+                "R_Foot_HJ_00"
+            ]
+        },
+        "toe_R": {
+            "main": [
+                "R_Toe"
+            ],
+            "aux": []
+        },
+        "thumb_01_L": {
+            "main": [
+                "L_Thumb1"
+            ],
+            "aux": [
+                "L_Thumb_HJ_00"
+            ]
+        },
+        "thumb_02_L": {
+            "main": [
+                "L_Thumb2"
+            ],
+            "aux": [
+                "L_Thumb_HJ_01"
+            ]
+        },
+        "thumb_03_L": {
+            "main": [
+                "L_Thumb3"
+            ],
+            "aux": [
+                "L_Thumb_HJ_02",
+                "L_Thumb_HJ_03"
+            ]
+        },
+        "index_01_L": {
+            "main": [
+                "L_IndexF1"
+            ],
+            "aux": [
+                "L_IndexF_HJ_00",
+                "L_IndexF_HJ_01"
+            ]
+        },
+        "index_02_L": {
+            "main": [
+                "L_IndexF2"
+            ],
+            "aux": [
+                "L_IndexF_HJ_02"
+            ]
+        },
+        "index_03_L": {
+            "main": [
+                "L_IndexF3"
+            ],
+            "aux": [
+                "L_IndexF_HJ_03",
+                "L_IndexF_HJ_04"
+            ]
+        },
+        "middle_01_L": {
+            "main": [
+                "L_MiddleF1"
+            ],
+            "aux": [
+                "L_MiddleF_HJ_00",
+                "L_MiddleF_HJ_01"
+            ]
+        },
+        "middle_02_L": {
+            "main": [
+                "L_MiddleF2"
+            ],
+            "aux": [
+                "L_MiddleF_HJ_02"
+            ]
+        },
+        "middle_03_L": {
+            "main": [
+                "L_MiddleF3"
+            ],
+            "aux": [
+                "L_MiddleF_HJ_03",
+                "L_MiddleF_HJ_04"
+            ]
+        },
+        "ring_01_L": {
+            "main": [
+                "L_RingF1"
+            ],
+            "aux": [
+                "L_RingF_HJ_00",
+                "L_RingF_HJ_01"
+            ]
+        },
+        "ring_02_L": {
+            "main": [
+                "L_RingF2"
+            ],
+            "aux": [
+                "L_RingF_HJ_02"
+            ]
+        },
+        "ring_03_L": {
+            "main": [
+                "L_RingF3"
+            ],
+            "aux": [
+                "L_RingF_HJ_03",
+                "L_RingF_HJ_04"
+            ]
+        },
+        "pinky_01_L": {
+            "main": [
+                "L_PinkyF1"
+            ],
+            "aux": [
+                "L_PinkyF_HJ_00",
+                "L_PinkyF_HJ_01"
+            ]
+        },
+        "pinky_02_L": {
+            "main": [
+                "L_PinkyF2"
+            ],
+            "aux": [
+                "L_PinkyF_HJ_02"
+            ]
+        },
+        "pinky_03_L": {
+            "main": [
+                "L_PinkyF3"
+            ],
+            "aux": [
+                "L_PinkyF_HJ_03",
+                "L_PinkyF_HJ_04"
+            ]
+        },
+        "thumb_01_R": {
+            "main": [
+                "R_Thumb1"
+            ],
+            "aux": [
+                "R_Thumb_HJ_00"
+            ]
+        },
+        "thumb_02_R": {
+            "main": [
+                "R_Thumb2"
+            ],
+            "aux": [
+                "R_Thumb_HJ_01"
+            ]
+        },
+        "thumb_03_R": {
+            "main": [
+                "R_Thumb3"
+            ],
+            "aux": [
+                "R_Thumb_HJ_02",
+                "R_Thumb_HJ_03"
+            ]
+        },
+        "index_01_R": {
+            "main": [
+                "R_IndexF1"
+            ],
+            "aux": [
+                "R_IndexF_HJ_00",
+                "R_IndexF_HJ_01"
+            ]
+        },
+        "index_02_R": {
+            "main": [
+                "R_IndexF2"
+            ],
+            "aux": [
+                "R_IndexF_HJ_02"
+            ]
+        },
+        "index_03_R": {
+            "main": [
+                "R_IndexF3"
+            ],
+            "aux": [
+                "R_IndexF_HJ_03",
+                "R_IndexF_HJ_04"
+            ]
+        },
+        "middle_01_R": {
+            "main": [
+                "R_MiddleF1"
+            ],
+            "aux": [
+                "R_MiddleF_HJ_00",
+                "R_MiddleF_HJ_01"
+            ]
+        },
+        "middle_02_R": {
+            "main": [
+                "R_MiddleF2"
+            ],
+            "aux": [
+                "R_MiddleF_HJ_02"
+            ]
+        },
+        "middle_03_R": {
+            "main": [
+                "R_MiddleF3"
+            ],
+            "aux": [
+                "R_MiddleF_HJ_03",
+                "R_MiddleF_HJ_04"
+            ]
+        },
+        "ring_01_R": {
+            "main": [
+                "R_RingF1"
+            ],
+            "aux": [
+                "R_RingF_HJ_00",
+                "R_RingF_HJ_01"
+            ]
+        },
+        "ring_02_R": {
+            "main": [
+                "R_RingF2"
+            ],
+            "aux": [
+                "R_RingF_HJ_02"
+            ]
+        },
+        "ring_03_R": {
+            "main": [
+                "R_RingF3"
+            ],
+            "aux": [
+                "R_RingF_HJ_03",
+                "R_RingF_HJ_04"
+            ]
+        },
+        "pinky_01_R": {
+            "main": [
+                "R_PinkyF1"
+            ],
+            "aux": [
+                "R_PinkyF_HJ_00",
+                "R_PinkyF_HJ_01"
+            ]
+        },
+        "pinky_02_R": {
+            "main": [
+                "R_PinkyF2"
+            ],
+            "aux": [
+                "R_PinkyF_HJ_02"
+            ]
+        },
+        "pinky_03_R": {
+            "main": [
+                "R_PinkyF3"
+            ],
+            "aux": [
+                "R_PinkyF_HJ_03",
+                "R_PinkyF_HJ_04"
+            ]
+        },
+        "upperarm_twist_01_L": {
+            "main": [
+                "L_UpperArmTwist_HJ_00"
+            ],
+            "aux": []
+        },
+        "upperarm_twist_02_L": {
+            "main": [
+                "L_UpperArmTwist_HJ_01"
+            ],
+            "aux": []
+        },
+        "upperarm_twist_03_L": {
+            "main": [
+                "L_UpperArmTwist_HJ_02"
+            ],
+            "aux": []
+        },
+        "elbow_L": {
+            "main": [
+                "L_Elbow_HJ_00"
+            ],
+            "aux": []
+        },
+        "forearm_twist_01_L": {
+            "main": [
+                "L_ForearmTwist_HJ_00"
+            ],
+            "aux": []
+        },
+        "forearm_twist_02_L": {
+            "main": [
+                "L_ForearmTwist_HJ_01"
+            ],
+            "aux": []
+        },
+        "forearm_twist_03_L": {
+            "main": [
+                "L_ForearmTwist_HJ_02"
+            ],
+            "aux": []
+        },
+        "thigh_twist_01_L": {
+            "main": [
+                "L_ThighTwist_HJ_00"
+            ],
+            "aux": []
+        },
+        "thigh_twist_02_L": {
+            "main": [
+                "L_ThighTwist_HJ_01"
+            ],
+            "aux": []
+        },
+        "thigh_twist_03_L": {
+            "main": [
+                "L_ThighTwist_HJ_02"
+            ],
+            "aux": []
+        },
+        "knee_L": {
+            "main": [
+                "L_Knee"
+            ],
+            "aux": [
+                "L_Knee_HJ_00",
+                "L_KneeDouble_HJ_00",
+                "L_KneeRX_HJ_00"
+            ]
+        },
+        "palm_L": {
+            "main": [
+                "L_Palm"
+            ],
+            "aux": []
+        },
+        "instep_L": {
+            "main": [
+                "L_Instep"
+            ],
+            "aux": []
+        },
+        "upperarm_twist_01_R": {
+            "main": [
+                "R_UpperArmTwist_HJ_00"
+            ],
+            "aux": []
+        },
+        "upperarm_twist_02_R": {
+            "main": [
+                "R_UpperArmTwist_HJ_01"
+            ],
+            "aux": []
+        },
+        "upperarm_twist_03_R": {
+            "main": [
+                "R_UpperArmTwist_HJ_02"
+            ],
+            "aux": []
+        },
+        "elbow_R": {
+            "main": [
+                "R_Elbow_HJ_00"
+            ],
+            "aux": []
+        },
+        "forearm_twist_01_R": {
+            "main": [
+                "R_ForearmTwist_HJ_00"
+            ],
+            "aux": []
+        },
+        "forearm_twist_02_R": {
+            "main": [
+                "R_ForearmTwist_HJ_01"
+            ],
+            "aux": []
+        },
+        "forearm_twist_03_R": {
+            "main": [
+                "R_ForearmTwist_HJ_02"
+            ],
+            "aux": []
+        },
+        "thigh_twist_01_R": {
+            "main": [
+                "R_ThighTwist_HJ_00"
+            ],
+            "aux": []
+        },
+        "thigh_twist_02_R": {
+            "main": [
+                "R_ThighTwist_HJ_01"
+            ],
+            "aux": []
+        },
+        "thigh_twist_03_R": {
+            "main": [
+                "R_ThighTwist_HJ_02"
+            ],
+            "aux": []
+        },
+        "knee_R": {
+            "main": [
+                "R_Knee"
+            ],
+            "aux": [
+                "R_Knee_HJ_00",
+                "R_KneeDouble_HJ_00",
+                "R_KneeRX_HJ_00"
+            ]
+        },
+        "palm_R": {
+            "main": [
+                "R_Palm"
+            ],
+            "aux": []
+        },
+        "instep_R": {
+            "main": [
+                "R_Instep"
+            ],
+            "aux": []
+        }
     }
-  }
 }

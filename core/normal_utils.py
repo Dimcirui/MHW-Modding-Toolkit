@@ -482,17 +482,31 @@ def _intent_field(me, data=None):
         a = np.empty(len(me.loops) * 3, np.float32)
         attr.data.foreach_get("vector", a)
         return normalize(a.reshape(-1, 3).astype(np.float64))
-    if attr is not None and (attr.domain != 'CORNER'
-                             or attr.data_type != 'FLOAT_VECTOR'):
-        me.attributes.remove(attr)
-        attr = None
-    if attr is None:
-        attr = me.attributes.new(INTENT_ATTR, 'FLOAT_VECTOR', 'CORNER')
-    attr.data.foreach_set("vector", data.astype(np.float32).ravel())
+    _vector_attr(me, INTENT_ATTR, data)
     return data
 
 
-def reencode_for_shape(me, deformed_co, reset_intent=False):
+def decode_at(me, co):
+    """The directions ``me``'s stored normals mean when decoded against the
+    geometry ``co`` instead of the mesh's own.
+
+    The decode basis is derived from the surrounding geometry, so the same
+    stored bytes answer differently on different geometry — which is the whole
+    problem this module exists for, and also the lever: handing it the geometry
+    the normals were authored against recovers what they were authored to be.
+    """
+    import bpy
+
+    dec = me.copy()
+    try:
+        dec.vertices.foreach_set("co", np.asarray(co, np.float32).ravel())
+        dec.update()
+        return normalize(corner_normals(dec))
+    finally:
+        bpy.data.meshes.remove(dec)
+
+
+def reencode_for_shape(me, deformed_co, reset_intent=False, base_co=None):
     """Re-encode the custom split normals against ``deformed_co``.
 
     ``deformed_co`` is the mesh's vertex positions under the deformation the
@@ -500,21 +514,33 @@ def reencode_for_shape(me, deformed_co, reset_intent=False):
     about the mesh's geometry, keys or topology is touched; only the stored
     encoding changes.
 
+    ``base_co`` is the geometry to *read* the authored directions off, in this
+    mesh's own local space.  ``None`` means the mesh's own base geometry, which
+    is what its stored normals already decode against.  Passing a reference
+    mesh's base instead recovers the directions as they were authored, for when
+    this mesh's own base has been edited out from under them — the stored bytes
+    did not change, but what they decode to did.  It has no effect once a target
+    field is stored: that field *is* the answer ``base_co`` would be used to
+    work out, so only a fresh capture consults it.
+
     Returns (corners written, whether the target field was captured now,
     per-corner residual in degrees between the deformed decode and the target).
     """
     import bpy  # only needed for the throwaway mesh; the rest of this file is numpy
 
+    def authored():
+        return corner_normals(me) if base_co is None else decode_at(me, base_co)
+
     if me.attributes.get("custom_normal") is None:
         # Nothing authored to preserve yet — pin down what the mesh shades with
         # now, so there is a target to re-encode at all
-        me.normals_split_custom_set(corner_normals(me).tolist())
+        me.normals_split_custom_set(authored().tolist())
         me.update()
 
     target = None if reset_intent else _intent_field(me)
     fresh = target is None
     if fresh:
-        target = normalize(corner_normals(me))
+        target = normalize(authored())
         _intent_field(me, target)
 
     enc = me.copy()
@@ -534,3 +560,140 @@ def reencode_for_shape(me, deformed_co, reset_intent=False):
     me.attributes["custom_normal"].data.foreach_set("value", raw)
     me.update()
     return len(target), fresh, resid
+
+# ── baking an object transform without losing the normals ──────────
+
+#: Where the normals wait out the bake.  Removed again on the way out.
+CARRY_ATTR = "mtk_normal_carry"
+
+
+def stash_normals(me, matrix):
+    """Park the split normals in world space so an object-transform bake cannot
+    damage them.  Returns False if there is nothing authored to protect.
+
+    Why this needs doing at all: a custom normal is stored relative to a basis
+    derived from the surrounding geometry, so baking a negative-determinant
+    matrix -- any mirror -- flips that basis and the same stored bytes decode to
+    a different direction.  Measured on one face mesh with only the matrix's
+    sign changing, determinant +1 came out 0 degrees off and determinant -1 left
+    76% of corners more than 90 degrees off.
+
+    Why a plain corner attribute rather than a captured array: the bake also
+    reverses every polygon's winding, so corner *index* i afterwards is a
+    different corner than index i before.  Blender moves its own corner
+    attributes along with the corners (measured: the permutation it applies is
+    exactly the one a ``(polygon, vertex)`` key reconstructs, 0 of 34350
+    corners differing), so riding along in an attribute gets the bookkeeping
+    for free.  Reconstructing the permutation by hand instead invites writing
+    the values back by index, which scrambles the normals inside each face and
+    -- because reading back the same indices just written always agrees --
+    reports success while doing it.
+
+    The stored intent field (see ``reencode_for_shape``) is object-space too,
+    so it is converted in place and rides along the same way.
+    """
+    if me.attributes.get("custom_normal") is None:
+        return False
+    # Normals transform by the inverse transpose, so as rows: n @ inv(M3)
+    inv = np.array(matrix.to_3x3().inverted_safe(), np.float64)
+    _vector_attr(me, CARRY_ATTR, normalize(corner_normals(me) @ inv))
+    intent = _intent_field(me)
+    if intent is not None:
+        _intent_field(me, normalize(intent @ inv))
+    return True
+
+
+def unstash_normals(me, matrix):
+    """Write the parked normals back into a mesh whose transform has just been
+    baked, and drop the parking attribute.
+
+    Returns the per-corner residual in degrees between what was parked and what
+    the mesh decodes to now.  That is the INT16 re-encode error only, read back
+    through the mesh; the corner matching is Blender's own, not something this
+    measures.  Returns None if nothing was parked.
+    """
+    attr = me.attributes.get(CARRY_ATTR)
+    if attr is None:
+        return None
+    a = np.empty(len(me.loops) * 3, np.float32)
+    attr.data.foreach_get("vector", a)
+    world = a.reshape(-1, 3).astype(np.float64)
+    me.attributes.remove(me.attributes[CARRY_ATTR])
+
+    # World back into the new object space: inverse of the inverse transpose
+    m3 = np.array(matrix.to_3x3(), np.float64)
+    out = normalize(world @ m3)
+    me.normals_split_custom_set(out.tolist())
+    intent = _intent_field(me)
+    if intent is not None:
+        _intent_field(me, normalize(intent @ m3))
+    me.update()
+    return np.degrees(np.arccos(np.clip(
+        (normalize(corner_normals(me)) * out).sum(1), -1.0, 1.0)))
+
+
+def _vector_attr(me, name, data):
+    attr = me.attributes.get(name)
+    if attr is not None and (attr.domain != 'CORNER'
+                             or attr.data_type != 'FLOAT_VECTOR'):
+        me.attributes.remove(attr)
+        attr = None
+    if attr is None:
+        attr = me.attributes.new(name, 'FLOAT_VECTOR', 'CORNER')
+    attr.data.foreach_set("vector", data.astype(np.float32).ravel())
+    return attr
+
+# ── matching corners between two meshes by position ──────────────────
+
+def corner_anchors(me, matrix, co):
+    """One distinct world point per corner: the corner's vertex nudged toward
+    its face centre.
+
+    Corner *index* is not a correspondence between two meshes — two exports of
+    the same head can carry the same counts in a different vertex and face
+    order (measured on one character's four expression meshes: 17046 of 35886
+    corners disagreed, and not by a winding flip either).  Position is the only
+    thing that does correspond.  The vertex position alone is not enough,
+    because a split fan puts several corners on one vertex; offsetting toward
+    the face centre separates them while staying a position, so it survives any
+    reordering.
+    """
+    m = np.array(matrix.to_3x3(), np.float64)
+    world = np.asarray(co, np.float64) @ m.T + np.array(matrix.translation, np.float64)
+    lv, ls, lt = _topology(me)
+    pid = np.repeat(np.arange(len(ls)), lt)
+    cent = np.zeros((len(ls), 3))
+    np.add.at(cent, pid, world[lv])
+    cent /= lt[:, None]
+    v = world[lv]
+    return v + 0.3 * (cent[pid] - v)
+
+
+def match_corners(src_anchors, dst_anchors):
+    """``(source index, distance)`` per destination corner, nearest first.
+
+    The caller decides what distance is too far; nothing is rejected here.
+    """
+    from mathutils import Vector
+    from mathutils.kdtree import KDTree
+
+    tree = KDTree(len(src_anchors))
+    for i, p in enumerate(src_anchors):
+        tree.insert(Vector(p), i)
+    tree.balance()
+    idx = np.empty(len(dst_anchors), np.int64)
+    dist = np.empty(len(dst_anchors), np.float64)
+    for i, p in enumerate(dst_anchors):
+        _co, j, d = tree.find(Vector(p))
+        idx[i], dist[i] = j, d
+    return idx, dist
+
+
+def _topology(me):
+    lv = np.empty(len(me.loops), np.int32)
+    me.loops.foreach_get("vertex_index", lv)
+    ls = np.empty(len(me.polygons), np.int32)
+    me.polygons.foreach_get("loop_start", ls)
+    lt = np.empty(len(me.polygons), np.int32)
+    me.polygons.foreach_get("loop_total", lt)
+    return lv, ls, lt

@@ -8,6 +8,7 @@ NSA-Cloud/AsteriskAmpersand's RE-Mesh-Editor texconv.py wrapper (MIT).
 
 import ctypes
 import os
+import shutil
 import struct
 import tempfile
 import zlib
@@ -248,14 +249,22 @@ def convert_to_raw_rgba(filepath, out_dir, verbose=False, allow_slow_codec=False
     dll = _load_dll()
 
     args = ['-f', 'R8G8B8A8_UNORM', '-ft', 'TGA']
-    _run_texconv(dll, filepath, args, out_dir, verbose=verbose, allow_slow_codec=allow_slow_codec)
 
-    tga_path = os.path.join(out_dir or '.', os.path.splitext(os.path.basename(filepath))[0] + '.tga')
+    # Into a private subdirectory, not out_dir.  texconv names its output after
+    # the input stem, so a .tga source that already lives in out_dir would have
+    # the output land on top of it -- and then the cleanup below would delete the
+    # caller's own file.  That is not hypothetical: composed slots and generated
+    # solid colours are both .tga written into the very temp dir that gets passed
+    # here as out_dir, and the symptom is a FileNotFoundError (80070002) on the
+    # *next* use of a source that had silently vanished.
+    work = tempfile.mkdtemp(prefix='raw_rgba_', dir=out_dir or None)
+    _run_texconv(dll, filepath, args, work, verbose=verbose, allow_slow_codec=allow_slow_codec)
+
+    tga_path = os.path.join(work, os.path.splitext(os.path.basename(filepath))[0] + '.tga')
     try:
         return _read_tga_rgba8(tga_path)
     finally:
-        if os.path.isfile(tga_path):
-            os.remove(tga_path)
+        shutil.rmtree(work, ignore_errors=True)
 
 
 def _is_pot(v):

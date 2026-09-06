@@ -1068,6 +1068,7 @@ class MdfTexProcessBase(bpy.types.Operator):
                 # same as core.mdf_generator_base's effective_mipmaps.
                 effective_mipmaps = (mat_item.generate_mipmaps
                                     and not getattr(settings, 'global_disable_mipmaps', False))
+                grade_mode = getattr(settings, 'global_color_grade', 'NONE')
                 pbr_paths      = {pt: getattr(mat_item.pbr, pt) for pt in PBR_TYPES}
                 pbr_channels   = {pt: getattr(mat_item.pbr, f"{pt}_ch")
                                   for pt in PBR_CHANNEL_SELECTABLE}
@@ -1162,6 +1163,7 @@ class MdfTexProcessBase(bpy.types.Operator):
                             mip_quality=mat_item.mipmap_strategy,
                             image_to_dds=ImageListToDDS,
                             dds_to_tex=lambda p, o: DDSToTex(p, cls._tex_version, o),
+                            grade_mode=grade_mode,
                         )
 
                         binding.path = mdf_path

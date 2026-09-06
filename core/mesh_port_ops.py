@@ -33,9 +33,11 @@ from .bone_correction import (DEFAULT_TOLERANCE_DEG, derive_bone_correction,
                               expand_corrections, invert_correction_table,
                               same_convention_set)
 from .bone_mapper import BoneMapManager, auto_detect_preset, build_cross_game_map
+from . import twist_chain
 from .i18n import T
 from .mesh_port import PLUMBING_BONES, build_port_plan, origin_shift
 from .ref_skeleton import get_reference_skeleton_items, import_reference_armature
+from . import weight_utils
 from .weight_utils import merge_weights_and_delete_bones
 from .port_consent import gate
 
@@ -481,10 +483,33 @@ def _sync_topology(arm_obj, plan, ref_arm):
     return changed
 
 
+def _rig_data(arm_obj):
+    """``{"positions": ..., "parents": ...}`` for twist_chain, in armature space.
+
+    ``head_local`` rather than a world position on purpose: *t* is a normalised
+    projection along the segment, so it is invariant under the object transform,
+    and reading armature space keeps the two rigs comparable without caring that
+    the reference was imported at a different scale.
+    """
+    bones = arm_obj.data.bones
+    return {"positions": {b.name: tuple(b.head_local) for b in bones},
+            "parents": {b.name: (b.parent.name if b.parent else None) for b in bones}}
+
+
+def _apply_splits(arm_obj, splits):
+    """Thin alias -- the implementation is shared with the standardise path.
+
+    Both paths distribute a twist bone's weights over a resampled chain and then
+    remove it; keeping two copies is how the two would drift apart, and only one of
+    them would be the one the offline tests cover.
+    """
+    return weight_utils.distribute_and_remove(arm_obj, splits)
+
+
 def execute_port(arm_obj, plan, ref_arm=None, correction_set=None, base_names=None):
     """Run *plan* on *arm_obj* (already a copy).  Returns a counts dict."""
     counts = {"merged": 0, "renamed": 0, "inserted": 0, "corrected": 0, "synced": 0,
-              "reparented": 0}
+              "reparented": 0, "split": 0}
 
     if plan.merges:
         # (keep, delete) is the order merge_weights_and_delete_bones expects; it also
@@ -503,6 +528,9 @@ def execute_port(arm_obj, plan, ref_arm=None, correction_set=None, base_names=No
     # Insertion comes last because its rules are written in target-game names, and
     # the bones it copies orientation from are already in the target convention.
     counts["inserted"] = _insert_bones(arm_obj, plan.inserts, ref_arm)
+    # After the insertions: a split's targets are the destination game's twist bones,
+    # which is exactly what the insert rules just built.
+    counts["split"] = _apply_splits(arm_obj, plan.splits)
     counts["reparented"] = _sync_topology(arm_obj, plan, ref_arm)
 
     # Last, and only when the convention actually changed: the non-base bones follow
@@ -714,6 +742,19 @@ class MODDER_OT_PortMeshCrossGame(bpy.types.Operator):
         if cross is None:
             return None, None
         extra = mhws_insert_rules() if self.target_game == "MHWS" else None
+
+        # 扭转链需要**两具**骨架的几何：链的成员按结构找、按归一化位置 t 排序，
+        # 而 t 只能从真实骨架量。所以没有参考骨架时这一步整个跳过，预检也就看不到
+        # splits——预检本来也没有 dst_bones，插骨那一项同样是近似值。
+        twist_transfer = None
+        self._twist_reports = {}
+        if ref_arm is not None:
+            src_m, dst_m = BoneMapManager(), BoneMapManager()
+            if src_m.load_preset(src) and dst_m.load_preset(dst):
+                segments = twist_chain.segments_from_presets(src_m, dst_m)
+                twist_transfer, self._twist_reports = twist_chain.plan_transfers(
+                    _rig_data(arm), _rig_data(ref_arm), segments)
+
         plan = build_port_plan(
             [b.name for b in arm.data.bones], cross,
             src_main_names=_preset_main_names(src),
@@ -722,7 +763,8 @@ class MODDER_OT_PortMeshCrossGame(bpy.types.Operator):
             extra_rules=extra,
             src_parents={b.name: (b.parent.name if b.parent else None)
                          for b in arm.data.bones},
-            src_native_bones=ref_model.load_base_bones(self.source_game))
+            src_native_bones=ref_model.load_base_bones(self.source_game),
+            twist_transfer=twist_transfer)
         return plan, cross
 
     def _source_armature(self):
@@ -908,6 +950,14 @@ class MODDER_OT_PortMeshCrossGame(bpy.types.Operator):
                         rejected=len(correction_set.rejected)))
                     return {'CANCELLED'}
 
+            if plan.splits_unbacked:
+                # 权重会落到没有骨骼驱动的顶点组上：形变为零，而且要等到进游戏才看得
+                # 出来。宁可拦下，不写这种文件。
+                self.report({'ERROR'}, T("core.mesh_port_ops.split_unbacked").format(
+                    n=len(plan.splits_unbacked),
+                    names=", ".join(plan.splits_unbacked[:4])))
+                return {'CANCELLED'}
+
             base_names = set(cross.mapping.values()) | {n for n, _r, _a in plan.inserts}
             counts = execute_port(arm, plan, ref_arm, correction_set, base_names)
         finally:
@@ -916,10 +966,23 @@ class MODDER_OT_PortMeshCrossGame(bpy.types.Operator):
 
         msg = T("core.mesh_port_ops.done").format(
             game=self.target_game, name=arm.name, **counts)
-        if correction_set is not None and correction_set.rejected:
-            msg += " " + T("core.mesh_port_ops.rejected").format(
-                n=len(correction_set.rejected),
-                names=", ".join(b for b, _t, _d in correction_set.rejected[:4]))
+        if counts.get("split"):
+            msg += " " + T("core.mesh_port_ops.twist_split").format(n=counts["split"])
+        # 降级钳位是真丢信息：目标链在源骨的位置上没有成员，最低只能到某个 t，
+        # 残余滚转算得出来就该报出来，不能静默做掉。
+        clamped = [(c["bone"], c["roll_residual"])
+                   for rep in (self._twist_reports or {}).values()
+                   for c in rep.get("clamped", ())]
+        if clamped:
+            worst = max(abs(r) for _b, r in clamped)
+            msg += " " + T("core.mesh_port_ops.twist_clamped").format(
+                n=len(clamped), residual=round(worst, 3),
+                names=", ".join(b for b, _r in clamped[:3]))
+        if clamped or (correction_set is not None and correction_set.rejected):
+            if correction_set is not None and correction_set.rejected:
+                msg += " " + T("core.mesh_port_ops.rejected").format(
+                    n=len(correction_set.rejected),
+                    names=", ".join(b for b, _t, _d in correction_set.rejected[:4]))
             self.report({'WARNING'}, msg)
         else:
             self.report({'INFO'}, msg)

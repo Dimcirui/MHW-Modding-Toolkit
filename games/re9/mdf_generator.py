@@ -1,6 +1,7 @@
 import bpy
 
 from ...core.i18n import T
+from ...core.color_grade import color_grade_items, DEFAULT_MODE_INDEX
 from ...core.mdf_tex_processor_base import _CH_ENUM_ITEMS, octahedral_normals_prop
 from .mdf_tex_processor import (
     RE9_SLOT_CHANNEL_MAPS, RE9_NULL_TEX_BY_TYPE, RE9_TEXTURE_TYPE_ABBREV,
@@ -25,6 +26,8 @@ def _re9_get_presets(self, context):
 
 
 # ── PropertyGroups ─────────────────────────────────────────────────────────────
+
+
 
 class RE9GenMaterialEntry(bpy.types.PropertyGroup):
     blender_material: bpy.props.StringProperty(name="Blender Material")
@@ -119,6 +122,16 @@ class RE9GenSettings(bpy.types.PropertyGroup):
         description="When enabled, directly convert the connected OpenGL normal map to DX format, "
                     "so you no longer need to manually invert the G channel in the shader",
         default=False,
+    )
+    # 色彩类贴图的整体色调处理。默认 NONE：把 sRGB 源图原样搬进 .tex 在色彩学上
+    # **是正确的**（实测原版 md_wood000_BML.tex 就是 BC1UNORMSRGB，和我们标的一致），
+    # 这个选项补的是源游戏与本作之间的美术口径差，属于调色不是修正，所以必须由人选。
+    # 三档的确切定义见 core/color_grade.py。
+    global_color_grade: bpy.props.EnumProperty(
+        name="Colour Grade (Global)",
+        description="Tone adjustment applied to every colour (sRGB) texture before encoding",
+        items=lambda self, ctx: color_grade_items(),
+        default=DEFAULT_MODE_INDEX,
     )
     global_disable_mipmaps: bpy.props.BoolProperty(
         name="Disable MipMaps (Global)",

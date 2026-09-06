@@ -21,7 +21,9 @@ class MODDER_OT_InitEditor(bpy.types.Operator):
     def execute(self, context):
         settings = context.scene.mhw_preset_editor
         settings.slots.clear()
-        for std_key in bone_mapper.STANDARD_BONE_NAMES:
+        # 编辑器恒列全部槽位（含辅助骨）：这里是**编写**预设的地方，能不能填与
+        # 运行时勾没勾"忽略辅助骨"无关，把槽位藏起来只会让人以为插件不支持。
+        for std_key in bone_mapper.standard_keys(True):
             item = settings.slots.add()
             item.std_name = std_key
             item.ui_name = std_key
