@@ -367,6 +367,25 @@ def build_chain_from_head(head_name, arm_obj):
 from .pre_export_check import WEIGHT_SUM_EPS, classify_weight_sum  # noqa: F401
 
 
+#: mmd_tools 在导入时打的两个纯标记用顶点组，权重值是"边缘缩放系数"/"顶点顺序"这类
+#: 元数据，不对应任何骨骼，也从不该参与形变。留着它们不会被 deform_group_indices
+#: 误算进总和，但会占外部（游戏引擎/其他 addon）不做骨名过滤、直接按顶点组数量
+#: 分配权重槽位的那类导出路径的名额，把真正的骨骼权重挤掉——所以要在归一化前先删。
+MMD_JUNK_GROUP_NAMES = {"mmd_edge_scale", "mmd_vertex_order"}
+
+
+def strip_mmd_junk_groups(mesh_objs):
+    """删掉每个网格上的 mmd_edge_scale / mmd_vertex_order 顶点组，返回删除总数。"""
+    removed = 0
+    for mesh_obj in mesh_objs:
+        for name in MMD_JUNK_GROUP_NAMES:
+            vg = mesh_obj.vertex_groups.get(name)
+            if vg is not None:
+                mesh_obj.vertex_groups.remove(vg)
+                removed += 1
+    return removed
+
+
 def deform_group_indices(mesh_obj, armature_obj):
     """*mesh_obj* 上真正参与骨架形变的顶点组下标集合。
 
@@ -399,7 +418,8 @@ def normalize_deform_weights(mesh_objs, armature_obj, eps=WEIGHT_SUM_EPS):
     总和为 0 的顶点跳过并单独计数：0/0 没有归一化可言，那是真的洞，只能上报。
     """
     stats = {"meshes": 0, "verts": 0, "fixed": 0, "unweighted": 0,
-             "worst_before": 1.0, "worst_mesh": None}
+             "worst_before": 1.0, "worst_mesh": None, "mmd_junk_removed": 0}
+    stats["mmd_junk_removed"] = strip_mmd_junk_groups(mesh_objs)
     for mesh_obj in mesh_objs:
         idx = deform_group_indices(mesh_obj, armature_obj)
         if not idx:

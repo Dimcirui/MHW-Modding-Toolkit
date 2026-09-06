@@ -132,15 +132,19 @@ def _normalize_weights_for(arm_obj):
 
 def _normalize_weights_message(stats):
     if not stats["fixed"] and not stats["unweighted"]:
-        return T("core.standard_ops.normalize_weights_clean").format(
+        msg = T("core.standard_ops.normalize_weights_clean").format(
             verts=stats["verts"], meshes=stats["meshes"])
-    msg = T("core.standard_ops.normalize_weights_done").format(
-        fixed=stats["fixed"], verts=stats["verts"], meshes=stats["meshes"],
-        worst=round(stats["worst_before"], 4), name=stats["worst_mesh"] or "-")
-    if stats["unweighted"]:
-        # 0/0 归一化救不了，只能报：这些顶点根本没被任何骨骼驱动，会留在原地。
-        msg += " " + T("core.standard_ops.normalize_weights_unweighted").format(
-            n=stats["unweighted"])
+    else:
+        msg = T("core.standard_ops.normalize_weights_done").format(
+            fixed=stats["fixed"], verts=stats["verts"], meshes=stats["meshes"],
+            worst=round(stats["worst_before"], 4), name=stats["worst_mesh"] or "-")
+        if stats["unweighted"]:
+            # 0/0 归一化救不了，只能报：这些顶点根本没被任何骨骼驱动，会留在原地。
+            msg += " " + T("core.standard_ops.normalize_weights_unweighted").format(
+                n=stats["unweighted"])
+    if stats.get("mmd_junk_removed"):
+        msg += " " + T("core.standard_ops.normalize_weights_mmd_junk").format(
+            n=stats["mmd_junk_removed"])
     return msg
 
 
@@ -194,7 +198,7 @@ class MODDER_OT_ApplyStandardX(bpy.types.Operator):
         # 对导入的头像按下的第一个按钮，正是"越早越好"的那个时机。
         if getattr(settings, "normalize_weights_first", True):
             stats = _normalize_weights_for(arm_obj)
-            if stats and (stats["fixed"] or stats["unweighted"]):
+            if stats and (stats["fixed"] or stats["unweighted"] or stats["mmd_junk_removed"]):
                 self.report({'INFO'}, _normalize_weights_message(stats))
 
         x_preset, err = resolve_preset(settings.import_preset_enum, arm_obj, True)
@@ -501,6 +505,15 @@ class MODDER_OT_DirectConvert(bpy.types.Operator):
 
         # 4. 开始处理网格 (Object Mode)
         bpy.ops.object.mode_set(mode='OBJECT')
+
+        # 先归一化，再动任何权重：一键转换是实际接在 UI 上、真正会被按下的按钮
+        # （骨骼标准化(X) modder.apply_standard_x 没有布线到面板，形同虚设）。
+        # 顺带清掉 mmd_edge_scale/mmd_vertex_order —— 它们不对应任何骨骼，本不该
+        # 参与形变，但会占外部按顶点组数量分配权重槽位的导出路径的名额。
+        if getattr(settings, "normalize_weights_first", True) and arm_for_detect is not None:
+            stats = _normalize_weights_for(arm_for_detect)
+            if stats and (stats["fixed"] or stats["unweighted"] or stats["mmd_junk_removed"]):
+                self.report({'INFO'}, _normalize_weights_message(stats))
 
         # 扭转链的权重分配走在改名之前：分配表的键是**源游戏骨名**，一改名就对不上。
         # remove_bones=False —— 一键转换只动顶点组，骨架留给标准化那两步。

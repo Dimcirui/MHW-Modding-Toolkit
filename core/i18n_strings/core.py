@@ -115,6 +115,10 @@ STRINGS = {
     "core.standard_ops.normalize_weights_no_mesh": {
         "EN": "No mesh is attached to this armature",
         "ZH": "该骨架下没有网格"},
+    "core.standard_ops.normalize_weights_mmd_junk": {
+        "EN": "Removed {n} mmd_edge_scale/mmd_vertex_order group(s) "
+              "that do not belong to any bone",
+        "ZH": "另外删除了 {n} 个不属于任何骨骼的 mmd_edge_scale/mmd_vertex_order 顶点组"},
     "core.standard_ops.preset_load_failed": {"EN": "Preset load failed", "ZH": "预设加载失败"},
     "core.standard_ops.cannot_load_y_preset": {"EN": "Cannot load Y preset", "ZH": "无法加载 Y 预设"},
     "core.standard_ops.cannot_load_x_preset": {"EN": "Cannot load X preset", "ZH": "无法加载 X 预设"},
