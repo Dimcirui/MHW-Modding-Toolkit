@@ -350,6 +350,8 @@ BASE_NULL_TEX_BY_TYPE = {
     'UserColorchangeMap':            'systems/rendering/NullBlack.tex',
     'FurVelocityMap':                'MasterMaterial/Textures/NullFurVelocity.tex',
     'FurTex':                        'systems/rendering/NullBlack.tex',
+    'SkinMap':                       'systems/rendering/NullGray.tex',
+    'BlendNormalMap':                'systems/rendering/NullNormalRoughness.tex',
 }
 
 # ── Factory helpers ────────────────────────────────────────────────────────────
