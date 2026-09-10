@@ -144,6 +144,19 @@ A built-in GUI editor for creating custom bone mappings without writing code.
 3. Click **Install**, select the ZIP, and enable **Modding Toolkit**.
 
 ---
+
+## License
+
+The add-on's source code is licensed under the **GNU General Public License
+v3.0** — see [`LICENSE`](LICENSE).
+
+That license covers the code and the author-created presets only. The game
+files bundled under `assets/` (reference skeletons, blank templates, body and
+shadow meshes, textures) are the property of CAPCOM CO., LTD. and are **not**
+covered by it, and `assets/bin/` contains third-party MIT components. See
+[`NOTICE.md`](NOTICE.md) for the exact scope.
+
+---
 <a id="中文说明"></a>
 # 中文说明
 
@@ -287,3 +300,12 @@ A built-in GUI editor for creating custom bone mappings without writing code.
 1. 从 Releases 页面下载 **ZIP** 文件。
 2. 在 Blender 中，进入 `编辑 > 首选项 > 插件`。
 3. 点击 **安装**，选择 ZIP 文件，启用 **Modding Toolkit**。
+
+---
+
+## 授权协议
+
+本插件源代码以 **GNU GPL v3.0** 授权，见 [`LICENSE`](LICENSE)。
+
+该授权仅覆盖代码及作者自行编写的预设。`assets/` 下随附的游戏文件（参考骨架、空白模板、身体与阴影网格、贴图）版权归株式会社卡普空所有，**不在**本授权范围内；`assets/bin/` 为第三方 MIT 组件。具体范围见 [`NOTICE.md`](NOTICE.md)。
+
